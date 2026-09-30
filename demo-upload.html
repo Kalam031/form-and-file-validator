@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload widget demo</title>
+<style>
+  :root { --ink: #1d2733; --muted: #56606b; --line: #b8c0c9; --bg: #fff; --accent: #0b5fff; --bad: #a4122a; --ok: #146c3c; }
+  body { font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--bg); max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.4rem; }
+  #zone { border: 2px dashed var(--line); border-radius: 10px; padding: 1.5rem; text-align: center; }
+  #zone.fv-dragover { border-color: var(--accent); background: #eef4ff; }
+  #zone label { font-weight: 600; }
+  .hint { color: var(--muted); font-size: .9rem; }
+  #errors:not(:empty) { margin-top: 1rem; padding: .6rem .8rem; border-left: 4px solid var(--bad); background: #fdf0f2; color: var(--bad); }
+  #status { color: var(--muted); font-size: .9rem; min-height: 1.4em; margin-top: .5rem; }
+  #list { list-style: none; padding: 0; margin: 1rem 0; }
+  .fv-file { display: flex; align-items: center; gap: .6rem; padding: .4rem 0; border-bottom: 1px solid #e3e7ec; }
+  .fv-preview { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; }
+  .fv-badge { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 6px; background: #e3e7ec; font-size: .75rem; font-weight: 700; }
+  .fv-name { flex: 1; word-break: break-all; }
+  .fv-size { color: var(--muted); font-size: .85rem; }
+  .fv-remove { font-size: 1.2rem; line-height: 1; padding: .2rem .6rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; }
+  .fv-remove:focus-visible, #zone input:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  button.primary { padding: .6rem 1.2rem; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer; }
+  #log { background: #f4f6f8; padding: .75rem; margin-top: 1rem; white-space: pre-wrap; font-size: .85rem; }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 1rem 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>Upload widget</h1>
+<p class="hint">Drop files or a whole folder, paste a screenshot (Ctrl+V), or use the button. Images (PNG, JPG, WebP, up to 5 files, 2 MB each) are shrunk to fit if they are too big. Documents are PDF or Word only; programs, macros and PDFs with JavaScript are refused. Nothing leaves your browser.</p>
+
+<form id="upload-form" novalidate>
+  <div id="zone">
+    <label for="files">Choose files</label>
+    <input type="file" id="files" name="files" multiple>
+    <p class="hint">or drop them here</p>
+  </div>
+  <div id="status"></div>
+  <div id="errors"></div>
+  <ul id="list" aria-label="Selected files"></ul>
+  <p><button type="submit" class="primary">Send</button></p>
+</form>
+<div id="log">Waiting for files.</div>
+</main>
+
+<script src="dist/validator.min.js"></script>
+<script>
+  var zone = FileValidator.widget('#zone', {
+    accept: '.png,.jpg,.jpeg,.webp,.pdf,.docx',
+    maxFiles: 5,
+    maxFileSizeMB: 2,
+    maxImageWidth: 2000,
+    maxImageHeight: 2000,
+    duplicateNames: true,
+    duplicateContent: true,
+    ignoreFiles: true
+  }, {
+    list: '#list',
+    messageElement: '#errors',
+    statusElement: '#status',
+    preview: true,
+    resize: true,
+    paste: true,
+    folder: true,
+    onChange: function (files) {
+      document.getElementById('log').textContent = files.length + ' file(s) ready: ' + files.map(function (f) { return f.name + ' (' + FileValidator.formatBytes(f.size) + ')'; }).join(', ');
+    }
+  });
+
+  document.getElementById('upload-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    zone.validate().then(function (result) {
+      if (!result.isValid) { document.getElementById('log').textContent = 'Not sent: ' + FileValidator.summary(result).join(' '); return; }
+      var data = zone.appendTo(new FormData(), 'files');
+      document.getElementById('log').textContent = 'Would send ' + Array.from(data.getAll('files')).map(function (f) { return f.name; }).join(', ');
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+// Types for FormValidator (formValidator.js).
+
+export interface RuleEnv {
+    value: string;
+    empty: boolean;
+    /** Ticked boxes, chosen options or selected files. */
+    count: number;
+    files: File[] | null;
+    field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    /** All boxes of a checkbox or radio group. */
+    fields: Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
+    form: HTMLFormElement;
+    config: FormConfig;
+    context: Record<string, unknown> & { form: HTMLFormElement };
+    inst: FormInstance;
+    badInput: boolean;
+}
+
+/** What a rule function may return. A string is the error message. */
+export type RuleResult = boolean | string | undefined | null | { valid: boolean; message?: string };
+
+export type MessageSource = string | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string);
+
+export interface RuleObject {
+    type: RuleName | (string & {});
+    /** Text with {min}, {max}, {0}, {1} placeholders, or a function. Wins over every other message source. */
+    message?: MessageSource;
+    /** The rule applies only when this returns true. */
+    when?: (value: string, env: RuleEnv) => boolean;
+    /** Transforms the value before the rule sees it. */
+    normalizer?: (value: string, field: HTMLElement) => string;
+    min?: number | string;
+    max?: number | string;
+    step?: number;
+    base?: number;
+    values?: unknown[];
+    pattern?: string | RegExp;
+    flags?: string;
+    /** equalTo / notEqualTo: a field name. */
+    target?: string;
+    /** equalTo / notEqualTo: a CSS selector. */
+    selector?: string;
+    types?: string[];
+    maxSize?: number;
+    maxSizeMB?: number;
+    /** custom rule */
+    validate?: (value: string, context: RuleEnv['context'], field: HTMLElement, env: RuleEnv) => RuleResult | Promise<RuleResult>;
+    /** pwcheck */
+    minLength?: number;
+    maxLength?: number;
+    requireUppercase?: boolean;
+    requireLowercase?: boolean;
+    requireDigit?: boolean;
+    requireSpecialChar?: boolean;
+    noWhitespace?: boolean;
+    enabled?: boolean;
+    /** remote rule */
+    url?: string;
+    method?: 'GET' | 'POST' | 'get' | 'post';
+    /** jQuery-style alias of `method` for remote rules. */
+    field?: string;
+    data?: Record<string, unknown> | ((value: string, env: RuleEnv) => Record<string, unknown>);
+    headers?: Record<string, string>;
+    timeout?: number;
+    cache?: boolean;
+    failOpen?: boolean;
+    encoding?: 'json' | 'form';
+    credentials?: RequestCredentials;
+    parse?: (json: unknown, response: Response) => unknown;
+    /** file rule: any FileValidator option */
+    accept?: string;
+    param?: unknown;
+    [option: string]: unknown;
+}
+
+export type RuleName =
+    | 'required' | 'email' | 'url' | 'number' | 'digits' | 'alpha' | 'alphanumeric' | 'phone' | 'date' | 'minDate' | 'maxDate' | 'creditcard' | 'pattern'
+    | 'minlength' | 'maxlength' | 'rangelength' | 'range' | 'min' | 'max' | 'step' | 'oneOf' | 'equalTo' | 'notEqualTo' | 'pwcheck'
+    | 'minChecked' | 'maxChecked' | 'minFiles' | 'maxFiles' | 'fileType' | 'fileSize' | 'file' | 'remote' | 'custom';
+
+/** jQuery-style rule map: `{ required: true, minlength: 3, range: [1, 5], equalTo: '#pw', remote: '/check' }`. */
+export type RuleMap = { [rule: string]: unknown } & { normalizer?: (value: string, field: HTMLElement) => string; messages?: Record<string, string> };
+
+/** A rule, a list of rules, or a jQuery-style map. Strings are rule names: 'required'. */
+export type RulesForField = string | RuleObject | Array<string | RuleObject> | RuleMap;
+
+export interface FormConfig {
+    trim?: boolean;
+    novalidate?: boolean;
+    focusInvalid?: boolean;
+    focusCleanup?: boolean;
+    validateHidden?: boolean;
+    ignore?: string | null;
+    validateOn?: Array<'change' | 'blur' | 'input'>;
+    debounce?: number;
+    errorElement?: string;
+    errorClass?: string;
+    invalidClass?: string;
+    pendingClass?: string;
+    messages?: Record<string, string | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
+    passwordStrength?: Partial<Pick<RuleObject, 'minLength' | 'maxLength' | 'requireUppercase' | 'requireLowercase' | 'requireDigit' | 'requireSpecialChar' | 'noWhitespace' | 'enabled'>>;
+    errorPlacement?: ((errorEl: HTMLElement, field: HTMLElement, fields: HTMLElement[]) => void) | null;
+    submitHandler?: ((form: HTMLFormElement, event: Event) => void) | null;
+    onError?: ((errors: Array<{ name: string; field: HTMLElement; message: string }>) => void) | null;
+    onSuccess?: (() => void) | null;
+    autoRules?: boolean;
+    classRules?: Record<string, RulesForField> | null;
+    skipEmptyUntilSubmit?: boolean;
+    validateAfterSubmit?: boolean;
+    liveInput?: boolean;
+    interceptSubmit?: boolean;
+    skipSubmitter?: string | null;
+    highlight?: ((field: HTMLElement, unit: unknown) => void) | null;
+    unhighlight?: ((field: HTMLElement, unit: unknown) => void) | null;
+    onFieldValid?: ((field: HTMLElement, unit: unknown) => void) | null;
+    fieldRules?: ((field: HTMLElement, unit: unknown) => RulesForField) | null;
+    resolveMessage?: ((rule: RuleObject, env: RuleEnv, dynamicMessage?: string) => string | null | undefined) | null;
+}
+
+export interface InitOptions {
+    /** An id, a CSS selector, an element, or an array of those. */
+    formId?: string | HTMLFormElement | Array<string | HTMLFormElement>;
+    form?: string | HTMLFormElement | Array<string | HTMLFormElement>;
+    rules: Record<string, RulesForField>;
+    config?: FormConfig;
+    /** Your own object, passed to `custom` rules next to `form`. */
+    context?: Record<string, unknown>;
+    /** Per rule type, per field ({ email: { required: '...' } }) or one text for a field. */
+    messages?: Record<string, string | Record<string, string> | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
+}
+
+export interface FieldError {
+    name: string;
+    field: HTMLElement;
+    fields: HTMLElement[];
+    message: string;
+    el: HTMLElement;
+}
+
+export interface FormInstance {
+    readonly form: HTMLFormElement;
+    readonly config: FormConfig;
+    /** Checks the whole form. */
+    validate(options?: { focus?: boolean; submit?: boolean }): Promise<boolean>;
+    /** Synchronous check. Answers from async rules (remote, file) count as valid until they arrive. */
+    validateSync(options?: { focus?: boolean; submit?: boolean }): boolean;
+    validateField(name: string): Promise<boolean>;
+    validateElement(el: HTMLElement): Promise<boolean>;
+    validateElementSync(el: HTMLElement): boolean;
+    getErrors(): FieldError[];
+    setError(name: string, message: string): boolean;
+    clearError(name: string): void;
+    clearErrors(): void;
+    resetForm(): void;
+    isSubmitted(): boolean;
+    setRules(name: string, rules: RulesForField): void;
+    addRules(name: string, rules: RulesForField): void;
+    removeRules(name: string): void;
+    destroy(): void;
+}
+
+/** jQuery Validation style method: `function (value, element, param)`, with `this.optional(element)`. */
+export type MethodFn = (this: { form: HTMLFormElement; field: HTMLElement; format: FormValidatorStatic['format']; optional(element: HTMLElement): boolean; elementValue(element: HTMLElement): string },
+    value: string, element: HTMLElement, param: any, env: RuleEnv) => RuleResult | 'dependency-mismatch' | 'pending' | Promise<RuleResult>;
+
+export interface FormValidatorStatic {
+    readonly version: string;
+    /** Set up one form (returns its instance) or several (returns an array). */
+    init(options: InitOptions & { formId: Array<string | HTMLFormElement> }): FormInstance[];
+    init(options: InitOptions): FormInstance;
+    /** Check an initialised form, or any form against ad-hoc rules. */
+    validate(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): Promise<boolean>;
+    getInstance(form: string | HTMLFormElement): FormInstance | null;
+    /** Engine-style rule: `fn(value, rule, env)`. */
+    registerRule(name: string, fn: (value: string, rule: RuleObject, env: RuleEnv) => RuleResult | Promise<RuleResult>, options?: { runOnEmpty?: boolean; remote?: boolean }): void;
+    /** jQuery-style rule: `fn(value, element, param)`. */
+    addMethod(name: string, fn: MethodFn, message?: string | ((param: any, element: HTMLElement) => string)): void;
+    addClassRules(name: string, rules: RulesForField): void;
+    addClassRules(rules: Record<string, RulesForField>): void;
+    /** Like $.validator.format: fills {0}, {1}. With one argument it returns a function. */
+    format(source: string): (...params: unknown[]) => string;
+    format(source: string, ...params: unknown[]): string;
+    setDefaults(options: FormConfig): void;
+    /** Global default messages by rule type. Change them to translate everything. */
+    readonly messages: Record<string, string | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
+    readonly defaults: FormConfig;
+    /** How remote rules talk to the server (default GET). */
+    readonly remoteDefaults: { method: 'GET' | 'POST'; encoding: 'json' | 'form' };
+    getRule(name: string): { fn: Function; runOnEmpty: boolean; remote: boolean } | null;
+    /** Only in the one-file bundle. */
+    readonly bundled?: boolean;
+    /** Only in the one-file bundle: install the jQuery Validation layer on this jQuery. */
+    useJQuery?(jQuery: unknown): unknown;
+}
+
+declare const FormValidator: FormValidatorStatic;
+export default FormValidator;
+export { FormValidator };

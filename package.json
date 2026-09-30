@@ -1,0 +1,56 @@
+{
+  "name": "form-and-file-validator",
+  "version": "3.2.0",
+  "private": true,
+  "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
+  "license": "MIT",
+  "main": "dist/validator.js",
+  "module": "dist/validator.mjs",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/validator.mjs",
+      "require": "./dist/validator.js",
+      "default": "./dist/validator.js"
+    },
+    "./form": { "types": "./types/formValidator.d.ts", "default": "./dist/formValidator.js" },
+    "./file": { "types": "./types/fileValidator.d.ts", "default": "./dist/fileValidator.js" },
+    "./locales/*": "./dist/locales/*",
+    "./widget": "./dist/fileValidator.widget.js",
+    "./jquery": "./dist/formValidator.jquery.js",
+    "./types/*": "./types/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "types",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": ["validation", "form", "file", "upload", "jquery-validation", "accessibility", "i18n"],
+  "sideEffects": false,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "node build.js",
+    "pretest": "node build.js",
+    "test": "node --test && npm run test:types",
+    "test:types": "tsc -p types/typecheck/tsconfig.json",
+    "test:jquery3": "node tests/run-jquery3.js",
+    "test:browser": "node build.js && node --test --test-concurrency=1 browser-tests/browser.spec.js"
+  },
+  "devDependencies": {
+    "@types/jquery": "^4.0.1",
+    "axe-core": "^4.13.0",
+    "jquery": "^4.0.0",
+    "jquery3": "npm:jquery@^3.7.1",
+    "jsdom": "^26.0.0",
+    "playwright": "^1.63.0",
+    "terser": "^5.51.2",
+    "typescript": "^7.0.2"
+  }
+}
+

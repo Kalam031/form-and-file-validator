@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validator demo</title>
+<style>
+  body { font: 16px/1.4 system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input, select { width: 100%; padding: .5rem; box-sizing: border-box; }
+  input[type=checkbox], input[type=radio] { width: auto; }
+  .error { color: #b00020; font-size: .875rem; margin-top: .25rem; }
+  .is-invalid { border-color: #b00020; outline-color: #b00020; }
+  button { margin-top: 1.25rem; padding: .6rem 1.2rem; }
+  #log { background: #f4f4f4; padding: .75rem; margin-top: 1rem; white-space: pre-wrap; font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Sign-up</h1>
+<form id="signup" action="#" method="get">
+  <label for="email">Email</label>
+  <input id="email" name="email">
+
+  <label for="phone">Phone (optional)</label>
+  <input id="phone" name="phone">
+
+  <label for="pw">Password</label>
+  <input id="pw" name="pw" type="password">
+
+  <label for="pw2">Confirm password</label>
+  <input id="pw2" name="pw2" type="password">
+
+  <label>Plan</label>
+  <div class="answer"><label><input type="radio" name="plan" value="free"> Free</label>
+  <label><input type="radio" name="plan" value="pro"> Pro</label></div>
+
+  <label for="avatar">Avatar (PNG/JPG, max 2 MB, 100–4000 px)</label>
+  <input id="avatar" name="avatar" type="file" accept=".png,.jpg,.jpeg">
+
+  <label><input type="checkbox" name="terms" value="1"> I accept the terms</label>
+
+  <button type="submit">Create account</button>
+  <button type="submit" formnovalidate>Save draft</button>
+</form>
+<div id="log">Fill in the form. Nothing is sent anywhere.</div>
+</main>
+
+<script src="dist/validator.min.js"></script>
+<script>
+  FormValidator.init({
+    formId: 'signup',
+    rules: {
+      email: ['required', 'email'],
+      phone: ['phone'],
+      pw: [{ type: 'pwcheck', minLength: 8, requireUppercase: true, requireDigit: true,
+             message: 'Use 8+ characters with an uppercase letter and a digit.' }],
+      pw2: [{ type: 'required', message: 'Please repeat the password.' },
+            { type: 'equalTo', target: 'pw', message: 'Passwords do not match.' }],
+      plan: [{ type: 'required', message: 'Pick a plan.' }],
+      avatar: [{ type: 'file', allowedExtensions: ['.png', '.jpg', '.jpeg'], maxFileSizeMB: 2,
+                 maxImageWidth: 4000, minImageWidth: 100 }],
+      terms: [{ type: 'required', message: 'You must accept the terms.' }]
+    },
+    config: {
+      submitHandler: function (form) {
+        document.getElementById('log').textContent = 'Valid! Would submit: ' +
+          JSON.stringify(Object.fromEntries(new FormData(form)), null, 2);
+      },
+      onError: function (errors) {
+        document.getElementById('log').textContent = errors.length + ' problem(s) to fix.';
+      }
+    }
+  });
+</script>
+</body>
+</html>
