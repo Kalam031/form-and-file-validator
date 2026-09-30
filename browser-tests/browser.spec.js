@@ -422,5 +422,29 @@ for (const b of BROWSERS) {
             await page.waitForSelector('label.error');
             await axeRun(page, 'demo-jquery.html (with errors)');
         }, '/demo-jquery.html');
+
+        // ============================================================ the docs site (docs/*.html)
+        it2('docs site playground: form errors, a rejected file, and the language switch (German, then Arabic right to left)', async page => {
+            await page.selectOption('#lang', 'en');
+            await page.click('#demo-form button');
+            await page.waitForFunction(() => /formValid": false/.test(document.getElementById('result').textContent));
+            await page.selectOption('#lang', 'de');
+            await page.click('#demo-form button');
+            await page.waitForFunction(() => /erforderlich/.test(document.getElementById('demo-form').textContent));
+            await page.setInputFiles('#files', [toFile('evil.png', [0x4d, 0x5a, 0x90, 0, 3, 0, 0, 0], 'image/png')]);
+            await page.waitForFunction(() => /Inhalt|Datei/.test(document.getElementById('messages').textContent));
+            await page.selectOption('#lang', 'ar');
+            assert.equal(await page.getAttribute('html', 'dir'), 'rtl');
+            await page.setInputFiles('#files', [{ name: 'p.png', mimeType: 'image/png', buffer: files.makePng(40, 30) }]);
+            await page.waitForSelector('#list .fv-file');
+            assert.match(await page.textContent('#status'), /تمت إضافة/);
+        }, '/docs/playground.html');
+        it2('axe (with colour contrast): docs site pages', async page => {
+            await axeRun(page, 'docs/index.html');
+            for (const f of ['form.html', 'file.html', 'languages.html', 'server-and-frameworks.html', 'playground.html']) {
+                await page.goto(srv.url + '/docs/' + f);
+                await axeRun(page, 'docs/' + f);
+            }
+        }, '/docs/index.html');
     });
 }

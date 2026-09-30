@@ -2,6 +2,14 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.3.0
+- **Server companion** (`form-and-file-validator/server`): Express / Connect middleware and `validate()` that run the same FileValidator rules on uploads from multer, formidable, express-fileupload, buffers, paths and Web Files. Has its own `locales`.
+- **Framework bindings**: React (`useFormValidator`, `<FileDropzone>`), Vue 3 (composable, `v-form-validator`, `<FileDropzone>`, plugin), Alpine.js (`x-validate`, `x-dropzone`), with typings.
+- **Docs site** (`docs/*.html`, GitHub Pages ready) generated from the Markdown docs, with a live playground and a language switch. `npm run site`.
+- New docs: Languages, Server and frameworks. Site pages pass the axe audit in four browsers.
+- Fix: `sideEffects` in package.json no longer lets bundlers drop language packs.
+- Fix: several registries (bundle and server) can share the language pack queue.
+
 ## 3.2.0
 - **Language packs**: `FVLocales` (`FormValidator.locales`, `FileValidator.locales`, ESM export `locales`) with 13 packs: de, fr, es, pt, it, nl, tr, ru, pl, ar (rtl), hi, zh, ja.
   Load `dist/locales/<code>.js` (or `all.js`) and call `FVLocales.use('de')` / `FVLocales.auto()`. Covers FormValidator messages, FileValidator messages, size units, the upload widget's sentences (with plural rules) and the jQuery layer messages. Translations are machine-quality: please have a native speaker review them.

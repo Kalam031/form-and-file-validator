@@ -1,0 +1,1173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FileValidator · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html" aria-current="page">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="filevalidator-v260-documentation">FileValidator v2.6.0 — Documentation</h1>
+<h2 id="overview">Overview</h2>
+<p>FileValidator decides whether selected files are safe and acceptable before you upload them. It returns a clear list of problems per file, with human-readable messages. It has no dependencies and also runs in Node 18+ (Node 20+ has <code>File</code> built in).</p>
+<p><strong>What it can do</strong></p>
+<ul>
+<li>Allow or block by extension and MIME type (wildcards like <code>image/*</code> work).</li>
+<li>Size limits per file, minimum size, total size, and empty-file detection.</li>
+<li>Count limits, minimum files, and duplicate-name detection.</li>
+<li>Blocks dangerous files: <code>.exe</code>, <code>.bat</code>, <code>.ps1</code>, <code>.php</code>, <code>.js</code> and more, in any letter case.</li>
+<li>Catches disguised names: <code>invoice.exe.pdf</code>, right-to-left tricks, path separators, control characters.</li>
+<li>Reads the file&#39;s real content, so a renamed <code>.exe</code> or a fake <code>.png</code> is rejected.</li>
+<li>Blocks SVG files that contain scripts.</li>
+<li>Looks inside PDF, Office and ZIP files: cut-off or damaged files, macros, JavaScript and launch actions in PDFs, embedded programs, zip bombs and unsafe paths.</li>
+<li>A hook for a malware scanner (<code>scan</code>), and folder-upload checks (path depth and safety, junk files like <code>.DS_Store</code>).</li>
+<li>An optional upload widget: drag and drop, dropped folders, paste, thumbnails, resizing big images, and an accessible file list.</li>
+<li>Image checks: readable image, max and min width and height, aspect ratio.</li>
+<li>Per-type limits (a bigger limit for video than for images).</li>
+<li>Friendly messages with real numbers, custom messages, and an easy <code>bind()</code> helper for file inputs.</li>
+<li>Your own checks (<code>addMethod</code>, inline <code>custom</code>), server-side checks (<code>remote</code>), duplicate-content detection, and audio and video duration limits.</li>
+</ul>
+<p><strong>Loading it</strong></p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/fileValidator.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/fileValidator.widget.js&quot;&gt;&lt;/script&gt;   &lt;!-- optional: the upload widget --&gt;
+</code></pre>
+<p>Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code>.</p>
+<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.6.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.1.0..</p>
+<h2 id="quick-start">Quick start</h2>
+<p>Call <code>validateFiles</code> with the selected files and a config. It always resolves, and never throws on odd input.</p>
+<pre tabindex="0"><code class="language-js">const input = document.querySelector(&#39;#upload&#39;);
+
+input.addEventListener(&#39;change&#39;, async () =&gt; {
+  const result = await FileValidator.validateFiles(input.files, {
+    accept: &#39;.jpg,.png,application/pdf&#39;,
+    maxFileSizeMB: 5,
+    maxFiles: 3
+  });
+
+  if (!result.isValid) {
+    showErrors(FileValidator.summary(result));
+    // [&quot;photo.png: This file is 6 MB but the maximum is 5 MB.&quot;]
+    input.value = &#39;&#39;;
+  }
+});
+</code></pre>
+<p>The first argument can be a <code>FileList</code>, an array of <code>File</code>, a single <code>File</code>, or the <code>&lt;input&gt;</code> element itself.</p>
+<p>The shortest route is <code>bind()</code>, which does the listening, the message and the clearing for you:</p>
+<pre tabindex="0"><code class="language-js">FileValidator.bind(&#39;#upload&#39;, { accept: &#39;.jpg,.png&#39;, maxFileSizeMB: 5 },
+  { messageElement: &#39;#upload-msg&#39;, clearOnInvalid: true });
+</code></pre>
+<h2 id="what-it-checks">What it checks</h2>
+<p>A check is on when you give it a value. To switch one off, set <code>validate: { &lt;name&gt;: false }</code> in the config. Every failing file is reported, not only the first one.</p>
+<p><strong>Names</strong></p>
+<ul>
+<li>Dangerous extensions, in any letter case: <code>.exe .bat .cmd .ps1 .sh .js .vbs .jar .dll .msi .scr .lnk .php .asp .jsp</code> and more. An extension you list in <code>allowedExtensions</code> is allowed on purpose.</li>
+<li>Disguised extensions such as <code>invoice.exe.pdf</code>. Harmless names like <code>example.com.pdf</code> and <code>backup.tar.gz</code> are fine.</li>
+<li>Control characters, right-to-left override tricks, path separators, trailing dots or spaces, and names over 255 characters.</li>
+<li>Optional strict pattern (<code>validate.filenamePattern</code>), Unicode friendly, with a custom <code>filenameRegex</code>.</li>
+</ul>
+<p><strong>Type and size</strong></p>
+<ul>
+<li>Extension allow-list and MIME allow-list. FileValidator has its own extension registry, so an extension list alone is enough: the file&#39;s type must fit its extension. See &quot;File types, MIME types and dangerous files&quot;.</li>
+<li>Maximum and minimum size per file, total size, and empty files.</li>
+</ul>
+<p><strong>Content</strong></p>
+<ul>
+<li>The first bytes of the file are compared with its extension. PNG, JPEG, GIF, WebP, BMP, ICO, TIFF, HEIC, MP4/MOV, WebM/MKV, AVI, WAV, MP3, AAC, OGG, FLAC, PDF, ZIP (and DOCX/XLSX/PPTX), RAR, 7z, GZip and old Office files are recognised.</li>
+<li>A mismatch is rejected: a text file named <code>.png</code>, or a PNG named <code>.pdf</code>.</li>
+<li>Executable content (Windows, Linux, macOS programs and shell scripts) is rejected even under a harmless name.</li>
+<li>Plain text is never mistaken for a binary format, including UTF-16 text and files that start with letters like <code>MZ</code> or <code>BM</code>.</li>
+<li>SVG files containing scripts, event handlers, <code>javascript:</code> links or <code>foreignObject</code> are rejected.</li>
+<li>About 45 formats are recognised, including fonts, Photoshop, SQLite, XZ, ZSTD, CAB, FLV, WMV, MIDI, AIFF, TAR and JPEG 2000. WebAssembly, Windows shortcuts, compiled help and Android <code>dex</code> files count as programs.</li>
+<li>PDF, Office and ZIP files are read from the inside (see &quot;Inside PDF, Office and ZIP files&quot;).</li>
+</ul>
+<p><strong>Images</strong></p>
+<ul>
+<li>The image must be readable. HEIC, TIFF and AVIF are exempt from this because many browsers cannot decode them.</li>
+<li>Maximum and minimum width and height, and aspect ratio.</li>
+</ul>
+<p><strong>The whole selection</strong></p>
+<ul>
+<li>Maximum and minimum number of files, duplicate names (case-insensitive), and total size.</li>
+</ul>
+<h2 id="options-reference">Options reference</h2>
+<p>All options are optional. Numbers may be given as numeric strings (<code>&#39;5&#39;</code>), and lists as comma-separated strings (<code>&#39;jpg, png&#39;</code>). Unknown option names log one console warning, which catches typos.</p>
+<p><strong>Type and name</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>allowedExtensions</code></td>
+<td>none</td>
+<td>Allowed extensions. Case-insensitive, dot optional. Also overrides the dangerous list for those extensions. Without <code>allowedMimeTypes</code>, the MIME types come from the built-in registry.</td>
+</tr>
+<tr>
+<td><code>allowedMimeTypes</code></td>
+<td>none</td>
+<td>Allowed MIME types, <code>image/*</code> wildcards work. When given, this list decides and the registry is not used.</td>
+</tr>
+<tr>
+<td><code>mimeByExtension</code></td>
+<td>none</td>
+<td><code>{ &#39;.xyz&#39;: &#39;application/x-xyz&#39; }</code>: MIME types for extensions, for this call (overrides the registry). A value may be a list.</td>
+</tr>
+<tr>
+<td><code>accept</code></td>
+<td>none</td>
+<td>HTML-style string like <code>&#39;.jpg,image/*,application/pdf&#39;</code>. Fills the two options above when they are not set.</td>
+</tr>
+<tr>
+<td><code>allowUnknownMime</code></td>
+<td><code>false</code></td>
+<td>Do not report a file whose MIME type cannot be determined (<code>UNKNOWN_MIME</code>, or <code>INVALID_MIME</code> when <code>allowedMimeTypes</code> is set)</td>
+</tr>
+<tr>
+<td><code>dangerousExtensions</code></td>
+<td>built-in list</td>
+<td>Replaces the block list. <code>FileValidator.constants.DEFAULT_DANGEROUS_EXTENSIONS</code> shows the default.</td>
+</tr>
+<tr>
+<td><code>dangerousMimeTypes</code></td>
+<td>built-in list</td>
+<td>Replaces the list of program and script MIME types. <code>FileValidator.constants.DEFAULT_DANGEROUS_MIME_TYPES</code> shows the default.</td>
+</tr>
+<tr>
+<td><code>maxFilenameLength</code></td>
+<td><code>255</code></td>
+<td>Longest allowed file name</td>
+</tr>
+<tr>
+<td><code>filenameRegex</code></td>
+<td>none</td>
+<td>Custom pattern the name must match. Also turns on the name check.</td>
+</tr>
+<tr>
+<td><code>allowExecutables</code></td>
+<td><code>false</code></td>
+<td>Do not reject executable content</td>
+</tr>
+</tbody></table></div>
+<p><strong>Size and count</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>maxFileSizeMB</code> / <code>maxFileSize</code></td>
+<td>none</td>
+<td>Largest file, in MB or in bytes</td>
+</tr>
+<tr>
+<td><code>minFileSizeKB</code> / <code>minFileSize</code></td>
+<td>none</td>
+<td>Smallest file, in KB or in bytes</td>
+</tr>
+<tr>
+<td><code>maxTotalSizeMB</code></td>
+<td>none</td>
+<td>Largest combined size of all files</td>
+</tr>
+<tr>
+<td><code>maxFiles</code> / <code>minFiles</code></td>
+<td>none</td>
+<td>Count limits</td>
+</tr>
+<tr>
+<td><code>allowEmpty</code></td>
+<td><code>false</code></td>
+<td>Accept zero-byte files</td>
+</tr>
+<tr>
+<td><code>allowNoFiles</code></td>
+<td><code>false</code></td>
+<td>An empty selection counts as valid</td>
+</tr>
+<tr>
+<td><code>duplicateNames</code></td>
+<td><code>false</code></td>
+<td>Reject two files with the same name (case-insensitive)</td>
+</tr>
+</tbody></table></div>
+<p><strong>Images</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>maxImageWidth</code>, <code>maxImageHeight</code></td>
+<td>none</td>
+<td>Largest pixel size</td>
+</tr>
+<tr>
+<td><code>minImageWidth</code>, <code>minImageHeight</code></td>
+<td>none</td>
+<td>Smallest pixel size</td>
+</tr>
+<tr>
+<td><code>aspectRatio</code></td>
+<td>none</td>
+<td><code>{ min, max }</code>, a number like <code>1.5</code>, or <code>&#39;16:9&#39;</code></td>
+</tr>
+<tr>
+<td><code>aspectRatioTolerance</code></td>
+<td><code>0.01</code></td>
+<td>Allowed difference for a fixed ratio</td>
+</tr>
+<tr>
+<td><code>imageDecode</code></td>
+<td><code>true</code></td>
+<td>Set <code>false</code> to skip decoding the image (faster on huge photos)</td>
+</tr>
+<tr>
+<td><code>imageTimeoutMs</code></td>
+<td><code>10000</code></td>
+<td>Give up decoding after this long</td>
+</tr>
+<tr>
+<td><code>readImageSize</code></td>
+<td>built in</td>
+<td><code>async (file) =&gt; ({ width, height })</code> to supply your own reader, for example in Node</td>
+</tr>
+<tr>
+<td><code>scanSvg</code></td>
+<td><code>true</code></td>
+<td>Set <code>false</code> to skip the SVG script check</td>
+</tr>
+</tbody></table></div>
+<p><strong>Folders and documents</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>maxPathDepth</code></td>
+<td>none</td>
+<td>Deepest folder allowed for files picked from a folder or dropped as a folder</td>
+</tr>
+<tr>
+<td><code>maxPathLength</code></td>
+<td>none</td>
+<td>Longest allowed relative path</td>
+</tr>
+<tr>
+<td><code>ignoreFiles</code></td>
+<td>none</td>
+<td><code>true</code> skips <code>.DS_Store</code>, <code>Thumbs.db</code>, <code>desktop.ini</code>, <code>~$</code> lock files and <code>._</code> files. Or a list of names and regular expressions. Skipped files are listed in <code>result.ignored</code>.</td>
+</tr>
+<tr>
+<td><code>documents</code></td>
+<td>on</td>
+<td><code>false</code> switches off the PDF, Office and ZIP inspection. Or an object with the options below.</td>
+</tr>
+<tr>
+<td><code>documents.checkStructure</code></td>
+<td><code>true</code></td>
+<td>Report damaged, cut-off or fake Office/ZIP/PDF files (<code>CORRUPT_FILE</code>)</td>
+</tr>
+<tr>
+<td><code>documents.blockMacros</code></td>
+<td><code>true</code></td>
+<td>Reject Office files with macros (<code>.docx</code> with <code>vbaProject.bin</code>, LibreOffice Basic/Scripts, old <code>.doc</code>/<code>.xls</code>/<code>.ppt</code> macros)</td>
+</tr>
+<tr>
+<td><code>documents.blockEmbeddedPrograms</code></td>
+<td><code>true</code></td>
+<td>Reject Office files with ActiveX or embedded <code>.exe</code>/<code>.js</code>/... and PDFs with an embedded program</td>
+</tr>
+<tr>
+<td><code>documents.blockUnsafePaths</code></td>
+<td><code>true</code></td>
+<td>Reject archives with <code>..</code> or absolute paths inside (zip slip)</td>
+</tr>
+<tr>
+<td><code>documents.blockPdfJavaScript</code></td>
+<td><code>true</code></td>
+<td>Reject PDFs with JavaScript</td>
+</tr>
+<tr>
+<td><code>documents.blockPdfLaunch</code></td>
+<td><code>true</code></td>
+<td>Reject PDFs with a launch action</td>
+</tr>
+<tr>
+<td><code>documents.maxUncompressedMB</code></td>
+<td><code>2048</code></td>
+<td>Archive would expand to more than this: <code>ARCHIVE_BOMB</code></td>
+</tr>
+<tr>
+<td><code>documents.maxCompressionRatio</code></td>
+<td><code>250</code></td>
+<td>Compression ratio of large archives above this: <code>ARCHIVE_BOMB</code></td>
+</tr>
+<tr>
+<td><code>documents.maxEntries</code></td>
+<td><code>20000</code></td>
+<td>More files than this inside an archive: <code>ARCHIVE_BOMB</code></td>
+</tr>
+<tr>
+<td><code>documents.maxScanMB</code></td>
+<td><code>25</code></td>
+<td>How much of a PDF or old Office file is scanned (larger files: the start and the end)</td>
+</tr>
+<tr>
+<td><code>scan</code></td>
+<td>none</td>
+<td>Your malware scanner, see &quot;Malware scanning&quot;</td>
+</tr>
+<tr>
+<td><code>scanTimeout</code></td>
+<td><code>30000</code></td>
+<td>Milliseconds before a scan counts as failed</td>
+</tr>
+<tr>
+<td><code>scanFailOpen</code></td>
+<td><code>false</code></td>
+<td>Let files through when the scanner fails or times out</td>
+</tr>
+</tbody></table></div>
+<p><strong>Custom checks, server checks and media</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>methods</code></td>
+<td>none</td>
+<td><code>{ name: param }</code> for methods registered with <code>addMethod</code></td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td>none</td>
+<td>Your own check as a function <code>(file, ctx)</code>, an array of them, or <code>{ name: fn }</code></td>
+</tr>
+<tr>
+<td><code>customAll</code></td>
+<td>none</td>
+<td><code>(files, ctx)</code> check on the whole selection</td>
+</tr>
+<tr>
+<td><code>remote</code></td>
+<td>none</td>
+<td><code>&#39;/url&#39;</code> or <code>{ url, method, send, field, data, headers, timeout, cache, failOpen, credentials, parse }</code></td>
+</tr>
+<tr>
+<td><code>duplicateContent</code></td>
+<td><code>false</code></td>
+<td>Reject files with identical content in one selection (SHA-256)</td>
+</tr>
+<tr>
+<td><code>duplicateContentMaxMB</code></td>
+<td><code>50</code></td>
+<td>Bigger files are not hashed</td>
+</tr>
+<tr>
+<td><code>maxDurationSec</code>, <code>minDurationSec</code></td>
+<td>none</td>
+<td>Length limits for audio and video</td>
+</tr>
+<tr>
+<td><code>readMediaInfo</code></td>
+<td>built in</td>
+<td><code>async (file) =&gt; ({ duration })</code> to supply your own reader, for example in Node</td>
+</tr>
+<tr>
+<td><code>requireMediaInfo</code></td>
+<td><code>false</code></td>
+<td>Report <code>INVALID_MEDIA</code> when the duration cannot be read (otherwise the check is skipped)</td>
+</tr>
+</tbody></table></div>
+<p><strong>Other</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>categories</code></td>
+<td>none</td>
+<td>Overrides per kind of file: <code>{ image: {...}, video: {...}, audio: {...}, file: {...} }</code></td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>none</td>
+<td>Custom text per error code</td>
+</tr>
+<tr>
+<td><code>concurrency</code></td>
+<td><code>4</code></td>
+<td>How many files are checked at once</td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td>none</td>
+<td>Switches: <code>{ dangerousExt, extension, mimeType, maxFileSize, minFileSize, signature, empty, imageDecode, filenamePattern, duplicateNames, ... }</code>. Set a name to <code>false</code> to turn that check off.</td>
+</tr>
+</tbody></table></div>
+<h2 id="results-and-messages">Results and messages</h2>
+<p><code>validateFiles</code> resolves to this object:</p>
+<pre tabindex="0"><code class="language-js">{
+  isValid: false,
+  errors: [&#39;SIZE_TOO_LARGE&#39;, &#39;EMPTY_FILE&#39;],      // unique codes, easy to test for
+  details: [                                    // one entry per problem
+    { code: &#39;SIZE_TOO_LARGE&#39;, fileName: &#39;a.png&#39;, file: File, message: &#39;This file is 6 MB but the maximum is 5 MB.&#39;,
+      params: { max: &#39;5 MB&#39;, size: &#39;6 MB&#39; } }
+  ],
+  files: [                                      // one entry per file, in order
+    { file: File, name: &#39;a.png&#39;, isValid: false, errors: [&#39;SIZE_TOO_LARGE&#39;], details: [...] }
+  ]
+}
+</code></pre>
+<p>Problems about the whole selection, such as too many files, have <code>fileName: null</code>.</p>
+<p><strong>Error codes</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>Params</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>INVALID_EXTENSION</code></td>
+<td>Extension not in the allow-list</td>
+<td><code>extension</code>, <code>allowed</code></td>
+</tr>
+<tr>
+<td><code>INVALID_MIME</code></td>
+<td>MIME type not in <code>allowedMimeTypes</code> (or cannot be determined)</td>
+<td><code>mime</code></td>
+</tr>
+<tr>
+<td><code>MIME_MISMATCH</code></td>
+<td>The reported type does not fit the extension (extension list without a MIME list)</td>
+<td><code>mime</code>, <code>extension</code></td>
+</tr>
+<tr>
+<td><code>UNKNOWN_MIME</code></td>
+<td>The extension is not in the registry and no MIME was given</td>
+<td><code>extension</code></td>
+</tr>
+<tr>
+<td><code>SIZE_TOO_LARGE</code> / <code>SIZE_TOO_SMALL</code></td>
+<td>Outside the size limits</td>
+<td><code>size</code>, <code>max</code> or <code>min</code></td>
+</tr>
+<tr>
+<td><code>TOTAL_SIZE_EXCEEDED</code></td>
+<td>All files together are too large</td>
+<td><code>size</code>, <code>max</code></td>
+</tr>
+<tr>
+<td><code>EMPTY_FILE</code></td>
+<td>Zero bytes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>INVALID_FILENAME</code></td>
+<td>Control characters, right-to-left tricks, path separators, trailing dot, or failed name pattern</td>
+<td></td>
+</tr>
+<tr>
+<td><code>FILENAME_TOO_LONG</code></td>
+<td>Longer than the limit</td>
+<td><code>max</code></td>
+</tr>
+<tr>
+<td><code>DANGEROUS_FILE_TYPE</code></td>
+<td>Blocked extension</td>
+<td><code>extension</code></td>
+</tr>
+<tr>
+<td><code>HIDDEN_EXTENSION</code></td>
+<td>Disguised extension such as <code>x.exe.pdf</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>DANGEROUS_CONTENT</code></td>
+<td>Executable program or SVG with scripts</td>
+<td><code>detected</code></td>
+</tr>
+<tr>
+<td><code>SIGNATURE_MISMATCH</code></td>
+<td>Content does not match the extension</td>
+<td><code>extension</code>, <code>detected</code></td>
+</tr>
+<tr>
+<td><code>INVALID_IMAGE</code></td>
+<td>Image is corrupted or unreadable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>WIDTH_EXCEEDED</code> / <code>HEIGHT_EXCEEDED</code></td>
+<td>Image too large</td>
+<td><code>width</code> or <code>height</code>, <code>max</code></td>
+</tr>
+<tr>
+<td><code>WIDTH_TOO_SMALL</code> / <code>HEIGHT_TOO_SMALL</code></td>
+<td>Image too small</td>
+<td><code>width</code> or <code>height</code>, <code>min</code></td>
+</tr>
+<tr>
+<td><code>INVALID_ASPECT_RATIO</code></td>
+<td>Image proportions not allowed</td>
+<td><code>ratio</code></td>
+</tr>
+<tr>
+<td><code>TOO_MANY_FILES</code> / <code>TOO_FEW_FILES</code></td>
+<td>File count outside the limits</td>
+<td><code>max</code> or <code>min</code></td>
+</tr>
+<tr>
+<td><code>DUPLICATE_FILENAMES</code></td>
+<td>Two files share a name</td>
+<td></td>
+</tr>
+<tr>
+<td><code>NO_FILES</code></td>
+<td>Nothing selected</td>
+<td></td>
+</tr>
+<tr>
+<td><code>INVALID_IMAGE_TYPE</code> / <code>INVALID_FILE_TYPE</code></td>
+<td>Wrong kind of file for the selected scope or target</td>
+<td></td>
+</tr>
+<tr>
+<td><code>SINGLE_FILE_LIMIT_EXCEEDED</code></td>
+<td>More than one file where only one is allowed</td>
+<td></td>
+</tr>
+<tr>
+<td><code>CUSTOM</code></td>
+<td>One of your own checks failed (a result object can supply another <code>code</code>)</td>
+<td><code>method</code>, <code>param</code></td>
+</tr>
+<tr>
+<td><code>REMOTE_REJECTED</code></td>
+<td>The server said no (or its own <code>code</code>)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>REMOTE_ERROR</code></td>
+<td>The server could not be reached or answered badly</td>
+<td></td>
+</tr>
+<tr>
+<td><code>DUPLICATE_FILES</code></td>
+<td>Files with identical content in one selection</td>
+<td><code>names</code></td>
+</tr>
+<tr>
+<td><code>DURATION_TOO_LONG</code> / <code>DURATION_TOO_SHORT</code></td>
+<td>Audio or video length outside the limits</td>
+<td><code>duration</code>, <code>max</code> or <code>min</code></td>
+</tr>
+<tr>
+<td><code>INVALID_MEDIA</code></td>
+<td>Audio or video cannot be read (with <code>requireMediaInfo</code>)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>INVALID_PATH</code></td>
+<td>Folder path with <code>..</code>, an absolute or backslash path, or hidden characters</td>
+<td></td>
+</tr>
+<tr>
+<td><code>PATH_TOO_DEEP</code> / <code>PATH_TOO_LONG</code></td>
+<td>Folder depth or path length over the limit</td>
+<td><code>depth</code>, <code>max</code></td>
+</tr>
+<tr>
+<td><code>CORRUPT_FILE</code></td>
+<td>PDF, Office or ZIP file that is damaged, cut off or not what its extension says</td>
+<td><code>kind</code>, <code>reason</code></td>
+</tr>
+<tr>
+<td><code>ARCHIVE_BOMB</code></td>
+<td>Archive that would expand hugely or holds far too many files</td>
+<td><code>reason</code></td>
+</tr>
+<tr>
+<td><code>MALWARE_DETECTED</code></td>
+<td>Your scanner flagged the file</td>
+<td><code>threat</code></td>
+</tr>
+<tr>
+<td><code>SCAN_ERROR</code></td>
+<td>The scanner failed or timed out</td>
+<td></td>
+</tr>
+</tbody></table></div>
+<p><strong>Custom messages</strong></p>
+<pre tabindex="0"><code class="language-js">FileValidator.validateFiles(files, {
+  maxFileSizeMB: 2,
+  messages: {
+    SIZE_TOO_LARGE: &#39;Please pick something under {max} (yours is {size}).&#39;,
+    EMPTY_FILE: p =&gt; &#39;That file is empty.&#39;      // a function receives the params
+  }
+});
+</code></pre>
+<p><code>FileValidator.summary(result)</code> returns ready-to-show lines with the file name in front. Pass <code>{ fileNames: false }</code> to leave the names out. The old static text map is still available as <code>FileValidator.errorMessages</code>.</p>
+<h2 id="helpers">Helpers</h2>
+<p><strong><code>bind(input, config, options)</code></strong> connects a file input to validation and returns a function that removes it again.</p>
+<pre tabindex="0"><code class="language-js">const unbind = FileValidator.bind(&#39;#avatar&#39;, { accept: &#39;.png,.jpg&#39;, maxFileSizeMB: 2 }, {
+  messageElement: &#39;#avatar-msg&#39;,   // receives the first message, or &#39;&#39; when valid
+  clearOnInvalid: true,            // empties the input when the choice is rejected
+  onResult: (result, input) =&gt; { /* your code */ }
+});
+</code></pre>
+<p>It also calls <code>input.setCustomValidity(message)</code>, so the browser&#39;s own form validation reports the problem too. If the user picks again before an earlier check finishes, the older check is ignored.</p>
+<p><strong><code>validateFile(file, config)</code></strong> checks one file and returns <code>{ isValid, errors, details }</code>.</p>
+<p><strong><code>summary(result, { fileNames })</code></strong> turns a result into a list of strings for display.</p>
+<p><strong><code>getMessage(code, params, config)</code></strong> builds one message, for example <code>getMessage(&#39;SIZE_TOO_LARGE&#39;, { size: &#39;6 MB&#39;, max: &#39;5 MB&#39; })</code>.</p>
+<p><strong><code>detectSignature(file)</code></strong> reads the file&#39;s first bytes and returns the matching format (<code>{ name, mime, exts, executable }</code>), <code>null</code> when no known format matches, or <code>undefined</code> when the file cannot be read.</p>
+<p><strong><code>getCategory(file)</code></strong> returns <code>&#39;image&#39;</code>, <code>&#39;video&#39;</code>, <code>&#39;audio&#39;</code> or <code>&#39;file&#39;</code>.</p>
+<p><strong><code>formatBytes(n)</code></strong> turns <code>3145728</code> into <code>&#39;3 MB&#39;</code>.</p>
+<p><strong>Inside FormValidator.</strong> Use the <code>file</code> rule, and pass FileValidator options right in the rule. Its message is shown under the field.</p>
+<pre tabindex="0"><code class="language-js">FormValidator.init({ formId: &#39;profile&#39;, rules: {
+  avatar: [{ type: &#39;file&#39;, accept: &#39;.png,.jpg&#39;, maxFileSizeMB: 2, minImageWidth: 100 }]
+}});
+</code></pre>
+<p>Load <code>fileValidator.js</code> before <code>formValidator.js</code> (or in any order, as long as both load before <code>init</code> runs).</p>
+<p><strong>Inside the jQuery Validation plugin (or the compatibility layer).</strong> <code>formValidator.jquery.js</code> adds a <code>fileValidator</code> method, so FileValidator works like any other jQuery Validation method, including per-field messages and <code>data-</code> attributes:</p>
+<pre tabindex="0"><code class="language-js">$(&#39;#profile&#39;).validate({
+  rules: {
+    avatar: { required: true, fileValidator: { accept: &#39;.png,.jpg&#39;, maxFileSizeMB: 2, minImageWidth: 200 } }
+  },
+  messages: { avatar: { fileValidator: &#39;Please choose a PNG or JPG under 2 MB&#39; } }   // optional: replaces the detailed message
+});
+
+$(&#39;#avatar&#39;).rules(&#39;add&#39;, { fileValidator: { accept: &#39;image/*&#39; } });   // or add it later
+</code></pre>
+<pre tabindex="0"><code class="language-html">&lt;input type=&quot;file&quot; name=&quot;avatar&quot; data-rule-filevalidator=&#39;{&quot;maxFileSizeMB&quot;: 2}&#39; data-msg-filevalidator=&quot;Too big&quot;&gt;
+</code></pre>
+<p>Notes: the check is asynchronous, so <code>$(&#39;#avatar&#39;).valid()</code> counts it as valid until the answer arrives (then the message appears), exactly like <code>remote</code>. On form submit the check is awaited. An empty file selection is optional unless you add <code>required</code>. With several files, the message starts with the file name (<code>bad.exe: ...</code>). Without a per-field message, the detailed FileValidator message is shown. The method is also available as <code>$.validator.methods.fileValidator</code>.</p>
+<h2 id="upload-widget">Upload widget</h2>
+<p><code>fileValidator.widget.js</code> (version 1.1.0) adds drag and drop, folder drops, paste, thumbnails, resizing and a file list on top of FileValidator. It is a separate optional file, and part of the one-file bundle.</p>
+<pre tabindex="0"><code class="language-html">&lt;div id=&quot;zone&quot;&gt;&lt;label for=&quot;in&quot;&gt;Choose files&lt;/label&gt; &lt;input type=&quot;file&quot; id=&quot;in&quot; name=&quot;up&quot; multiple&gt; or drop them here&lt;/div&gt;
+&lt;div id=&quot;status&quot;&gt;&lt;/div&gt;&lt;div id=&quot;errors&quot;&gt;&lt;/div&gt;&lt;ul id=&quot;list&quot; aria-label=&quot;Selected files&quot;&gt;&lt;/ul&gt;
+
+&lt;script&gt;
+  const zone = FileValidator.widget(&#39;#zone&#39;, { accept: &#39;image/*&#39;, maxFiles: 5, maxFileSizeMB: 5 }, {
+    list: &#39;#list&#39;,               // renders the accepted files with size, thumbnail and a remove button
+    messageElement: &#39;#errors&#39;,   // rejected files and why (role=&quot;alert&quot;)
+    statusElement: &#39;#status&#39;,    // &quot;2 files added. 1 file not accepted. 3 selected.&quot; for screen readers
+    preview: true,               // thumbnails for images
+    resize: true,                // shrink too-big images to the config limits instead of rejecting them
+    paste: true                  // Ctrl+V of a screenshot
+  });
+&lt;/script&gt;
+</code></pre>
+<p><strong>How it works.</strong> Files are accepted one at a time with the same checks as <code>validateFiles</code>, including the running limits (<code>maxFiles</code>, <code>maxTotalSizeMB</code>, <code>duplicateNames</code>, <code>duplicateContent</code>) counted against what is already selected. A mixed drop is not thrown away as a whole: each rejected file is reported with its reasons and the rest is kept. <code>await zone.validate()</code> runs the full-selection check at the end (<code>minFiles</code>, scopes, <code>customAll</code>).</p>
+<p><strong>The <code>&lt;input&gt;</code> stays in sync.</strong> Accepted files are put back into the file input (through <code>DataTransfer</code>, which every current browser supports), and a <code>change</code> event is fired, so a normal form submit and FormValidator&#39;s <code>file</code> rule see the accepted files. Where <code>DataTransfer</code> is missing, use <code>zone.files</code> or <code>zone.appendTo(formData, &#39;files&#39;)</code>.</p>
+<p><strong>Options</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>input</code></td>
+<td>first file input inside</td>
+<td>The <code>&lt;input type=&quot;file&quot;&gt;</code> to use and keep in sync</td>
+</tr>
+<tr>
+<td><code>dropzone</code></td>
+<td>the target element</td>
+<td>The element that accepts drops</td>
+</tr>
+<tr>
+<td><code>multiple</code></td>
+<td><code>true</code></td>
+<td><code>false</code>: a single file, the newest replaces the old one</td>
+</tr>
+<tr>
+<td><code>append</code></td>
+<td><code>true</code></td>
+<td><code>false</code>: every new selection replaces the previous one</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td>none</td>
+<td>Element that receives the file list. <code>renderItem(entry, helpers)</code> replaces the default item.</td>
+</tr>
+<tr>
+<td><code>messageElement</code></td>
+<td>none</td>
+<td>Element for the rejection messages (gets <code>role=&quot;alert&quot;</code>, <code>aria-live=&quot;polite&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>statusElement</code></td>
+<td>none</td>
+<td>Element for polite status announcements (gets <code>role=&quot;status&quot;</code>). <code>statusText(kind, info, total)</code> replaces the wording.</td>
+</tr>
+<tr>
+<td><code>preview</code></td>
+<td><code>false</code></td>
+<td><code>true</code> or <code>{ maxWidth: 160, maxHeight: 160, type, quality, thumbnail }</code></td>
+</tr>
+<tr>
+<td><code>resize</code></td>
+<td>none</td>
+<td><code>true</code> (limits from <code>maxImageWidth</code>, <code>maxImageHeight</code>, <code>maxFileSizeMB</code>) or <code>{ maxWidth, maxHeight, maxSizeMB, quality, type }</code></td>
+</tr>
+<tr>
+<td><code>folder</code></td>
+<td><code>false</code></td>
+<td><code>true</code> also ignores junk files like <code>.DS_Store</code> in folders</td>
+</tr>
+<tr>
+<td><code>paste</code></td>
+<td><code>false</code></td>
+<td><code>true</code> listens on the zone, <code>&#39;document&#39;</code> on the whole page</td>
+</tr>
+<tr>
+<td><code>browse</code></td>
+<td><code>true</code></td>
+<td>Clicking the zone opens the file dialog</td>
+</tr>
+<tr>
+<td><code>keyboard</code></td>
+<td>auto</td>
+<td>Make the zone a keyboard-operable button. Automatic only when the real input cannot be reached by keyboard.</td>
+</tr>
+<tr>
+<td><code>syncInput</code></td>
+<td><code>true</code></td>
+<td>Put accepted files back into the input</td>
+</tr>
+<tr>
+<td><code>dragClass</code></td>
+<td><code>&#39;fv-dragover&#39;</code></td>
+<td>Class on the zone while files are dragged over it</td>
+</tr>
+<tr>
+<td><code>maxShownMessages</code></td>
+<td><code>5</code></td>
+<td>How many rejection lines to show</td>
+</tr>
+<tr>
+<td><code>onChange(files, entries)</code>, <code>onReject(rejected)</code></td>
+<td>none</td>
+<td>Callbacks. The zone also fires <code>fv:widget-change</code> and <code>fv:widget-reject</code> DOM events.</td>
+</tr>
+</tbody></table></div>
+<p><strong>The controller</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
+<thead>
+<tr>
+<th>Member</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>add(files)</code></td>
+<td>Add files by code (returns <code>{ accepted, rejected, ignored }</code>)</td>
+</tr>
+<tr>
+<td><code>remove(entry | index | file)</code>, <code>clear()</code></td>
+<td>Remove one or all files</td>
+</tr>
+<tr>
+<td><code>files</code>, <code>entries</code></td>
+<td>The accepted files, and entries with <code>id</code>, <code>file</code>, <code>path</code>, <code>preview</code>, <code>resized</code></td>
+</tr>
+<tr>
+<td><code>validate()</code></td>
+<td>Full check of the selection</td>
+</tr>
+<tr>
+<td><code>appendTo(formData, name)</code></td>
+<td>Append the files to a <code>FormData</code>. Folder files keep their path as the file name.</td>
+</tr>
+<tr>
+<td><code>destroy()</code></td>
+<td>Remove listeners, revoke previews, clear the list</td>
+</tr>
+</tbody></table></div>
+<p><strong>Folders.</strong> Dropping a folder reads everything inside it (<code>FileValidator.filesFromDrop</code>), and each file keeps its relative path (<code>photos/2024/a.jpg</code>), just like <code>&lt;input webkitdirectory&gt;</code>. The folder checks apply: <code>maxPathDepth</code>, <code>maxPathLength</code>, and <code>INVALID_PATH</code> for <code>..</code> or absolute paths.</p>
+<p><strong>Resizing.</strong> <code>FileValidator.resizeImage(file, options)</code> shrinks an image to fit <code>maxWidth</code>, <code>maxHeight</code> and <code>maxSizeMB</code> (it lowers the quality first, then the size), and returns a new <code>File</code>, or the same file when nothing needed changing. GIF and SVG are left alone (animation, vectors), a resize never makes a file bigger, and <code>file.fvResized</code> tells you the before and after. It uses the browser&#39;s canvas, so it needs a browser (or your own <code>readImage</code> and <code>render</code> functions).</p>
+<p><strong>Previews.</strong> <code>FileValidator.createPreview(file)</code> returns <code>{ url, kind, revoke() }</code>: a small thumbnail for images, an object URL for video and audio, and a badge label for documents. The widget revokes them when files are removed.</p>
+<p><strong>Helpers you can use alone:</strong> <code>FileValidator.filesFromDrop(dataTransfer)</code> (call it inside the drop handler), <code>filesFromClipboard(clipboardData)</code> (names unnamed screenshots <code>pasted-2025-01-31T12-00-00.png</code>), <code>resizeImage</code>, <code>createPreview</code>.</p>
+<p><strong>Accessibility.</strong> The list, the live regions, the remove buttons and the focus handling are covered in <code>Accessibility.md</code>. Keep the file input available: dragging is not possible with a keyboard.</p>
+<h2 id="common-recipes">Common recipes</h2>
+<p><strong>Profile photo</strong></p>
+<pre tabindex="0"><code class="language-js">{ accept: &#39;.jpg,.jpeg,.png,.webp&#39;, maxFileSizeMB: 5,
+  minImageWidth: 200, minImageHeight: 200, aspectRatio: 1 }     // square, at least 200 px
+</code></pre>
+<p><strong>One PDF, under 10 MB</strong></p>
+<pre tabindex="0"><code class="language-js">{ allowedExtensions: [&#39;.pdf&#39;], allowedMimeTypes: [&#39;application/pdf&#39;], maxFileSizeMB: 10, maxFiles: 1 }
+</code></pre>
+<p><strong>Photo gallery, up to 12 images</strong></p>
+<pre tabindex="0"><code class="language-js">{ accept: &#39;image/*&#39;, maxFiles: 12, minFiles: 1, maxTotalSizeMB: 60, duplicateNames: true,
+  maxImageWidth: 8000, maxImageHeight: 8000 }
+</code></pre>
+<p><strong>Images and video, different limits</strong></p>
+<pre tabindex="0"><code class="language-js">{ accept: &#39;image/*,video/*&#39;,
+  maxFileSizeMB: 10,
+  categories: { video: { maxFileSizeMB: 500 } } }
+</code></pre>
+<p><strong>Documents only (no images)</strong></p>
+<pre tabindex="0"><code class="language-js">{ allowedExtensions: [&#39;.pdf&#39;, &#39;.docx&#39;, &#39;.xlsx&#39;], validateTarget: { files: true } }   // images are rejected
+</code></pre>
+<p><strong>Allow something normally blocked.</strong> List the extension explicitly:</p>
+<pre tabindex="0"><code class="language-js">{ allowedExtensions: [&#39;.js&#39;] }       // an extension you list is not blocked as dangerous
+{ validate: { dangerousExt: false } } // or turn the block list off entirely
+</code></pre>
+<p><strong>Server-side in Node.</strong> Wrap uploads as <code>File</code> objects (a global in Node 20+; on Node 18 use <code>require(&#39;buffer&#39;).File</code>) and pass your own image reader, for example one built on <code>sharp</code>:</p>
+<pre tabindex="0"><code class="language-js">const FileValidator = require(&#39;./dist/fileValidator.js&#39;);
+const result = await FileValidator.validateFiles([new File([buffer], &#39;a.png&#39;, { type: &#39;image/png&#39; })], {
+  accept: &#39;.png&#39;, maxImageWidth: 4000,
+  readImageSize: async (file) =&gt; { const m = await sharp(Buffer.from(await file.arrayBuffer())).metadata(); return { width: m.width, height: m.height }; }
+});
+</code></pre>
+<p>Without <code>readImageSize</code>, Node skips image dimension checks and all other checks still run.</p>
+<h2 id="file-types-mime-types-and-dangerous-files">File types, MIME types and dangerous files</h2>
+<p>FileValidator carries its own extension registry: about 110 extensions with the MIME types browsers and operating systems really report for them, including aliases (<code>.csv</code> is also reported as <code>application/vnd.ms-excel</code> on Windows, <code>.jpg</code> as <code>image/pjpeg</code>, <code>.zip</code> as <code>application/x-zip-compressed</code>).</p>
+<p><strong>Dangerous files are blocked by default.</strong> No configuration is needed:</p>
+<ul>
+<li>Dangerous extensions such as <code>.exe .bat .cmd .ps1 .sh .js .vbs .jar .dll .msi .scr .lnk .php .asp .jsp</code>, in any letter case.</li>
+<li>Disguised names such as <code>invoice.exe.pdf</code>.</li>
+<li>Dangerous MIME types such as <code>application/x-msdownload</code>, <code>application/x-sh</code>, <code>application/java-archive</code> and <code>application/x-httpd-php</code>, even under a harmless name like <code>photo.jpg</code>.</li>
+<li>Program content (see What it checks).</li>
+</ul>
+<p>To allow one on purpose, list it: <code>allowedExtensions: [&#39;.jar&#39;]</code> or <code>allowedMimeTypes: [&#39;application/java-archive&#39;]</code>. To change the lists use <code>dangerousExtensions</code> and <code>dangerousMimeTypes</code>, or switch the whole check off with <code>validate: { dangerousExt: false }</code>.</p>
+<p><strong>How the type of a file is decided</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
+<thead>
+<tr>
+<th>You give</th>
+<th>What is checked</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>nothing about types</td>
+<td>only the dangerous checks and the content check</td>
+</tr>
+<tr>
+<td><code>allowedExtensions</code> only</td>
+<td>the extension must be in the list, and the MIME type must fit it. The allowed types are taken from the registry for that extension.</td>
+</tr>
+<tr>
+<td><code>allowedMimeTypes</code> (with or without extensions)</td>
+<td>the file&#39;s MIME type must be in that list. The registry is not used.</td>
+</tr>
+<tr>
+<td><code>mimeByExtension</code></td>
+<td>your MIME types replace the registry&#39;s for those extensions</td>
+</tr>
+</tbody></table></div>
+<p>&quot;The file&#39;s MIME type&quot; is what the browser reports. If it reports nothing, or the generic <code>application/octet-stream</code>, the type is worked out from the extension, and for files without a known extension from the file&#39;s content.</p>
+<p><strong>When the type cannot be found</strong></p>
+<p>An extension that is not in the registry cannot be verified, so a file with it gets an error (<code>UNKNOWN_MIME</code>) instead of passing silently. Tell FileValidator what to expect in any of these ways:</p>
+<pre tabindex="0"><code class="language-js">FileValidator.addExtension(&#39;.dxf&#39;, &#39;application/dxf&#39;);                       // teach the registry once, for every call
+{ allowedExtensions: [&#39;.dxf&#39;], mimeByExtension: { &#39;.dxf&#39;: [&#39;application/dxf&#39;, &#39;image/vnd.dxf&#39;] } }   // for one call
+{ allowedExtensions: [&#39;.dxf&#39;], allowedMimeTypes: [&#39;application/dxf&#39;] }       // the MIME list decides
+{ allowedExtensions: [&#39;.dxf&#39;], allowUnknownMime: true }                      // do not verify
+</code></pre>
+<p><strong>Reading the registry:</strong> <code>FileValidator.getMimeTypes(&#39;.pdf&#39;)</code> returns the known types (<code>[&#39;application/pdf&#39;, &#39;application/x-pdf&#39;]</code>) and <code>FileValidator.constants.EXTENSIONS()</code> returns a copy of the whole table.</p>
+<h2 id="your-own-checks-and-server-checks">Your own checks and server checks</h2>
+<p><strong>A reusable method, like <code>$.validator.addMethod</code></strong></p>
+<pre tabindex="0"><code class="language-js">FileValidator.addMethod(&#39;maxLines&#39;, async function (file, param, ctx) {
+  return (await file.text()).split(&#39;\n&#39;).length &lt;= param;
+}, &#39;At most {0} lines&#39;);
+
+FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
+</code></pre>
+<p>A method gets <code>(file, param, ctx)</code> where <code>ctx</code> has <code>config</code>, <code>ext</code>, <code>category</code>, <code>files</code> and <code>index</code>. It returns <code>true</code>, <code>false</code>, a message string, <code>{ valid, message, code }</code> or a Promise. The message is text with <code>{0}</code> for the parameter, or a function <code>(param, file) =&gt; string</code>.</p>
+<p><strong>A one-off check</strong></p>
+<pre tabindex="0"><code class="language-js">{ custom: (file, ctx) =&gt; file.name.includes(&#39; &#39;) ? &#39;No spaces in file names&#39; : true }
+{ custom: { noSpaces: f =&gt; !f.name.includes(&#39; &#39;), sizeOk: async f =&gt; f.size &gt; 0 } }   // several, by name
+{ customAll: files =&gt; files.length % 2 === 0 || &#39;Please select pairs of files&#39; }       // the whole selection
+</code></pre>
+<p><strong>Ask your server, like jQuery&#39;s <code>remote</code></strong></p>
+<pre tabindex="0"><code class="language-js">{ remote: &#39;/api/files/check&#39; }
+{ remote: { url: &#39;/api/files/check&#39;, send: &#39;hash&#39;, headers: { &#39;X-CSRF&#39;: token } } }
+</code></pre>
+<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
+<thead>
+<tr>
+<th><code>send</code></th>
+<th>What the server receives</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&#39;meta&#39;</code> (default)</td>
+<td><code>name</code>, <code>size</code>, <code>type</code>, <code>lastModified</code>, plus your <code>data</code>: in the query string for <code>GET</code> (the default), as JSON for <code>POST</code></td>
+</tr>
+<tr>
+<td><code>&#39;hash&#39;</code></td>
+<td>the same, plus the SHA-256 <code>hash</code> of the content, so the server can say &quot;already uploaded&quot;</td>
+</tr>
+<tr>
+<td><code>&#39;file&#39;</code></td>
+<td>the file itself as multipart form data under <code>field</code> (default <code>file</code>). Always sent with <code>POST</code>.</td>
+</tr>
+</tbody></table></div>
+<p>By default the request is a <code>GET</code>, like jQuery Validation. Use <code>method: &#39;POST&#39;</code> to send a JSON body instead, or <code>FileValidator.remoteDefaults.method = &#39;POST&#39;</code> to make it the default everywhere.</p>
+<p>The server answers <code>true</code> or <code>&quot;true&quot;</code> (accepted), <code>false</code> (rejected), a text (rejected, and the text is the message), or <code>{ &quot;valid&quot;: false, &quot;message&quot;: &quot;...&quot;, &quot;code&quot;: &quot;...&quot; }</code>. <code>parse</code> adapts other shapes. Network or server errors block the file (<code>REMOTE_ERROR</code>) unless <code>failOpen: true</code>. Answers are cached per file and URL (<code>cache: false</code> to disable), and the server is only asked about files that passed every other check. Order of checks: built-in checks, <code>methods</code>, <code>custom</code>, then <code>remote</code>.</p>
+<p><strong>Duplicates and media length</strong></p>
+<pre tabindex="0"><code class="language-js">{ duplicateContent: true }                    // &quot;These files have identical content: a.png, copy.png.&quot;
+{ maxDurationSec: 600, minDurationSec: 5 }    // audio and video: &quot;This recording is 12:30 long but the maximum is 10:00.&quot;
+</code></pre>
+<p>Content hashing needs <code>crypto.subtle</code>, which browsers only offer on HTTPS pages (and localhost). Without it, <code>duplicateContent</code> and <code>send: &#39;hash&#39;</code> skip the hash.</p>
+<p><strong>Global defaults.</strong> <code>FileValidator.setDefaults({ maxFileSizeMB: 10, messages: { ... } })</code> applies to every later call. Options you pass explicitly win.</p>
+<h2 id="inside-pdf-office-and-zip-files">Inside PDF, Office and ZIP files</h2>
+<p>For files that really are PDF, ZIP or Office (found by their content, so a renamed file is not fooled), the library reads the structure of the file. It does not unpack or open the document, and it does not run anything.</p>
+<p><strong>ZIP, Office (<code>.docx .xlsx .pptx</code> and macro/template variants) and OpenDocument</strong></p>
+<ul>
+<li>The ZIP directory at the end of the file is read. A missing or damaged directory means the file is cut off or not a real archive: <code>CORRUPT_FILE</code>.</li>
+<li>A file named <code>.docx</code>, <code>.xlsx</code> or <code>.pptx</code> must contain <code>[Content_Types].xml</code> and the <code>word/</code>, <code>xl/</code> or <code>ppt/</code> part. A ZIP renamed to <code>.docx</code> fails.</li>
+<li>Macros: <code>vbaProject.bin</code> in an Office file, or <code>Basic/</code> or <code>Scripts/</code> in an OpenDocument file, gives <code>DANGEROUS_CONTENT</code> (&quot;This file contains macros&quot;).</li>
+<li>ActiveX controls and embedded programs (<code>.exe</code>, <code>.dll</code>, <code>.js</code>, <code>.vbs</code>, ...) inside an Office file are blocked. Embedded documents (for example an Excel sheet in a Word file) are fine.</li>
+<li>Zip bombs: the sizes in the directory are added up. Too big when expanded, too high a compression ratio, or too many files gives <code>ARCHIVE_BOMB</code>. Nothing is unpacked to find out.</li>
+<li>Zip slip: <code>..</code> segments, absolute paths and drive letters inside the archive are blocked.</li>
+<li>Macro-enabled extensions (<code>.docm .xlsm .pptm .dotm .xlam ...</code>) are dangerous by default. If you allow the extension explicitly (<code>allowedExtensions: [&#39;.docm&#39;]</code>), its macros are allowed too.</li>
+</ul>
+<p><strong>PDF</strong></p>
+<ul>
+<li>The end of the file must contain <code>%%EOF</code>, or it is reported as cut off.</li>
+<li>JavaScript (<code>/JavaScript</code>, <code>/JS</code>), launch actions (<code>/Launch</code>) and embedded programs are blocked. Names written with <code>#</code> escapes (<code>/J#61vaScript</code>) are decoded first, so that simple hiding does not work. Ordinary PDFs, links, forms without scripts and attached documents pass.</li>
+<li>Trade-off: PDF forms with JavaScript are rejected by default. Use <code>documents: { blockPdfJavaScript: false }</code> if you accept them.</li>
+</ul>
+<p><strong>Old Office files (<code>.doc .xls .ppt</code>)</strong> are searched for the macro storage name, which finds macros in the usual case.</p>
+<p><strong>What this cannot see:</strong> content inside compressed streams (JavaScript in a compressed PDF object stream), encrypted files, and anything a scanner would find by running or emulating code. Use <code>scan</code> with an antivirus for that.</p>
+<pre tabindex="0"><code class="language-js">{ documents: { blockPdfJavaScript: false, maxUncompressedMB: 500 } }   // adjust
+{ documents: false }                                                     // switch the inspection off
+</code></pre>
+<h2 id="malware-scanning">Malware scanning</h2>
+<p>FileValidator does not contain an antivirus. The <code>scan</code> option connects yours (ClamAV, a cloud scanning API, your own service). It runs for files that passed every other check, before <code>remote</code>.</p>
+<pre tabindex="0"><code class="language-js">{
+  scan: async (file, ctx) =&gt; {
+    const res = await fetch(&#39;/api/scan&#39;, { method: &#39;POST&#39;, body: file });
+    const out = await res.json();
+    return out.clean ? true : { valid: false, threat: out.virusName };   // or: return false / &#39;Eicar-Test-Signature&#39;
+  },
+  scanTimeout: 20000
+}
+</code></pre>
+<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
+<thead>
+<tr>
+<th>The function returns</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>true</code></td>
+<td>clean</td>
+</tr>
+<tr>
+<td><code>false</code></td>
+<td><code>MALWARE_DETECTED</code> (&quot;This file was flagged as malware and can&#39;t be uploaded.&quot;)</td>
+</tr>
+<tr>
+<td>a text</td>
+<td><code>MALWARE_DETECTED</code>, with the text as the threat name</td>
+</tr>
+<tr>
+<td><code>{ valid: false, threat, message, code }</code></td>
+<td>flagged, with your details</td>
+</tr>
+</tbody></table></div>
+<p>If the scanner throws, or does not answer within <code>scanTimeout</code>, the file is blocked with <code>SCAN_ERROR</code>. Set <code>scanFailOpen: true</code> to let files through in that case. <code>ctx</code> holds <code>config</code>, <code>ext</code>, <code>category</code>, <code>files</code> and <code>index</code>.</p>
+<p>A scan in the browser only helps honest users, so scan again on the server before you store or serve a file.</p>
+<h2 id="legacy-config-style">Legacy config style</h2>
+<p>Configs written for version 1 keep working. In version 1 a check only ran when its <code>validate</code> flag was <code>true</code>. Now a check runs whenever its value is set, and a flag set to <code>false</code> turns it off.</p>
+<pre tabindex="0"><code class="language-js">{
+  validate: { extension: true, mimeType: true, maxFileSize: true, duplicateNames: true },
+  allowedExtensions: [&#39;.png&#39;, &#39;.jpg&#39;],
+  allowedMimeTypes: [&#39;image/png&#39;, &#39;image/jpeg&#39;],
+  maxFileSizeMB: 5,
+  validateTarget: { images: true },       // which kinds of file are accepted
+  validateScope: &#39;images&#39;,                 // how many and what kind of selection
+  imageLimit: 5
+}
+</code></pre>
+<p><strong><code>validateTarget</code>.</strong> <code>{ images: true }</code> accepts only images, <code>{ files: true }</code> accepts only non-images, and <code>{ allowMixed: true }</code> accepts anything. Video and audio count as <code>files</code> unless you set <code>videos</code> or <code>audios</code>.</p>
+<p><strong><code>validateScope</code></strong></p>
+<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Requires</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&#39;file&#39;</code></td>
+<td>one file that is not an image (<code>SINGLE_FILE_LIMIT_EXCEEDED</code> if more)</td>
+</tr>
+<tr>
+<td><code>&#39;files&#39;</code></td>
+<td>at least two files, none of them images</td>
+</tr>
+<tr>
+<td><code>&#39;image&#39;</code></td>
+<td>one image</td>
+</tr>
+<tr>
+<td><code>&#39;images&#39;</code></td>
+<td>at least two images</td>
+</tr>
+<tr>
+<td><code>&#39;mixed&#39;</code> or unset</td>
+<td>no scope rule</td>
+</tr>
+</tbody></table></div>
+<p><code>imageLimit</code> and <code>fileLimit</code> cap the count for a selection made of only images, or only non-images. New code can use <code>accept</code>, <code>maxFiles</code> and <code>minFiles</code> instead, which are simpler.</p>
+<p>The old flag names <code>filenamePattern</code>, <code>dangerousExt</code>, <code>extension</code>, <code>mimeType</code>, <code>maxFileSize</code>, <code>minFileSize</code>, <code>imageWidth</code>, <code>imageHeight</code>, <code>aspectRatio</code>, <code>maxFiles</code> and <code>duplicateNames</code> are all still understood.</p>
+<h2 id="security-notes-and-limits">Security notes and limits</h2>
+<p><strong>Always check again on the server.</strong> Anything running in a browser can be changed or skipped by an attacker. FileValidator gives honest users fast feedback and stops obvious mistakes and simple tricks. It does not replace server-side checks.</p>
+<p><strong>What the content check can do</strong></p>
+<ul>
+<li>Compare the first bytes of a file with its extension, and reject programs disguised as documents or images.</li>
+<li>Recognise the common formats listed in the What it checks section.</li>
+</ul>
+<p><strong>What it cannot do</strong></p>
+<ul>
+<li>It has no antivirus of its own. The <code>scan</code> option connects one.</li>
+<li>It reads the structure of ZIP, Office and PDF files, but it does not unpack or run them. Content inside compressed streams (for example JavaScript in a compressed PDF object stream) and encrypted files cannot be seen.</li>
+<li>It does not verify that a whole image or PDF is well formed. Images are decoded when a browser can do so, but crafted files can still be valid images.</li>
+<li>A file whose extension is not in the known list (for example <code>.dwg</code>) is judged by name, type and size only.</li>
+<li>A polyglot file (valid as two formats at once) can look right to the check.</li>
+<li>Plain text files that begin with <code>#!/</code> are treated as shell scripts and rejected, which is a deliberate choice.</li>
+</ul>
+<p><strong>Good practice on the server</strong></p>
+<ul>
+<li>Re-check size, extension and content there, with the same rules.</li>
+<li>Store uploads outside the web root or on a separate domain, and serve them with the correct <code>Content-Type</code> and <code>Content-Disposition</code>.</li>
+<li>Generate your own file names, never reuse the uploaded name.</li>
+<li>Re-encode images you display, and run a malware scanner on uploads.</li>
+</ul>
+<p><strong>SVG.</strong> SVG is allowed by default because it is a common image format, but it can carry scripts. The scan blocks obvious scripts and event handlers. If you serve user SVGs from your own domain, still sanitise them or serve them as downloads.</p>
+<h2 id="migrating-from-v1-troubleshooting-and-tests">Migrating from v1, troubleshooting and tests</h2>
+<p><strong>What changed from version 1</strong></p>
+<ul>
+<li>Every failing file is reported, not just the first. <code>errors</code> is still a list of codes, so old checks like <code>errors.includes(&#39;SIZE_TOO_LARGE&#39;)</code> keep working. The new <code>details</code> and <code>files</code> lists carry the file names and messages.</li>
+<li>Extension checks are case-insensitive. <code>virus.EXE</code> is now blocked.</li>
+<li>A check now runs when its value is set, without needing a <code>validate</code> flag.</li>
+<li>Files with no browser MIME type (like <code>.csv</code> on some systems) are no longer rejected. The type is worked out from the extension.</li>
+<li>Video and audio files are accepted by <code>validateTarget: { files: true }</code>.</li>
+<li>Empty files, content that does not match the extension, and executable content are now rejected by default. Use <code>allowEmpty</code>, <code>validate: { signature: false }</code> or <code>allowExecutables</code> to relax that.</li>
+<li>Messages are friendlier and carry numbers. <code>FileValidator.errorMessages</code> keeps the old text for anyone who used it directly.</li>
+</ul>
+<p><strong>Troubleshooting</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause and fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A real photo is rejected as <code>SIGNATURE_MISMATCH</code></td>
+<td>Its extension differs from its real format, for example a PNG named <code>.jpg</code>. Rename it, or set <code>validate: { signature: false }</code>.</td>
+</tr>
+<tr>
+<td><code>.js</code> or <code>.php</code> upload is blocked</td>
+<td>It is on the block list. List it in <code>allowedExtensions</code>, or replace the list with <code>dangerousExtensions</code>.</td>
+</tr>
+<tr>
+<td><code>CORRUPT_FILE</code> for a real document</td>
+<td>The end of the file is missing (an incomplete upload) or a ZIP-based file lacks the parts its extension needs. Re-save or re-upload it. <code>documents: { checkStructure: false }</code> turns it off.</td>
+</tr>
+<tr>
+<td>A PDF is rejected for JavaScript</td>
+<td>PDF forms and some exports contain JavaScript. Use <code>documents: { blockPdfJavaScript: false }</code> if you accept them.</td>
+</tr>
+<tr>
+<td>A <code>.docm</code> or <code>.xlsm</code> is blocked</td>
+<td>Macro-enabled extensions are dangerous by default. Allow them with <code>allowedExtensions: [&#39;.docm&#39;]</code>.</td>
+</tr>
+<tr>
+<td><code>SCAN_ERROR</code></td>
+<td>Your <code>scan</code> function threw or timed out. Check the scanner, raise <code>scanTimeout</code>, or set <code>scanFailOpen: true</code>.</td>
+</tr>
+<tr>
+<td><code>UNKNOWN_MIME</code> for an extension you allowed</td>
+<td>The registry does not know it. Add it with <code>FileValidator.addExtension</code>, or use <code>mimeByExtension</code>, <code>allowedMimeTypes</code> or <code>allowUnknownMime</code>.</td>
+</tr>
+<tr>
+<td><code>MIME_MISMATCH</code> for a real file</td>
+<td>The browser reported another type than the registry lists for that extension. Add the alias with <code>mimeByExtension</code>, or give <code>allowedMimeTypes</code>.</td>
+</tr>
+<tr>
+<td>A <code>.txt</code> starting with <code>#!/</code> is rejected</td>
+<td>It looks like a shell script. Add <code>allowExecutables: true</code> if that is acceptable.</td>
+</tr>
+<tr>
+<td>Image size limits are ignored in Node</td>
+<td>Node cannot decode images. Pass <code>readImageSize</code>.</td>
+</tr>
+<tr>
+<td>HEIC photos are not size-checked</td>
+<td>Most browsers cannot decode HEIC, so those checks are skipped for HEIC, TIFF and AVIF.</td>
+</tr>
+<tr>
+<td>One option seems ignored</td>
+<td>Look for a console warning about an unknown option name.</td>
+</tr>
+<tr>
+<td>Huge photos make the page slow</td>
+<td>Set <code>imageDecode: false</code>, or lower <code>concurrency</code>.</td>
+</tr>
+</tbody></table></div>
+<p><strong>Running the tests</strong></p>
+<p>The project has 122 tests for this library (including the widget), 101 for FormValidator, 70 for the jQuery layer, 6 accessibility tests and 15 tests for the bundle. From the project folder run:</p>
+<pre tabindex="0"><code>npm install
+npm test
+</code></pre>
+<p>The tests cover every option, every error code, false-positive guards for plain text, and odd inputs that must not throw. Open <code>demo.html</code> in a browser to try the libraries by hand.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

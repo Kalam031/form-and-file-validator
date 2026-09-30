@@ -145,6 +145,21 @@ async function build(options) {
             result.files['validator.min.js'] = result.minCode.length;
             fs.writeFileSync(path.join(DIST, 'validator.min.mjs'), result.minEsm);
             result.files['validator.min.mjs'] = result.minEsm.length;
+            const server = read('server.js');                      // Node-only companion: copied as is (it requires ./fileValidator.js next to it)
+            fs.writeFileSync(path.join(DIST, 'server.js'), server);
+            result.files['server.js'] = server.length;
+            const intDir = path.join(SRC, 'integrations');        // framework bindings (React, Vue, Alpine): copied as is
+            if (fs.existsSync(intDir)) {
+                fs.mkdirSync(path.join(DIST, 'integrations'), { recursive: true });
+                for (const f of fs.readdirSync(intDir)) {
+                    const code = fs.readFileSync(path.join(intDir, f), 'utf8');
+                    fs.writeFileSync(path.join(DIST, 'integrations', f), code);
+                    result.files['integrations/' + f] = code.length;
+                }
+                const alpine = read('integrations/alpine.js'), min = await minify(alpine);
+                fs.writeFileSync(path.join(DIST, 'integrations', 'alpine.min.js'), min);
+                result.files['integrations/alpine.min.js'] = min.length;
+            }
             for (const p of PARTS) {
                 const src = read(p.file);
                 fs.writeFileSync(path.join(DIST, p.file), src);

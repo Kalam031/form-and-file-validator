@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playground · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="playground.html" aria-current="page">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1>Playground</h1>
+<p>Everything on this page runs in your browser with the same library you install. Try a wrong value, a renamed program, a huge file, and another language.</p>
+<p><label for="lang"><strong>Language</strong></label> <select id="lang"></select></p>
+<div class="pg">
+  <section class="card" aria-labelledby="h-form">
+    <h2 id="h-form" style="margin-top:0;border:0;padding:0">FormValidator</h2>
+    <form id="demo-form" novalidate>
+      <label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email">
+      <label for="name">Name (3 to 20 characters)</label><input id="name" name="name" type="text" autocomplete="off">
+      <label for="pw">Password (at least 8)</label><input id="pw" name="pw" type="password" autocomplete="new-password">
+      <label for="pw2">Repeat password</label><input id="pw2" name="pw2" type="password" autocomplete="new-password">
+      <button type="submit">Check</button>
+    </form>
+  </section>
+  <section class="card" aria-labelledby="h-file">
+    <h2 id="h-file" style="margin-top:0;border:0;padding:0">FileValidator upload widget</h2>
+    <p>Images and PDFs up to 1 MB, at most 3 files. Drop, browse or paste (Ctrl+V).</p>
+    <div id="zone" class="fv-zone">
+      <label for="files">Choose files</label> <input id="files" type="file" name="files" multiple>
+      <ul id="list" class="fv-list"></ul>
+      <div id="messages" class="fv-messages" role="alert"></div>
+      <div id="status" aria-live="polite" class="error" style="color:var(--muted)"></div>
+    </div>
+  </section>
+</div>
+<h2>Result</h2>
+<pre id="result" aria-live="polite" tabindex="0">Press "Check" or add a file.</pre>
+<script src="assets/validator.min.js"></script>
+<script src="assets/locales.all.min.js"></script>
+<script src="assets/playground.js"></script>
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

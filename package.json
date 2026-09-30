@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
@@ -14,8 +14,30 @@
       "require": "./dist/validator.js",
       "default": "./dist/validator.js"
     },
-    "./form": { "types": "./types/formValidator.d.ts", "default": "./dist/formValidator.js" },
-    "./file": { "types": "./types/fileValidator.d.ts", "default": "./dist/fileValidator.js" },
+    "./form": {
+      "types": "./types/formValidator.d.ts",
+      "default": "./dist/formValidator.js"
+    },
+    "./file": {
+      "types": "./types/fileValidator.d.ts",
+      "default": "./dist/fileValidator.js"
+    },
+    "./server": {
+      "types": "./types/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./react": {
+      "types": "./types/react.d.ts",
+      "default": "./dist/integrations/react.mjs"
+    },
+    "./vue": {
+      "types": "./types/vue.d.ts",
+      "default": "./dist/integrations/vue.mjs"
+    },
+    "./alpine": {
+      "types": "./types/alpine.d.ts",
+      "default": "./dist/integrations/alpine.js"
+    },
     "./locales/*": "./dist/locales/*",
     "./widget": "./dist/fileValidator.widget.js",
     "./jquery": "./dist/formValidator.jquery.js",
@@ -31,26 +53,59 @@
     "LICENSE",
     "CHANGELOG.md"
   ],
-  "keywords": ["validation", "form", "file", "upload", "jquery-validation", "accessibility", "i18n"],
-  "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "keywords": [
+    "validation",
+    "form",
+    "file",
+    "upload",
+    "jquery-validation",
+    "accessibility",
+    "i18n"
+  ],
+  "sideEffects": [
+    "./dist/locales/*",
+    "./dist/integrations/alpine.js",
+    "./dist/validator.js",
+    "./dist/validator.min.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "node build.js",
     "pretest": "node build.js",
     "test": "node --test && npm run test:types",
     "test:types": "tsc -p types/typecheck/tsconfig.json",
+    "site": "node build.js && node site-build.js",
     "test:jquery3": "node tests/run-jquery3.js",
     "test:browser": "node build.js && node --test --test-concurrency=1 browser-tests/browser.spec.js"
   },
+  "peerDependencies": {
+    "react": ">=17",
+    "vue": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/jquery": "^4.0.1",
+    "@types/react": "^19.3.0",
+    "alpinejs": "^3.17.4",
     "axe-core": "^4.13.0",
     "jquery": "^4.0.0",
     "jquery3": "npm:jquery@^3.7.1",
     "jsdom": "^26.0.0",
+    "marked": "^15.0.12",
     "playwright": "^1.63.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "terser": "^5.51.2",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vue": "^3.5.43"
   }
 }
-

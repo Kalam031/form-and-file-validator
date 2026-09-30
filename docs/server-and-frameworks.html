@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server &amp; frameworks · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html" aria-current="page">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="server-companion-and-framework-bindings">Server companion and framework bindings</h1>
+<h2 id="server-node-18">Server (Node 18+)</h2>
+<p>Browser checks help your visitors; <strong>the server must check again</strong>, because anyone can send a request without your page. The server companion runs the same FileValidator rules on the uploaded files: extension and type rules, size limits, content signatures (a program renamed to <code>.png</code> is caught), dangerous types, ZIP / Office / PDF inspection, duplicate content, and your <code>scan</code> hook.</p>
+<pre tabindex="0"><code class="language-js">const express = require(&#39;express&#39;);
+const multer = require(&#39;multer&#39;);
+const { middleware, validate } = require(&#39;form-and-file-validator/server&#39;);
+
+const rules = { allowedExtensions: [&#39;.jpg&#39;, &#39;.png&#39;, &#39;.pdf&#39;], maxFileSizeMB: 5, maxFiles: 3 };   // the same object your browser code uses
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post(&#39;/upload&#39;, upload.array(&#39;files&#39;), middleware(rules), (req, res) =&gt; {
+  res.json({ ok: true });                       // only reached when every file passed
+});
+</code></pre>
+<p>A failing request gets <strong>422</strong> with JSON: <code>{ ok: false, errors: [...], files: [{ name, isValid, errors, details: [{ code, message }] }] }</code>.</p>
+<h3 id="options">Options</h3>
+<pre tabindex="0"><code class="language-js">middleware(rulesOrFunction, {
+  status: 422,            // response code
+  field: &#39;avatar&#39;,        // validate only req.files.avatar
+  allowNoFiles: false,    // a request without files is an error (NO_FILES) unless true
+  removeFailed: true,     // delete failed uploads from disk (multer disk storage, formidable)
+  respond: (req, res, result) =&gt; res.status(400).send(&#39;Bad upload&#39;)   // your own answer
+});
+middleware(req =&gt; req.user.isPro ? proRules : freeRules);           // rules that depend on the request
+</code></pre>
+<p>On success <code>req.fileValidation</code> holds the full result. Without Express, call it yourself:</p>
+<pre tabindex="0"><code class="language-js">const result = await validate(req.files, rules);       // { isValid, errors, details, files }
+</code></pre>
+<h3 id="what-it-accepts">What it accepts</h3>
+<p>multer (memory and disk), formidable (<code>filepath</code>), express-fileupload (<code>data</code>, <code>tempFilePath</code>), busboy-style <code>{ filename, buffer }</code>, <code>Buffer</code>s, file paths and Web <code>File</code>/<code>Blob</code> objects, single or in arrays / field maps.</p>
+<h3 id="good-to-know">Good to know</h3>
+<ul>
+<li>Image pixel sizes (<code>maxImageWidth</code>…) need a browser and are skipped on the server; everything else runs.</li>
+<li>Files are read into memory for the checks: keep a request size limit in your upload library (multer <code>limits</code>).</li>
+<li>The languages of the messages: see <a href="languages.html">Languages</a>, <code>require(&#39;form-and-file-validator/server&#39;).locales</code>.</li>
+<li>Never trust the browser&#39;s MIME type. The companion checks the content, not only the name.</li>
+</ul>
+<h2 id="react">React</h2>
+<pre tabindex="0"><code class="language-jsx">import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;;
+
+function Signup() {
+  const { ref, validate, errors } = useFormValidator({ rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+  return (
+    &lt;form ref={ref} onSubmit={async e =&gt; { e.preventDefault(); if (await validate()) send(); }}&gt;
+      &lt;input name=&quot;email&quot; /&gt;
+      &lt;FileDropzone name=&quot;photos&quot; label=&quot;Drop photos here&quot;
+        config={{ accept: &#39;image/*&#39;, maxFiles: 3, maxFileSizeMB: 5 }} options={{ preview: true }}
+        onChange={files =&gt; setFiles(files)} /&gt;
+      &lt;button&gt;Send&lt;/button&gt;
+    &lt;/form&gt;
+  );
+}
+</code></pre>
+<p><code>useFormValidator(options, deps)</code> creates the validator when the form appears and destroys it when it goes away; pass <code>deps</code> if your rules change. <code>errors</code> is refreshed after each <code>validate()</code>. <code>&lt;FileDropzone&gt;</code> gives a ref with <code>files</code>, <code>validate()</code>, <code>clear()</code>, <code>add(files)</code> and <code>appendTo(formData)</code>.</p>
+<h2 id="vue-3">Vue 3</h2>
+<pre tabindex="0"><code class="language-vue">&lt;script setup&gt;
+import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/vue&#39;;
+const { formRef, validate, errors } = useFormValidator({ rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+&lt;/script&gt;
+&lt;template&gt;
+  &lt;form ref=&quot;formRef&quot; @submit.prevent=&quot;validate().then(ok =&gt; ok &amp;&amp; send())&quot;&gt;
+    &lt;input name=&quot;email&quot; /&gt;
+    &lt;FileDropzone name=&quot;photos&quot; :config=&quot;{ accept: &#39;image/*&#39;, maxFiles: 3 }&quot; :options=&quot;{ preview: true }&quot; @change=&quot;files =&gt; (picked = files)&quot; /&gt;
+  &lt;/form&gt;
+&lt;/template&gt;
+</code></pre>
+<p>Also available: the directive <code>v-form-validator=&quot;{ rules: {...} }&quot; </code> (register with <code>app.directive(&#39;form-validator&#39;, vFormValidator)</code> or <code>app.use(FormValidatorPlugin)</code>).</p>
+<h2 id="alpinejs">Alpine.js</h2>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/integrations/alpine.min.js&quot;&gt;&lt;/script&gt;
+&lt;script defer src=&quot;https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js&quot;&gt;&lt;/script&gt;
+
+&lt;form x-data x-validate=&quot;{ rules: { email: [&#39;required&#39;, &#39;email&#39;] } }&quot;&gt;
+  &lt;input name=&quot;email&quot;&gt; &lt;button&gt;Send&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;div x-data=&quot;{ files: [] }&quot; x-dropzone=&quot;{ config: { accept: &#39;image/*&#39;, maxFiles: 3 }, options: { preview: true } }&quot;
+     @fv-change=&quot;files = $event.detail.files&quot;&gt;
+  &lt;input type=&quot;file&quot; name=&quot;photos&quot;&gt;
+  &lt;ul class=&quot;fv-list&quot;&gt;&lt;/ul&gt;&lt;div class=&quot;fv-messages&quot;&gt;&lt;/div&gt;&lt;div class=&quot;fv-status&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p>With a bundler: <code>import Alpine from &#39;alpinejs&#39;; window.FVAlpine(Alpine); Alpine.start();</code> (after loading the validator bundle).</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

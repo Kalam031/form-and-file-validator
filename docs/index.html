@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html" aria-current="page">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="formvalidator-filevalidator">FormValidator + FileValidator</h1>
+<p>Two dependency-free libraries for validating forms and file uploads in the browser (and, for files, in Node). They work as plain <code>&lt;script&gt;</code> tags or with a bundler. jQuery, Select2 and Bootstrap are optional.</p>
+<h2 id="which-file-do-i-load">Which file do I load?</h2>
+<p><strong>One file: <code>dist/validator.min.js</code></strong> (113 KB minified).</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p>It holds FormValidator, FileValidator, the upload widget and the jQuery Validation layer. The jQuery layer switches on by itself when jQuery was loaded first. If jQuery loads after it, call <code>FormValidator.useJQuery(jQuery)</code>. With a bundler or Node: <code>const { FormValidator, FileValidator } = require(&#39;./dist/validator.js&#39;)</code>.</p>
+<p><strong>Project layout</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>What is in it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>dist/</code></td>
+<td>Everything you load or ship. Do not edit.</td>
+</tr>
+<tr>
+<td><code>src/</code></td>
+<td>The four source files. Edit these, then run <code>npm run build</code>.</td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td>Documentation.</td>
+</tr>
+<tr>
+<td><code>tests/</code></td>
+<td>Tests.</td>
+</tr>
+</tbody></table></div>
+<p><strong>Why does <code>src/</code> have four files?</strong> They are four separate jobs with different dependencies, so a page that needs only one part can load only that part (<code>dist/</code> has each one on its own, readable and minified):</p>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it is</th>
+<th>Needs</th>
+<th>Minified</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>formValidator</code></td>
+<td>Form validation</td>
+<td>nothing</td>
+<td>28 KB</td>
+</tr>
+<tr>
+<td><code>fileValidator</code></td>
+<td>File checks. Works without any form, and in Node.</td>
+<td>nothing</td>
+<td>44 KB</td>
+</tr>
+<tr>
+<td><code>fileValidator.widget</code></td>
+<td>Upload widget: drag and drop, folders, paste, previews, resizing, file list</td>
+<td><code>fileValidator</code></td>
+<td>15 KB</td>
+</tr>
+<tr>
+<td><code>formValidator.jquery</code></td>
+<td>The jQuery Validation plugin API (<code>$(&#39;#f&#39;).validate(...)</code>), for migrating old sites</td>
+<td>jQuery, <code>formValidator</code></td>
+<td>25 KB</td>
+</tr>
+</tbody></table></div>
+<p>If you do not care about size, ignore them and use the one file.</p>
+<h2 id="the-four-parts-with-examples">The four parts, with examples</h2>
+<p>All four are in <code>dist/validator.min.js</code>. Pick by what your page has:</p>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<thead>
+<tr>
+<th>Your page has...</th>
+<th>Use</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a form to validate</td>
+<td><strong>FormValidator</strong></td>
+<td><a href="#1-formvalidator-validate-a-form">1</a></td>
+</tr>
+<tr>
+<td>file inputs or uploads (with or without a form, or on a server)</td>
+<td><strong>FileValidator</strong></td>
+<td><a href="#2-filevalidator-check-files">2</a></td>
+</tr>
+<tr>
+<td>a drop area for files</td>
+<td><strong>Upload widget</strong> (on top of FileValidator)</td>
+<td><a href="#3-upload-widget-a-drop-area">3</a></td>
+</tr>
+<tr>
+<td>an old site that already uses <code>$(&#39;#form&#39;).validate(...)</code></td>
+<td><strong>jQuery layer</strong></td>
+<td><a href="#4-jquery-layer-keep-old-jquery-validation-code">4</a></td>
+</tr>
+</tbody></table></div>
+<h3 id="1-formvalidator-validate-a-form">1. FormValidator: validate a form</h3>
+<pre tabindex="0"><code class="language-html">&lt;form id=&quot;signup&quot;&gt;
+  &lt;label&gt;Email &lt;input name=&quot;email&quot;&gt;&lt;/label&gt;
+  &lt;label&gt;Password &lt;input name=&quot;password&quot; type=&quot;password&quot;&gt;&lt;/label&gt;
+  &lt;label&gt;Repeat &lt;input name=&quot;confirm&quot; type=&quot;password&quot;&gt;&lt;/label&gt;
+  &lt;label&gt;&lt;input type=&quot;checkbox&quot; name=&quot;terms&quot; value=&quot;1&quot;&gt; I accept the terms&lt;/label&gt;
+  &lt;button&gt;Create account&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+  FormValidator.init({
+    formId: &#39;signup&#39;,
+    rules: {
+      email:    [&#39;required&#39;, &#39;email&#39;],
+      password: [&#39;required&#39;, { type: &#39;pwcheck&#39;, minLength: 8, requireDigit: true, message: &#39;Use 8+ characters with a digit.&#39; }],
+      confirm:  [&#39;required&#39;, { type: &#39;equalTo&#39;, target: &#39;password&#39;, message: &#39;Passwords do not match.&#39; }],
+      terms:    [{ type: &#39;required&#39;, message: &#39;Please accept the terms.&#39; }]
+    },
+    config: { submitHandler: function (form) { /* send it with fetch(), then show a thank-you */ } }
+  });
+&lt;/script&gt;
+</code></pre>
+<p>What it does:</p>
+<ul>
+<li>Pressing &quot;Create account&quot; on the empty form is <strong>blocked</strong>. A message appears under each of the four fields (<code>This field is required.</code>, ..., <code>Please accept the terms.</code>) and the first bad field gets focus.</li>
+<li>With a password of <code>abcdefg</code> the only message left is <code>Use 8+ characters with a digit.</code> It disappears as soon as the user types a valid one.</li>
+<li>When everything is valid, <code>submitHandler</code> runs and the messages are gone. Leave <code>submitHandler</code> out to submit the form normally.</li>
+<li>Fields you do not mark <code>required</code> may stay empty, so an empty optional email is not an error.</li>
+</ul>
+<h3 id="2-filevalidator-check-files">2. FileValidator: check files</h3>
+<p>In a browser, with one line:</p>
+<pre tabindex="0"><code class="language-html">&lt;input type=&quot;file&quot; id=&quot;cv&quot; multiple&gt;
+&lt;p id=&quot;cv-msg&quot;&gt;&lt;/p&gt;
+
+&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+  FileValidator.bind(&#39;#cv&#39;, { accept: &#39;.pdf,.docx&#39;, maxFileSizeMB: 5, maxFiles: 3 },
+    { messageElement: &#39;#cv-msg&#39;, clearOnInvalid: true });
+&lt;/script&gt;
+</code></pre>
+<p>Or in your own code (also in Node, where there is no page):</p>
+<pre tabindex="0"><code class="language-js">const result = await FileValidator.validateFiles(input.files, { accept: &#39;.pdf&#39;, maxFileSizeMB: 5 });
+if (!result.isValid) alert(FileValidator.summary(result).join(&#39;\n&#39;));
+</code></pre>
+<p>What it does for files the user picks (the message goes into <code>#cv-msg</code> and the input is cleared):</p>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a normal <code>cv.pdf</code></td>
+<td>accepted, no message</td>
+</tr>
+<tr>
+<td><code>setup.exe</code></td>
+<td><code>setup.exe: Files of this type (.exe) can&#39;t be uploaded for security reasons.</code></td>
+</tr>
+<tr>
+<td><code>invoice.exe.pdf</code></td>
+<td><code>invoice.exe.pdf: The file name has a disguised extension.</code></td>
+</tr>
+<tr>
+<td>a PDF that contains JavaScript</td>
+<td><code>form.pdf: This file contains JavaScript in a PDF, which can&#39;t be uploaded.</code></td>
+</tr>
+<tr>
+<td>a PNG renamed to <code>photo.pdf</code></td>
+<td><code>photo.pdf: The file&#39;s content doesn&#39;t match its extension (.pdf); it looks like png.</code></td>
+</tr>
+<tr>
+<td><code>pic.png</code> when only PDF and Word are allowed</td>
+<td><code>pic.png: This file type (.png) isn&#39;t allowed. Allowed types: .pdf, .docx.</code></td>
+</tr>
+<tr>
+<td>four files when the limit is 3</td>
+<td><code>Please select no more than 3 file(s).</code></td>
+</tr>
+</tbody></table></div>
+<p>It reads the file&#39;s real content, not only its name. See <code>docs/FileValidator.md</code> for every option (sizes, image dimensions, macros in Office files, a malware-scanner hook, server checks).</p>
+<h3 id="3-upload-widget-a-drop-area">3. Upload widget: a drop area</h3>
+<pre tabindex="0"><code class="language-html">&lt;div id=&quot;zone&quot;&gt;
+  &lt;label for=&quot;files&quot;&gt;Choose files&lt;/label&gt; &lt;input type=&quot;file&quot; id=&quot;files&quot; multiple&gt; or drop them here
+&lt;/div&gt;
+&lt;div id=&quot;status&quot;&gt;&lt;/div&gt;
+&lt;div id=&quot;errors&quot;&gt;&lt;/div&gt;
+&lt;ul id=&quot;list&quot;&gt;&lt;/ul&gt;
+
+&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+  const zone = FileValidator.widget(&#39;#zone&#39;,
+    { accept: &#39;.pdf,.png&#39;, maxFiles: 2, maxFileSizeMB: 2 },          // the same checks as example 2
+    { list: &#39;#list&#39;, messageElement: &#39;#errors&#39;, statusElement: &#39;#status&#39;, preview: true, resize: true, paste: true });
+
+  // when the user clicks &quot;Send&quot;:
+  const data = zone.appendTo(new FormData(), &#39;files&#39;);                // only the accepted files
+  fetch(&#39;/upload&#39;, { method: &#39;POST&#39;, body: data });
+&lt;/script&gt;
+</code></pre>
+<p>What it does when a user drops <code>a.pdf</code>, <code>bad.exe</code>, <code>b.pdf</code> and <code>c.pdf</code> on the zone (or picks them, or pastes them):</p>
+<ul>
+<li><code>a.pdf</code> and <code>b.pdf</code> are <strong>accepted</strong> and appear in the list, each with its size and a remove button (images also get a thumbnail).</li>
+<li><code>bad.exe</code> and <code>c.pdf</code> are <strong>rejected</strong>, and each one is reported: <code>bad.exe: Files of this type (.exe) can&#39;t be uploaded for security reasons.</code> and <code>c.pdf: Please select no more than 2 file(s).</code> The good files are not thrown away because of the bad ones.</li>
+<li>Screen reader users hear <code>2 files added. 2 files not accepted. 2 selected.</code></li>
+<li>Dropping a folder adds every file inside it. With <code>resize: true</code>, a photo that is too large is shrunk to fit instead of being rejected. With <code>paste: true</code>, Ctrl+V of a screenshot adds it.</li>
+<li>The real <code>&lt;input&gt;</code> is kept in sync, so a normal form submit and FormValidator&#39;s <code>file</code> rule see the accepted files.</li>
+</ul>
+<h3 id="4-jquery-layer-keep-old-jquery-validation-code">4. jQuery layer: keep old jQuery Validation code</h3>
+<p>For a site that already uses the jQuery Validation plugin, replace its scripts and change nothing else:</p>
+<pre tabindex="0"><code class="language-html">&lt;!-- before --&gt;
+&lt;script src=&quot;jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;jquery.validate.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;additional-methods.js&quot;&gt;&lt;/script&gt;
+
+&lt;!-- after --&gt;
+&lt;script src=&quot;jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<pre tabindex="0"><code class="language-js">// your existing code, unchanged:
+$.validator.addMethod(&#39;notTest&#39;, function (value, element) {
+  return this.optional(element) || value.toLowerCase() !== &#39;test@test.com&#39;;
+}, &#39;Please use your real email.&#39;);
+
+$(&#39;#signup&#39;).validate({
+  rules:    { email: { required: true, email: true, notTest: true } },
+  messages: { email: { required: &#39;We need your email&#39; } }
+});
+
+$(&#39;#email&#39;).valid();   // true or false, right away, like the original
+</code></pre>
+<p>What it does:</p>
+<ul>
+<li><code>$(&#39;#email&#39;).valid()</code> on an empty field returns <code>false</code> and shows <code>We need your email</code> (your own message).</li>
+<li>With <code>test@test.com</code> it returns <code>false</code> and shows <code>Please use your real email.</code> from your custom method.</li>
+<li>With a real address it returns <code>true</code> and the message is removed.</li>
+<li>The same code now runs on the new engine: accessible error messages (<code>aria-invalid</code>, <code>aria-describedby</code>), fields added later are validated, and a new <code>fileValidator</code> method is available for uploads: <code>rules: { cv: { fileValidator: { accept: &#39;.pdf&#39;, maxFileSizeMB: 5 } } }</code>.</li>
+</ul>
+<h3 id="combining-them">Combining them</h3>
+<ul>
+<li><strong>Form with an upload:</strong> add <code>cv: [&#39;required&#39;, { type: &#39;file&#39;, accept: &#39;.pdf&#39;, maxFileSizeMB: 5 }]</code> to the FormValidator rules of example 1. The file is checked with all of FileValidator&#39;s checks and the message shows under the field.</li>
+<li><strong>Form with a drop area:</strong> use example 1 for the form and example 3 for the zone. The widget puts the accepted files into the input, so FormValidator&#39;s <code>required</code> and <code>file</code> rules see them.</li>
+</ul>
+<h2 id="documentation">Documentation</h2>
+<p><code>docs/FormValidator.md</code>, <code>docs/FileValidator.md</code> (including the upload widget), <code>docs/Migrating-from-jQuery-Validate.md</code> and <code>docs/Accessibility.md</code>.</p>
+<p>Demos to open in a browser: <code>demo.html</code> (a form), <code>demo-upload.html</code> (the upload widget), <code>demo-jquery.html</code> (the jQuery-style API).</p>
+<h2 id="formvalidator">FormValidator</h2>
+<pre tabindex="0"><code class="language-js">FormValidator.init({
+  formId: &#39;signup&#39;,                 // id, selector, element, or an array of them
+  rules: {
+    email:   [&#39;required&#39;, &#39;email&#39;],
+    pw:      [{ type: &#39;pwcheck&#39;, minLength: 8, requireDigit: true }],
+    confirm: [{ type: &#39;equalTo&#39;, target: &#39;pw&#39; }],
+    avatar:  [{ type: &#39;file&#39;, allowedExtensions: [&#39;.png&#39;, &#39;.jpg&#39;], maxFileSizeMB: 2 }],
+    user:    [{ type: &#39;remote&#39;, url: &#39;/api/username-free&#39; }],   // GET by default; method: &#39;POST&#39; for a POST
+  },
+  config: { submitHandler(form) { /* ajax */ } },   // omit to use the normal submit
+});
+</code></pre>
+<ul>
+<li>Blank optional fields are fine. Only <code>required</code> (and <code>equalTo</code>, <code>custom</code>, <code>minFiles</code>, <code>minChecked</code>) look at empty values.</li>
+<li>Rules: <code>required email url number digits alpha alphanumeric phone date minDate maxDate creditcard pattern minlength maxlength rangelength range min max step oneOf equalTo notEqualTo pwcheck minChecked maxChecked minFiles maxFiles fileType fileSize file remote custom</code>.</li>
+<li>Add your own with <code>FormValidator.registerRule(...)</code>, or the jQuery way: <code>FormValidator.addMethod(name, fn(value, element, param), message)</code>.</li>
+<li>jQuery-style rules natively: <code>{ minlength: 3, equalTo: &#39;#pw&#39;, remote: &#39;/check&#39; }</code>, <code>depends</code>, <code>normalizer</code>, class rules, <code>data-rule-*</code>, per-field <code>messages</code>.</li>
+<li>Messages can live in the HTML: <code>&lt;input name=&quot;n&quot; required data-msg-required=&quot;Please tell us your name&quot;&gt;</code>.</li>
+<li>Accessible errors (<code>aria-invalid</code>, <code>aria-describedby</code>, focus on the first invalid field). See <code>docs/Accessibility.md</code>.</li>
+<li>Live validation, fields added later, <code>remote</code> server checks with a <code>fv-pending</code> state, <code>formnovalidate</code> buttons, <code>autoRules</code> from HTML attributes.</li>
+<li>Instance methods: <code>validate()</code>, <code>validateSync()</code>, <code>validateField(name)</code>, <code>clearErrors()</code>, <code>addRules/setRules/removeRules</code>, <code>destroy()</code>. Events: <code>fv:valid</code>, <code>fv:invalid</code>.</li>
+</ul>
+<h2 id="replacing-the-jquery-validation-plugin">Replacing the jQuery Validation plugin</h2>
+<p>FormValidator is the successor of the jQuery Validation plugin. Load the bundle after jQuery (or <code>dist/formValidator.js</code> and <code>dist/formValidator.jquery.js</code>) and your existing code keeps working:</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;   &lt;!-- replaces jquery.validate.js + additional-methods.js --&gt;
+</code></pre>
+<p><code>$(&#39;#f&#39;).validate({...})</code>, <code>$(&#39;#f&#39;).valid()</code>, <code>$(&#39;#x&#39;).rules(&#39;add&#39;, ...)</code>, <code>$.validator.addMethod(...)</code>, all built-in and additional methods, <code>messages</code>, <code>data-rule-*</code>, class rules, <code>depends</code>, <code>remote</code>, <code>groups</code>, <code>showErrors</code>, <code>highlight</code>, <code>errorPlacement</code>, <code>submitHandler</code> and the rest of the API are supported. See <code>docs/Migrating-from-jQuery-Validate.md</code>. Uploads get one more method there: <code>fileValidator</code>.</p>
+<h2 id="filevalidator">FileValidator</h2>
+<pre tabindex="0"><code class="language-js">const result = await FileValidator.validateFiles(input.files, {
+  accept: &#39;.jpg,.png,application/pdf&#39;,   // or allowedExtensions / allowedMimeTypes
+  maxFileSizeMB: 5, maxFiles: 3, maxImageWidth: 4000,
+});
+// result.isValid, result.errors (codes), result.details [{ code, fileName, message, params }], result.files
+FileValidator.summary(result);           // [&quot;photo.png: This file is 6 MB but the maximum is 5 MB.&quot;]
+FileValidator.bind(&#39;#upload&#39;, config, { messageElement: &#39;#msg&#39;, clearOnInvalid: true });
+</code></pre>
+<p><strong>Checked by default, with no configuration</strong></p>
+<ul>
+<li>dangerous extensions and dangerous MIME types, in any letter case (<code>.exe</code>, <code>.php</code>, <code>application/x-msdownload</code>, ...)</li>
+<li>disguised names (<code>invoice.exe.pdf</code>, right-to-left tricks, path separators)</li>
+<li>file content that does not match the extension, and programs renamed to other types (about 45 formats are recognised)</li>
+<li>SVG files that contain scripts</li>
+<li>inside PDF, Office and ZIP files: cut-off or fake files, macros, PDF JavaScript, embedded programs, zip bombs, unsafe paths</li>
+</ul>
+<p><strong>On request</strong></p>
+<ul>
+<li>its own extension registry (about 110 extensions and their MIME types): <code>allowedExtensions</code> alone verifies the file&#39;s type, and unknown types are reported</li>
+<li>sizes, counts, total size, empty files, duplicate names and duplicate content, image size and shape, audio and video length</li>
+<li>folder uploads (path depth and safety, junk files like <code>.DS_Store</code>)</li>
+<li>your own checks (<code>FileValidator.addMethod</code>, <code>custom</code>), a malware-scanner hook (<code>scan</code>), and server checks (<code>remote</code>, sending metadata, a hash, or the file)</li>
+<li>the upload widget: <code>FileValidator.widget(&#39;#zone&#39;, config, { list: &#39;#list&#39;, preview: true, resize: true, paste: true })</code></li>
+</ul>
+<p>Every option is listed at the bottom of <code>src/fileValidator.js</code> and in <code>docs/FileValidator.md</code>.</p>
+<h2 id="development">Development</h2>
+<pre tabindex="0"><code>npm install
+npm run build        # src/ -&gt; dist/: the one-file bundle and each part on its own (readable and minified)
+npm test             # builds, then runs all tests (jsdom; jQuery 4)
+npm run test:jquery3 # the jQuery and accessibility tests again on jQuery 3.x
+</code></pre>
+<h2 id="languages">Languages</h2>
+<p>13 language packs ship in <code>dist/locales/</code> (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja). One script per language, loaded after the bundle:</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/locales/de.min.js&quot;&gt;&lt;/script&gt;   &lt;!-- or dist/locales/all.min.js --&gt;
+&lt;script&gt;
+  FVLocales.use(&#39;de&#39;);                    // FormValidator, FileValidator, the upload widget and the jQuery messages
+  // FVLocales.auto();                    // the visitor&#39;s browser language, English if there is no pack
+  // FVLocales.use(&#39;ar&#39;, { document: true });   // also sets &lt;html lang=&quot;ar&quot; dir=&quot;rtl&quot;&gt;
+&lt;/script&gt;
+</code></pre>
+<p>In a module project: <code>import { locales } from &#39;form-and-file-validator&#39;; import &#39;form-and-file-validator/locales/de.js&#39;; locales.use(&#39;de&#39;);</code>.
+Add your own with <code>FVLocales.register(&#39;sv&#39;, { name: &#39;Svenska&#39;, form: { required: &#39;...&#39; } })</code>; anything missing stays English, and <code>FVLocales.keys()</code> lists every text a full pack needs.
+The packs are machine-quality translations: please have a native speaker check them before shipping to end users.</p>
+<h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
+<p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.3.0/dist/validator.min.js&quot;
+        integrity=&quot;sha384-svSisyYvXE2hHnnrqzXCheMMBv+uAz9qbd/DKeviE/GIZeaIeh5NCODe7vxwXlRK&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.3.0/dist/locales/de.min.js&quot;
+        integrity=&quot;sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+&lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;
+</code></pre>
+<p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.3.0; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or <code>locales/all.min.js</code>.</p>
+<h2 id="contributing">Contributing</h2>
+<p>Anyone can contribute: fork, change <code>src/</code>, open a pull request. See <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>. Only reviewed pull requests reach <code>main</code>.</p>
+<h2 id="server-react-vue-alpine">Server, React, Vue, Alpine</h2>
+<ul>
+<li><strong>Server (Node):</strong> <code>require(&#39;form-and-file-validator/server&#39;)</code>: <code>middleware(rules)</code> for Express (multer, formidable, express-fileupload) runs the same file rules on the uploaded files and answers 422 with JSON.</li>
+<li><strong>React:</strong> <code>import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;</code></li>
+<li><strong>Vue 3:</strong> <code>import { useFormValidator, FileDropzone, vFormValidator } from &#39;form-and-file-validator/vue&#39;</code></li>
+<li><strong>Alpine.js:</strong> <code>dist/integrations/alpine.min.js</code> adds <code>x-validate</code> and <code>x-dropzone</code>.</li>
+</ul>
+<p>Full examples: <a href="server-and-frameworks.html">Server and frameworks</a>, languages: <a href="languages.html">Languages</a>. A live playground is in the docs site (<code>docs/playground.html</code>).</p>
+<h2 id="tests">Tests</h2>
+<p><code>npm test</code> (jsdom, TypeScript typings, fuzz / ReDoS), <code>npm run test:jquery3</code>, and <code>npm run test:browser</code> (Chrome, Edge, Firefox and WebKit, headless, with an axe accessibility audit). CI runs them on every push and pull request.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

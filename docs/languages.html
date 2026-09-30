@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Languages · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html" aria-current="page">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="languages">Languages</h1>
+<p>Every text the library shows can be translated: FormValidator messages, FileValidator messages, file sizes (<code>MB</code>, <code>Mo</code>…), the sentences of the upload widget (with plural rules) and the jQuery Validation messages.</p>
+<p>13 packs ship: <strong>de, fr, es, pt, it, nl, tr, ru, pl, ar (right to left), hi, zh, ja</strong>. English is built in.</p>
+<blockquote>
+<p>The packs are machine-quality translations. Please have a native speaker read them before you show them to customers, and send corrections as a pull request (<code>src/locales/&lt;code&gt;.js</code>).</p>
+</blockquote>
+<h2 id="in-a-page">In a page</h2>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/locales/de.min.js&quot;&gt;&lt;/script&gt;      &lt;!-- or dist/locales/all.min.js for every language --&gt;
+&lt;script&gt;
+  FVLocales.use(&#39;de&#39;);                 // now everything is German
+  FVLocales.use(&#39;ar&#39;, { document: true });   // also sets &lt;html lang=&quot;ar&quot; dir=&quot;rtl&quot;&gt;
+  FVLocales.auto();                    // the visitor&#39;s browser language (de-AT → de), English when there is no pack
+  FVLocales.use(&#39;en&#39;);                 // back to English
+&lt;/script&gt;
+</code></pre>
+<h2 id="in-a-module-project">In a module project</h2>
+<pre tabindex="0"><code class="language-js">import { locales } from &#39;form-and-file-validator&#39;;
+import &#39;form-and-file-validator/locales/de.js&#39;;    // registers the pack
+locales.use(&#39;de&#39;);
+</code></pre>
+<h2 id="on-the-server">On the server</h2>
+<p>The server companion has its own registry, because it runs its own FileValidator:</p>
+<pre tabindex="0"><code class="language-js">const { validate, locales } = require(&#39;form-and-file-validator/server&#39;);
+require(&#39;form-and-file-validator/locales/de.js&#39;);
+locales.use(&#39;de&#39;);                       // or a language per request: locales.use(req.language) before validate()
+</code></pre>
+<h2 id="your-own-language">Your own language</h2>
+<pre tabindex="0"><code class="language-js">FVLocales.register(&#39;sv&#39;, {
+  name: &#39;Svenska&#39;,
+  form: { required: &#39;Fältet är obligatoriskt.&#39; },      // only what you have; the rest stays English
+  file: { EMPTY_FILE: &#39;Filen är tom.&#39; },
+  units: { B: &#39;B&#39;, KB: &#39;kB&#39;, MB: &#39;MB&#39;, GB: &#39;GB&#39; }
+});
+FVLocales.use(&#39;sv&#39;);
+console.log(FVLocales.keys());          // every key a complete pack needs: { form: [...], file: [...], phrases: [...] }
+</code></pre>
+<p>A pack is <code>{ name, dir: &#39;ltr&#39; | &#39;rtl&#39;, form, file, phrases, units, jquery }</code>.</p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Keys</th>
+<th>Placeholders</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>form</code></td>
+<td>rule type (<code>required</code>, <code>email</code>, <code>maxlength</code>…)</td>
+<td><code>{min}</code> <code>{max}</code> <code>{step}</code></td>
+</tr>
+<tr>
+<td><code>file</code></td>
+<td>error code (<code>SIZE_TOO_LARGE</code>…)</td>
+<td>as in the English text, for example <code>{size}</code> <code>{max}</code></td>
+</tr>
+<tr>
+<td><code>phrases</code></td>
+<td>the English fragment (<code>&#39;macros&#39;</code>, <code>&#39;{n} selected.&#39;</code>)</td>
+<td>as in the English fragment</td>
+</tr>
+<tr>
+<td><code>phrases[&#39;status.added&#39;]</code>, <code>[&#39;status.rejected&#39;]</code></td>
+<td>plural objects: <code>one</code>, <code>few</code>, <code>many</code>, <code>other</code> (and <code>zero</code>, <code>two</code> for Arabic)</td>
+<td><code>{n}</code></td>
+</tr>
+<tr>
+<td><code>units</code></td>
+<td><code>B</code> <code>KB</code> <code>MB</code> <code>GB</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>jquery</code></td>
+<td>jQuery Validation method name</td>
+<td><code>{0}</code> <code>{1}</code></td>
+</tr>
+</tbody></table></div>
+<p>Form messages are also used for the jQuery layer methods with the same name (<code>{min}</code> <code>{max}</code> <code>{step}</code> become <code>{0}</code> <code>{1}</code>), so one pack covers both.</p>
+<p>Plural forms follow the language&#39;s CLDR rules through <code>Intl.PluralRules</code>.</p>
+<h2 id="testing-a-pack">Testing a pack</h2>
+<p>The test suite checks that every pack has every key, that no text is empty and that every <code>{placeholder}</code> of the English text is still there, so a typo cannot break a message at run time.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

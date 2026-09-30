@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migrating from jQuery Validate · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html" aria-current="page">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="replacing-the-jquery-validation-plugin">Replacing the jQuery Validation plugin</h1>
+<p>FormValidator is the successor of the <a href="https://jqueryvalidation.org/">jQuery Validation plugin</a>. The compatibility layer <code>formValidator.jquery.js</code> gives you the same API on top of the new engine, so most sites switch by changing script tags only.</p>
+<h2 id="1-swap-the-scripts">1. Swap the scripts</h2>
+<p>Before:</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;jquery.validate.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;additional-methods.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;localization/messages_de.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p>After:</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/formValidator.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/formValidator.jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;localization/messages_de.js&quot;&gt;&lt;/script&gt;   &lt;!-- unchanged: it only fills $.validator.messages --&gt;
+</code></pre>
+<p><code>additional-methods.js</code> is no longer needed. Its common methods are built in (the list is in section 2). If you rely on a method that is not in that list, keep loading the original <code>additional-methods.js</code> after these scripts; it registers itself through <code>$.validator.addMethod</code>. The compatibility layer is tested with jQuery 3.7 and 4.0.</p>
+<p>Your page code does not change:</p>
+<pre tabindex="0"><code class="language-js">$(&#39;#signup&#39;).validate({
+  rules: {
+    email:    { required: true, email: true, remote: &#39;/api/email-free&#39; },
+    password: { minlength: 8 },
+    confirm:  { equalTo: &#39;#password&#39; }
+  },
+  messages: { email: { required: &#39;We need your email&#39; } },
+  errorPlacement: function (error, element) { error.insertAfter(element); },
+  submitHandler: function (form) { form.submit(); }
+});
+
+$(&#39;#signup&#39;).valid();                       // synchronous
+$(&#39;#email&#39;).rules(&#39;add&#39;, { minlength: 3 });
+$.validator.addMethod(&#39;even&#39;, function (value, element, param) {
+  return this.optional(element) || value % 2 === 0;
+}, &#39;Even numbers only&#39;);
+</code></pre>
+<h2 id="2-what-is-supported">2. What is supported</h2>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Supported</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Plugin functions</td>
+<td><code>$.fn.validate</code>, <code>$.fn.valid</code>, <code>$.fn.rules(&#39;add&#39; / &#39;remove&#39;)</code></td>
+</tr>
+<tr>
+<td><code>$.validator</code></td>
+<td><code>addMethod</code>, <code>addClassRules</code>, <code>setDefaults</code>, <code>format</code>, <code>messages</code>, <code>methods</code>, <code>defaults</code>, <code>classRuleSettings</code>, <code>normalizeRule</code>, <code>normalizeRules</code>, <code>staticRules</code>, <code>classRules</code>, <code>attributeRules</code>, <code>dataRules</code>, <code>autoCreateRanges</code></td>
+</tr>
+<tr>
+<td>Methods</td>
+<td><code>required remote minlength maxlength rangelength min max range step email url date dateISO number digits equalTo creditcard accept extension pattern maxWords minWords rangeWords integer lettersonly letterswithbasicpunc alphanumeric nowhitespace ipv4 ipv6 time time12h phoneUS iban notEqualTo require_from_group skip_or_fill_minimum</code></td>
+</tr>
+<tr>
+<td>Rule sources</td>
+<td><code>rules</code> option, <code>class=&quot;required email&quot;</code>, HTML attributes (<code>required</code>, <code>type</code>, <code>minlength</code>, <code>pattern</code>, ...), <code>data-rule-*</code></td>
+</tr>
+<tr>
+<td>Rule parameters</td>
+<td><code>depends</code> (function or selector), <code>required</code> as selector or function, parameters as functions, <code>normalizer</code>, range strings like <code>&quot;[1,5]&quot;</code></td>
+</tr>
+<tr>
+<td>Messages</td>
+<td><code>messages</code> option (string, per method, function), <code>data-msg-*</code>, <code>data-msg</code>, the <code>title</code> attribute, <code>ignoreTitle</code>, <code>$.validator.messages</code>, <code>$.validator.format</code></td>
+</tr>
+<tr>
+<td>Options</td>
+<td><code>rules messages errorClass validClass errorElement errorPlacement highlight unhighlight success invalidHandler submitHandler onsubmit onfocusout onkeyup onclick focusInvalid focusCleanup ignore ignoreTitle debug errorContainer errorLabelContainer wrapper groups showErrors</code></td>
+</tr>
+<tr>
+<td>Validator object</td>
+<td><code>form()</code>, <code>element()</code>, <code>valid()</code>, <code>size()</code>, <code>numberOfInvalids()</code>, <code>errorList</code>, <code>errorMap</code>, <code>defaultShowErrors()</code>, <code>invalidElements()</code>, <code>validElements()</code>, <code>elements()</code>, <code>showErrors(map)</code>, <code>hideErrors()</code>, <code>resetForm()</code>, <code>destroy()</code>, <code>checkable</code>, <code>findByName</code>, <code>getLength</code>, <code>optional</code>, <code>depend</code>, <code>elementValue</code>, <code>defaultMessage</code>, <code>settings</code>, <code>currentForm</code></td>
+</tr>
+<tr>
+<td>Events and buttons</td>
+<td>the <code>invalid-form</code> event, <code>.cancel</code> submit buttons, <code>formnovalidate</code></td>
+</tr>
+<tr>
+<td>Custom methods</td>
+<td>same signature <code>function (value, element, param)</code> with <code>this.optional(element)</code>, returning true or false</td>
+</tr>
+<tr>
+<td>File checks beyond <code>accept</code> and <code>extension</code></td>
+<td>the extra <code>fileValidator</code> method runs every FileValidator check (content, size, image size, dangerous files); see the FileValidator document</td>
+</tr>
+</tbody></table></div>
+<h2 id="3-what-is-different">3. What is different</h2>
+<p><strong>Improvements you get for free</strong></p>
+<ul>
+<li>Invalid submits are stopped reliably, and other submit handlers never see an invalid attempt.</li>
+<li>Error messages are accessible: <code>role=&quot;alert&quot;</code>, <code>aria-invalid</code>, <code>aria-describedby</code>.</li>
+<li>Fields added after page load are validated and get live feedback, with no <code>rules(&#39;add&#39;)</code> needed for markup-driven rules.</li>
+<li><code>remote</code> cancels stale requests, times out after 10 s, and caches per value.</li>
+<li>Text values are trimmed, so <code>&quot;   &quot;</code> counts as empty for <code>required</code> and <code>&quot;ab  &quot;</code> has length 2. Set <code>trim: false</code> in the options to get the original behaviour.</li>
+<li><code>url</code> uses the browser&#39;s URL parser plus the same rules as before: the scheme (<code>http</code>, <code>https</code>, <code>ftp</code> or <code>//</code>) is required, and the host needs a real top-level domain.</li>
+</ul>
+<p><strong>Behaviours that follow the original exactly</strong></p>
+<ul>
+<li>Custom methods run on empty values unless they call <code>this.optional(element)</code>.</li>
+<li>Empty fields are not flagged on blur until the first submit, and after a submit every key press re-checks the field.</li>
+<li><code>valid()</code> and <code>form()</code> are synchronous. A <code>remote</code> check that is still running counts as valid until it answers, then the message appears (or the pending submit continues).</li>
+<li><code>focusCleanup</code> clears an error on focus. As in the original, do not combine it with <code>focusInvalid</code>.</li>
+</ul>
+<p><strong>Small differences</strong></p>
+<ul>
+<li><code>groups</code>: only the first message of a group is visible; the others are hidden (and not announced). The original could also merge the messages into one line.</li>
+<li><code>showErrors</code>: called after <code>form()</code>, <code>element()</code> and after live validation (once per tick). While it is set, messages are not placed in the page until you call <code>this.defaultShowErrors()</code> or place them yourself.</li>
+<li><code>onkeyup</code> or <code>onfocusout</code> given as your own function are treated as &quot;on&quot;.</li>
+</ul>
+<h2 id="4-step-by-step">4. Step by step</h2>
+<ol>
+<li>Swap the scripts (section 1) and reload.</li>
+<li>Open the browser console. <code>formValidator.jquery.js: replacing the jQuery Validation plugin</code> means the old plugin is still loaded; remove it.</li>
+<li>Test your forms once. The most common difference is whitespace-only input now counting as empty.</li>
+<li>When you are ready, move new forms to the native API without jQuery (see the FormValidator document). Both APIs can live on the same page and work on different forms.</li>
+</ol>
+<h2 id="5-native-api-mapping">5. Native API mapping</h2>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th>jQuery Validation</th>
+<th>FormValidator</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>$(&#39;#f&#39;).validate({ rules })</code></td>
+<td><code>FormValidator.init({ formId: &#39;f&#39;, rules })</code>. The rules can stay in the jQuery shape: <code>{ email: { required: true, minlength: 3, equalTo: &#39;#pw&#39;, remote: &#39;/check&#39; } }</code></td>
+</tr>
+<tr>
+<td><code>{ required: true, minlength: 3 }</code></td>
+<td><code>[&#39;required&#39;, { type: &#39;minlength&#39;, min: 3 }]</code></td>
+</tr>
+<tr>
+<td><code>messages: { a: { required: &#39;...&#39; } }</code></td>
+<td><code>{ type: &#39;required&#39;, message: &#39;...&#39; }</code></td>
+</tr>
+<tr>
+<td><code>$(&#39;#f&#39;).valid()</code></td>
+<td><code>await instance.validate()</code> (or <code>instance.validateSync()</code>)</td>
+</tr>
+<tr>
+<td><code>$.validator.addMethod(name, fn(value, element, param), message)</code></td>
+<td><code>FormValidator.addMethod(name, fn, message)</code>: same signature, <code>this.optional(element)</code> included. <code>registerRule</code> is the lower-level version.</td>
+</tr>
+<tr>
+<td><code>$.validator.addClassRules</code>, <code>$.validator.format</code>, <code>$.validator.setDefaults</code></td>
+<td><code>FormValidator.addClassRules</code>, <code>.format</code>, <code>.setDefaults</code></td>
+</tr>
+<tr>
+<td><code>messages: { a: { required: &#39;...&#39; } }</code>, <code>data-msg-*</code>, <code>data-rule-*</code></td>
+<td>the same, natively (<code>data-rule-*</code> with <code>autoRules: true</code>)</td>
+</tr>
+<tr>
+<td><code>remote</code> (default <code>GET</code>, <code>type: &#39;post&#39;</code>)</td>
+<td>the same defaults natively: <code>GET</code>; <code>type</code> or <code>method: &#39;POST&#39;</code> for a POST; global <code>FormValidator.remoteDefaults</code></td>
+</tr>
+<tr>
+<td><code>pendingClass</code>, <code>focusCleanup</code></td>
+<td><code>config.pendingClass</code> (default <code>fv-pending</code>), <code>config.focusCleanup</code></td>
+</tr>
+<tr>
+<td><code>submitHandler(form)</code></td>
+<td><code>config.submitHandler(form, event)</code></td>
+</tr>
+<tr>
+<td><code>invalidHandler</code></td>
+<td><code>config.onError(errors)</code> or the <code>fv:invalid</code> event</td>
+</tr>
+<tr>
+<td><code>errorPlacement(error, element)</code></td>
+<td><code>config.errorPlacement(errorEl, field)</code></td>
+</tr>
+<tr>
+<td><code>highlight</code> / <code>unhighlight</code></td>
+<td><code>config.highlight(field)</code> / <code>config.unhighlight(field)</code>, or the <code>invalidClass</code> option</td>
+</tr>
+<tr>
+<td><code>ignore</code></td>
+<td><code>config.ignore</code>, <code>config.validateHidden</code></td>
+</tr>
+<tr>
+<td><code>resetForm()</code></td>
+<td><code>instance.resetForm()</code></td>
+</tr>
+<tr>
+<td><code>showErrors({ a: &#39;msg&#39; })</code></td>
+<td><code>instance.setError(&#39;a&#39;, &#39;msg&#39;)</code></td>
+</tr>
+</tbody></table></div>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

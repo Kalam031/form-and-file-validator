@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FormValidator · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html" aria-current="page">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="formvalidator-v250-documentation">FormValidator v2.5.0 — Documentation</h1>
+<h2 id="overview">Overview</h2>
+<p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
+<p><strong>What it can do</strong></p>
+<ul>
+<li>Blocks invalid submits, including when you validate asynchronously (server checks, custom rules).</li>
+<li>30+ built-in rules: required, email, url, number, phone, date ranges, credit card, pattern, lengths, ranges, password strength, equal-to, checkbox counts, file rules, and more.</li>
+<li>Skips blank values for optional fields, so an empty optional email is not an error.</li>
+<li>Validates every kind of control: text, textarea, select, multi-select, checkbox and radio groups, file inputs.</li>
+<li>Live feedback: an error clears or updates as the user fixes the field.</li>
+<li>Server-side checks with the <code>remote</code> rule (timeout, caching, stale-request cancel).</li>
+<li>Validates uploads with FileValidator through the <code>file</code> rule.</li>
+<li>Accessible errors: <code>aria-invalid</code>, <code>aria-describedby</code>, <code>role=&quot;alert&quot;</code>, focus on the first bad field.</li>
+<li>Works with fields added after page load, several forms at once, and Bootstrap, input groups and Select2 layouts.</li>
+<li>Custom rules, conditional rules, translated messages, and callbacks and DOM events.</li>
+</ul>
+<p><strong>Loading it</strong></p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/fileValidator.js&quot;&gt;&lt;/script&gt;  &lt;!-- optional: needed only for the &quot;file&quot; rule --&gt;
+&lt;script src=&quot;dist/formValidator.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p>One-file alternative: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code> carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: <code>const FormValidator = require(&#39;./dist/formValidator.js&#39;)</code>. Check the loaded version with <code>FormValidator.version</code> (currently 2.5.0). It is also the successor of the jQuery Validation plugin: see <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
+<h2 id="quick-start">Quick start</h2>
+<p>Give the form an id, then call <code>FormValidator.init</code> with the rules for each field, keyed by the field&#39;s <code>name</code>.</p>
+<pre tabindex="0"><code class="language-html">&lt;form id=&quot;signup&quot; action=&quot;/register&quot; method=&quot;post&quot;&gt;
+  &lt;input name=&quot;email&quot;&gt;
+  &lt;input name=&quot;password&quot; type=&quot;password&quot;&gt;
+  &lt;input name=&quot;confirm&quot; type=&quot;password&quot;&gt;
+  &lt;label&gt;&lt;input type=&quot;checkbox&quot; name=&quot;terms&quot; value=&quot;1&quot;&gt; I accept the terms&lt;/label&gt;
+  &lt;button type=&quot;submit&quot;&gt;Create account&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;script&gt;
+  FormValidator.init({
+    formId: &#39;signup&#39;,
+    rules: {
+      email:    [&#39;required&#39;, &#39;email&#39;],
+      password: [{ type: &#39;pwcheck&#39;, minLength: 8, requireDigit: true }],
+      confirm:  [{ type: &#39;equalTo&#39;, target: &#39;password&#39;, message: &#39;Passwords do not match.&#39; }],
+      terms:    [{ type: &#39;required&#39;, message: &#39;Please accept the terms.&#39; }]
+    }
+  });
+&lt;/script&gt;
+</code></pre>
+<p><strong>What happens on submit</strong></p>
+<ol>
+<li>The submit is stopped, and other submit handlers do not see an invalid attempt.</li>
+<li>Every field is checked. Each bad field gets a message under it and the first one is focused.</li>
+<li>If all fields are valid, the form is submitted normally. If you set <code>config.submitHandler</code>, it is called instead, which is the place for AJAX submits.</li>
+<li>After that, each error updates as the user edits the field.</li>
+</ol>
+<p>Rules can be written as a string (<code>&#39;required&#39;</code>), an object (<code>{ type: &#39;minlength&#39;, min: 3 }</code>), or a list of either. <code>formId</code> can also be an element, a CSS selector, or an array of forms.</p>
+<h2 id="rules-reference">Rules reference</h2>
+<p>Blank values skip every rule except <code>required</code>, <code>equalTo</code>, <code>custom</code>, <code>minFiles</code> and <code>minChecked</code>. That is what lets an optional field stay empty. Put <code>required</code> first to make a field mandatory. Rules run in order and the first failure is shown.</p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Options</th>
+<th>Passes</th>
+<th>Fails</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>required</code></td>
+<td></td>
+<td>any non-blank value, a checked box or radio, a chosen option, a selected file</td>
+<td>blank or whitespace only, nothing checked</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td></td>
+<td><code>a@b.co</code>, <code>first.last+tag@sub.example.org</code></td>
+<td><code>a@b</code>, <code>a b@c.de</code>, <code>@b.co</code></td>
+</tr>
+<tr>
+<td><code>url</code></td>
+<td><code>requireProtocol</code>, <code>allowLocal</code>, <code>protocols</code></td>
+<td><code>https://example.com</code>, <code>www.example.com/x</code></td>
+<td><code>ftp://x.com</code> (unless allowed), <code>not a url</code></td>
+</tr>
+<tr>
+<td><code>number</code></td>
+<td></td>
+<td><code>1</code>, <code>-1.5</code>, <code>.5</code>, <code>1e3</code></td>
+<td><code>abc</code>, <code>1,5</code>, <code>1.2.3</code></td>
+</tr>
+<tr>
+<td><code>digits</code></td>
+<td></td>
+<td><code>123</code></td>
+<td><code>-1</code>, <code>1.5</code></td>
+</tr>
+<tr>
+<td><code>alpha</code>, <code>alphanumeric</code></td>
+<td></td>
+<td>letters (any language), letters and digits</td>
+<td>spaces, symbols</td>
+</tr>
+<tr>
+<td><code>phone</code></td>
+<td></td>
+<td><code>+1 (555) 123-4567</code>, <code>555-1234</code></td>
+<td><code>123</code>, <code>abc</code></td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td></td>
+<td><code>2024-02-29</code></td>
+<td><code>2024-13-45</code></td>
+</tr>
+<tr>
+<td><code>minDate</code>, <code>maxDate</code></td>
+<td><code>min</code> / <code>max</code> (date or <code>&#39;today&#39;</code>)</td>
+<td>on or after / before the limit</td>
+<td>outside the limit</td>
+</tr>
+<tr>
+<td><code>creditcard</code></td>
+<td></td>
+<td>numbers that pass the Luhn check</td>
+<td><code>4111111111111112</code></td>
+</tr>
+<tr>
+<td><code>pattern</code></td>
+<td><code>pattern</code> (string or RegExp), <code>flags</code></td>
+<td>matches the pattern</td>
+<td>does not match</td>
+</tr>
+<tr>
+<td><code>minlength</code>, <code>maxlength</code>, <code>rangelength</code></td>
+<td><code>min</code>, <code>max</code></td>
+<td>length within the limit</td>
+<td>too short or long</td>
+</tr>
+<tr>
+<td><code>min</code>, <code>max</code>, <code>range</code></td>
+<td><code>min</code>, <code>max</code></td>
+<td>number within the limit</td>
+<td>outside the limit, or not a number</td>
+</tr>
+<tr>
+<td><code>step</code></td>
+<td><code>step</code>, <code>base</code></td>
+<td>multiples of the step</td>
+<td><code>3</code> with step 5</td>
+</tr>
+<tr>
+<td><code>oneOf</code></td>
+<td><code>values</code></td>
+<td>one of the listed values</td>
+<td>anything else</td>
+</tr>
+<tr>
+<td><code>equalTo</code>, <code>notEqualTo</code></td>
+<td><code>target</code> (field name)</td>
+<td>same / different from the target field</td>
+<td>mismatch; blank confirm when the target is filled</td>
+</tr>
+<tr>
+<td><code>pwcheck</code></td>
+<td><code>minLength</code>, <code>maxLength</code>, <code>requireUppercase</code>, <code>requireLowercase</code>, <code>requireDigit</code>, <code>requireSpecialChar</code>, <code>noWhitespace</code></td>
+<td>meets all listed requirements</td>
+<td>any requirement missing</td>
+</tr>
+<tr>
+<td><code>minChecked</code>, <code>maxChecked</code></td>
+<td><code>min</code> / <code>max</code></td>
+<td>enough / not too many ticked boxes or selected options</td>
+<td>outside the count</td>
+</tr>
+<tr>
+<td><code>minFiles</code>, <code>maxFiles</code></td>
+<td><code>min</code> / <code>max</code></td>
+<td>file count in range</td>
+<td>outside the range</td>
+</tr>
+<tr>
+<td><code>fileType</code></td>
+<td><code>types</code> (extensions or MIME, <code>image/*</code>)</td>
+<td>allowed type</td>
+<td>other types</td>
+</tr>
+<tr>
+<td><code>fileSize</code></td>
+<td><code>maxSize</code> (bytes) or <code>maxSizeMB</code></td>
+<td>every file within the limit</td>
+<td>a file is too large</td>
+</tr>
+<tr>
+<td><code>file</code></td>
+<td>any FileValidator option</td>
+<td>passes every FileValidator check</td>
+<td>see the FileValidator doc</td>
+</tr>
+<tr>
+<td><code>remote</code></td>
+<td><code>url</code>, <code>method</code>, <code>field</code>, <code>data</code>, <code>headers</code>, <code>timeout</code>, <code>cache</code>, <code>failOpen</code>, <code>parse</code></td>
+<td>server says valid</td>
+<td>server says invalid, or network error</td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td><code>validate(value, context, field)</code></td>
+<td>your function returns true</td>
+<td>returns false, a message string, or throws</td>
+</tr>
+</tbody></table></div>
+<p>Passwords are never trimmed. All other values are trimmed before checking unless you set <code>config.trim</code> to <code>false</code>.</p>
+<h2 id="configuration-options">Configuration options</h2>
+<p><code>FormValidator.init</code> takes these top-level keys:</p>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>formId</code> (or <code>form</code>)</td>
+<td>Form id, CSS selector, element, or an array of these</td>
+</tr>
+<tr>
+<td><code>rules</code></td>
+<td>Object keyed by field <code>name</code>; each value is a rule or a list of rules</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td>The options in the table below</td>
+</tr>
+<tr>
+<td><code>context</code></td>
+<td>Your own object, passed to <code>custom</code> rules next to <code>form</code></td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>Message overrides by rule type, same as <code>config.messages</code></td>
+</tr>
+</tbody></table></div>
+<p>Options inside <code>config</code>:</p>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>trim</code></td>
+<td><code>true</code></td>
+<td>Trim values before checking. Passwords are never trimmed.</td>
+</tr>
+<tr>
+<td><code>novalidate</code></td>
+<td><code>true</code></td>
+<td>Sets <code>novalidate</code> on the form so browser pop-ups do not clash with yours. Restored on <code>destroy()</code>.</td>
+</tr>
+<tr>
+<td><code>focusInvalid</code></td>
+<td><code>true</code></td>
+<td>Focus and scroll to the first invalid field after a failed submit</td>
+</tr>
+<tr>
+<td><code>validateHidden</code></td>
+<td><code>false</code></td>
+<td>Also check fields that are hidden, <code>type=&quot;hidden&quot;</code>, or not rendered</td>
+</tr>
+<tr>
+<td><code>ignore</code></td>
+<td><code>null</code></td>
+<td>CSS selector of fields to skip</td>
+</tr>
+<tr>
+<td><code>validateOn</code></td>
+<td><code>[&#39;change&#39;]</code></td>
+<td>Events that check a field that has no error yet: <code>&#39;change&#39;</code>, <code>&#39;blur&#39;</code>, <code>&#39;input&#39;</code></td>
+</tr>
+<tr>
+<td><code>debounce</code></td>
+<td><code>150</code></td>
+<td>Milliseconds to wait while typing before re-checking a field that has an error</td>
+</tr>
+<tr>
+<td><code>errorElement</code></td>
+<td><code>&#39;div&#39;</code></td>
+<td>Tag used for the message</td>
+</tr>
+<tr>
+<td><code>errorClass</code></td>
+<td><code>&#39;text-danger error&#39;</code></td>
+<td>Class of the message element</td>
+</tr>
+<tr>
+<td><code>invalidClass</code></td>
+<td><code>&#39;is-invalid&#39;</code></td>
+<td>Class added to invalid fields. Use <code>&#39;&#39;</code> to turn off.</td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td><code>{}</code></td>
+<td>Per-form message text by rule type</td>
+</tr>
+<tr>
+<td><code>passwordStrength</code></td>
+<td><code>{}</code></td>
+<td>Defaults for <code>pwcheck</code> (<code>minLength</code>, <code>requireDigit</code>, ...)</td>
+</tr>
+<tr>
+<td><code>errorPlacement</code></td>
+<td><code>null</code></td>
+<td><code>(errorEl, field, fields) =&gt; void</code> to place the message yourself</td>
+</tr>
+<tr>
+<td><code>submitHandler</code></td>
+<td><code>null</code></td>
+<td><code>(form, event) =&gt; void</code>, called instead of a normal submit when the form is valid</td>
+</tr>
+<tr>
+<td><code>onError</code></td>
+<td><code>null</code></td>
+<td>Called with <code>[{ name, field, message }]</code> after a failed check</td>
+</tr>
+<tr>
+<td><code>onSuccess</code></td>
+<td><code>null</code></td>
+<td>Called after a successful check</td>
+</tr>
+<tr>
+<td><code>autoRules</code></td>
+<td><code>false</code></td>
+<td>Also build rules from HTML attributes and <code>data-rule-*</code> (see Live validation)</td>
+</tr>
+<tr>
+<td><code>classRules</code></td>
+<td><code>null</code></td>
+<td><code>{ className: rules }</code>, applied to fields that carry the class (see the jQuery-style API section)</td>
+</tr>
+<tr>
+<td><code>pendingClass</code></td>
+<td><code>&#39;fv-pending&#39;</code></td>
+<td>Class (and <code>aria-busy</code>) on a field while a server or async check runs. <code>&#39;&#39;</code> turns it off.</td>
+</tr>
+<tr>
+<td><code>focusCleanup</code></td>
+<td><code>false</code></td>
+<td>Clear a field&#39;s error when it receives focus</td>
+</tr>
+<tr>
+<td><code>skipEmptyUntilSubmit</code></td>
+<td><code>false</code></td>
+<td>Do not check an empty field on blur or change until the first submit attempt</td>
+</tr>
+<tr>
+<td><code>validateAfterSubmit</code></td>
+<td><code>false</code></td>
+<td>After the first submit attempt, re-check every field as the user types</td>
+</tr>
+<tr>
+<td><code>liveInput</code></td>
+<td><code>true</code></td>
+<td><code>false</code> stops re-checking while typing (only change and blur)</td>
+</tr>
+<tr>
+<td><code>interceptSubmit</code></td>
+<td><code>true</code></td>
+<td><code>false</code> leaves the form&#39;s submit event alone, so you call <code>validate()</code> yourself</td>
+</tr>
+<tr>
+<td><code>skipSubmitter</code></td>
+<td><code>null</code></td>
+<td>CSS selector of submit buttons that skip validation, like <code>formnovalidate</code></td>
+</tr>
+<tr>
+<td><code>highlight</code>, <code>unhighlight</code></td>
+<td><code>null</code></td>
+<td><code>(field, unit) =&gt; void</code>, called when a field turns invalid or is cleared</td>
+</tr>
+<tr>
+<td><code>onFieldValid</code></td>
+<td><code>null</code></td>
+<td><code>(field, unit) =&gt; void</code>, called after a field was checked and passed</td>
+</tr>
+<tr>
+<td><code>fieldRules</code></td>
+<td><code>null</code></td>
+<td><code>(field, unit) =&gt; rules[]</code>, extra rules worked out at check time</td>
+</tr>
+<tr>
+<td><code>resolveMessage</code></td>
+<td><code>null</code></td>
+<td><code>(rule, env, dynamicMessage) =&gt; string</code>, takes over choosing the message</td>
+</tr>
+</tbody></table></div>
+<p>Global defaults for all forms can be changed in <code>FormValidator.defaults</code>.</p>
+<h2 id="messages-and-translations">Messages and translations</h2>
+<p>Every rule has a friendly default message. Messages are set as plain text, so they can never inject HTML. The message shown is the first of these that exists:</p>
+<ol>
+<li><code>message</code> on the rule, as text or as a function <code>(field, rule, env) =&gt; string</code>.</li>
+<li><code>data-msg-&lt;rule&gt;</code> on the field, for example <code>data-msg-required=&quot;Please tell us your name&quot;</code>.</li>
+<li>A message returned by the check itself, such as a <code>remote</code> server reply or a FileValidator error.</li>
+<li><code>data-msg</code> on the field: one message used for every rule of that field.</li>
+<li><code>config.messages[ruleType]</code> for this form.</li>
+<li><code>FormValidator.messages[ruleType]</code>, the global defaults.</li>
+</ol>
+<p>Text can use placeholders taken from the rule&#39;s own options:</p>
+<pre tabindex="0"><code class="language-js">rules: {
+  bio:   [{ type: &#39;maxlength&#39;, max: 200, message: &#39;At most {max} characters, please.&#39; }],
+  price: [{ type: &#39;range&#39;, min: 5, max: 50 }]   // default: &quot;Please enter a value between 5 and 50.&quot;
+}
+</code></pre>
+<p><strong>Messages in the HTML.</strong> As in jQuery Validation, a field can carry its own messages, so the markup is self-contained:</p>
+<pre tabindex="0"><code class="language-html">&lt;input name=&quot;fullname&quot; required data-msg-required=&quot;Please tell us your name&quot;&gt;
+&lt;input name=&quot;email&quot; type=&quot;email&quot; required
+       data-msg-required=&quot;We need your email&quot; data-msg-email=&quot;That does not look like an email&quot;&gt;
+&lt;input name=&quot;age&quot; data-msg=&quot;Please check this field&quot;&gt;      &lt;!-- used for any rule of this field --&gt;
+</code></pre>
+<p>Combine it with <code>config.autoRules: true</code> to get rules and messages from the HTML alone. The attribute name is the rule name in lower case, or with dashes for camelCase rules (<code>data-msg-mindate</code> or <code>data-msg-min-date</code>). Placeholders such as <code>{min}</code> work in these messages too, and the text is always set as plain text.</p>
+<p><strong>Translating everything once</strong></p>
+<pre tabindex="0"><code class="language-js">Object.assign(FormValidator.messages, {
+  required: &#39;Pflichtfeld&#39;,
+  email: &#39;Bitte eine gültige E-Mail-Adresse eingeben.&#39;,
+  minlength: &#39;Mindestens {min} Zeichen.&#39;
+});
+</code></pre>
+<p>The message keys are the rule names: <code>required</code>, <code>email</code>, <code>url</code>, <code>number</code>, <code>digits</code>, <code>alpha</code>, <code>alphanumeric</code>, <code>phone</code>, <code>date</code>, <code>minDate</code>, <code>maxDate</code>, <code>creditcard</code>, <code>pattern</code>, <code>maxlength</code>, <code>minlength</code>, <code>rangelength</code>, <code>range</code>, <code>max</code>, <code>min</code>, <code>step</code>, <code>oneOf</code>, <code>notEqualTo</code>, <code>equalTo</code>, <code>pwcheck</code>, <code>minChecked</code>, <code>maxChecked</code>, <code>minFiles</code>, <code>maxFiles</code>, <code>fileType</code>, <code>fileSize</code>, <code>file</code>, <code>remote</code>, <code>custom</code>, plus <code>badInput</code> for an unparseable number field.</p>
+<h2 id="error-display-and-accessibility">Error display and accessibility</h2>
+<p><strong>Where the message appears</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<thead>
+<tr>
+<th>Field type</th>
+<th>Message goes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Text, textarea, select, file</td>
+<td>right after the field</td>
+</tr>
+<tr>
+<td>Field inside <code>.input-group</code> or <code>.form-floating</code></td>
+<td>after that wrapper</td>
+</tr>
+<tr>
+<td>Select2 dropdown</td>
+<td>after the <code>.select2</code> container</td>
+</tr>
+<tr>
+<td>Radio or checkbox group</td>
+<td>after the group container (<code>.answer</code>, <code>.btn-group</code>, <code>.option-group</code>, <code>.choice-group</code>, <code>.checkbox-group</code>), else after the last option</td>
+</tr>
+</tbody></table></div>
+<p>There is only ever one message per field, and re-checking replaces it instead of adding another. To place messages yourself, use <code>errorPlacement</code>:</p>
+<pre tabindex="0"><code class="language-js">config: { errorPlacement: (errorEl, field) =&gt; document.querySelector(&#39;#errors&#39;).appendChild(errorEl) }
+</code></pre>
+<p><strong>What is added to the page</strong></p>
+<ul>
+<li>The message element gets the classes in <code>errorClass</code> (default <code>text-danger error</code>), the attribute <code>data-error-for=&quot;&lt;field name&gt;&quot;</code>, an id, and <code>role=&quot;alert&quot;</code>. A <code>&lt;label&gt;</code> message gets <code>aria-live=&quot;polite&quot;</code> instead, because ARIA does not allow <code>role=&quot;alert&quot;</code> on a label. Accessibility is covered in <code>Accessibility.md</code>.</li>
+<li>The invalid field gets the class in <code>invalidClass</code> (default <code>is-invalid</code>), <code>aria-invalid=&quot;true&quot;</code>, and the message id added to <code>aria-describedby</code>. Existing <code>aria-describedby</code> values are kept.</li>
+<li>When the field is fixed, all of this is removed again.</li>
+</ul>
+<p><strong>Focus</strong></p>
+<p>After a failed submit, the first invalid field in page order is focused and scrolled into view. Turn this off with <code>focusInvalid: false</code>.</p>
+<p><strong>Which fields are checked</strong></p>
+<p>Disabled fields, hidden fields (<code>hidden</code> attribute or <code>display: none</code>, including inside a hidden parent), <code>type=&quot;hidden&quot;</code> inputs and fields matching <code>ignore</code> are skipped, and any stale message on them is removed. Set <code>validateHidden: true</code> to check them anyway. Fields with the same <code>name</code> (like <code>items[]</code>) are each checked on their own.</p>
+<p>Style the messages with your own CSS; the library adds no stylesheet.</p>
+<h2 id="live-validation-and-dynamic-forms">Live validation and dynamic forms</h2>
+<p><strong>While the user types</strong></p>
+<ul>
+<li>A field with no error is left alone while typing, so nobody is scolded halfway through an email address.</li>
+<li>It is checked when the events in <code>validateOn</code> fire (default: <code>change</code>, which is when the user leaves a text box after editing it, or picks an option).</li>
+<li>Once a field shows an error, it is re-checked as the user types (after the <code>debounce</code> delay) and the message updates or disappears.</li>
+<li><code>remote</code> rules run on change and submit, never on every keystroke.</li>
+</ul>
+<p><strong>Confirm-password style fields.</strong> If a rule uses <code>equalTo</code> or <code>notEqualTo</code>, changing the target field re-checks the dependent field, even when the target has no rules of its own.</p>
+<p><strong>Fields added later.</strong> Listeners sit on the form, so inputs added or replaced after <code>init</code> get validated on submit and get live feedback with no extra work. Removed fields are simply ignored. Rules can be changed at any time:</p>
+<pre tabindex="0"><code class="language-js">const form = FormValidator.init({ formId: &#39;order&#39;, rules: {} });
+form.addRules(&#39;coupon&#39;, [&#39;required&#39;, { type: &#39;pattern&#39;, pattern: /^[A-Z0-9]{6}$/ }]);
+form.removeRules(&#39;coupon&#39;);
+</code></pre>
+<p><strong>Buttons that skip validation.</strong> A submit button with the <code>formnovalidate</code> attribute, such as &quot;Save draft&quot;, submits without validating.</p>
+<p><strong>Rules from HTML attributes.</strong> With <code>autoRules: true</code> the library also reads the markup:</p>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Rule added</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>required</code></td>
+<td><code>required</code></td>
+</tr>
+<tr>
+<td><code>type=&quot;email&quot;</code>, <code>&quot;url&quot;</code>, <code>&quot;number&quot;</code>, <code>&quot;date&quot;</code></td>
+<td><code>email</code>, <code>url</code>, <code>number</code>, <code>date</code></td>
+</tr>
+<tr>
+<td><code>minlength</code>, <code>maxlength</code></td>
+<td><code>minlength</code>, <code>maxlength</code></td>
+</tr>
+<tr>
+<td><code>min</code>, <code>max</code> on number/range</td>
+<td><code>min</code>, <code>max</code></td>
+</tr>
+<tr>
+<td><code>pattern</code> (with <code>title</code> as the message)</td>
+<td><code>pattern</code>, anchored like HTML</td>
+</tr>
+<tr>
+<td><code>accept</code> on a file input</td>
+<td><code>file</code></td>
+</tr>
+</tbody></table></div>
+<p>A rule you list yourself for the same type wins over the one from the markup.</p>
+<p><strong>Number fields.</strong> When a browser reports unparseable input in a <code>type=&quot;number&quot;</code> field (for example letters), it is reported with the <code>badInput</code> message instead of passing as blank.</p>
+<p><strong>Reset.</strong> A form <code>reset</code> clears all messages.</p>
+<h2 id="custom-and-conditional-rules">Custom and conditional rules</h2>
+<p><strong>One-off rule with <code>custom</code>.</strong> The function receives the value, your context object (which includes <code>form</code>), the field element, and an environment object. It may be sync or async.</p>
+<pre tabindex="0"><code class="language-js">rules: {
+  username: [{ type: &#39;custom&#39;, validate: (value, ctx, field) =&gt; !value.includes(&#39; &#39;), message: &#39;No spaces.&#39; }],
+  coupon:   [{ type: &#39;custom&#39;, validate: async (v) =&gt; (await api.checkCoupon(v)) || &#39;Coupon not valid&#39; }]
+}
+</code></pre>
+<p>What the function may return:</p>
+<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
+<thead>
+<tr>
+<th>Return value</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>true</code></td>
+<td>valid</td>
+</tr>
+<tr>
+<td><code>false</code>, <code>undefined</code>, or an exception</td>
+<td>invalid, with the rule&#39;s message</td>
+</tr>
+<tr>
+<td>a non-empty string</td>
+<td>invalid, and the string is the message</td>
+</tr>
+<tr>
+<td><code>{ valid: false, message: &#39;...&#39; }</code></td>
+<td>invalid with that message</td>
+</tr>
+</tbody></table></div>
+<p><strong>Reusable rule with <code>registerRule</code>.</strong> Register once, then use the name anywhere.</p>
+<pre tabindex="0"><code class="language-js">FormValidator.registerRule(&#39;evenNumber&#39;, (value, rule, env) =&gt; Number(value) % 2 === 0);
+FormValidator.messages.evenNumber = &#39;Please enter an even number.&#39;;
+
+FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#39;evenNumber&#39;] } });
+</code></pre>
+<p>By default a rule is skipped for blank values. Pass <code>{ runOnEmpty: true }</code> as the third argument when your rule must also run on blank fields. The <code>env</code> object gives you <code>field</code>, <code>fields</code> (all boxes of a group), <code>form</code>, <code>config</code>, <code>context</code>, <code>empty</code>, <code>count</code> (ticked boxes, chosen options, or files) and <code>files</code>.</p>
+<p><strong>Conditional rules with <code>when</code>.</strong> The rule applies only when the function returns true.</p>
+<pre tabindex="0"><code class="language-js">rules: {
+  company: [{ type: &#39;required&#39;, when: () =&gt; document.querySelector(&#39;[name=type]&#39;).value === &#39;business&#39; }]
+}
+</code></pre>
+<p><strong>Other ways to write rules.</strong> A whole field can be one string (<code>email: &#39;required&#39;</code>) or a map (<code>email: { required: true, email: &#39;Bad address&#39; }</code>, where a string value is the message and an object value holds the options).</p>
+<h2 id="server-checks-and-file-fields">Server checks and file fields</h2>
+<p><strong>The <code>remote</code> rule</strong> asks your server whether a value is acceptable, for example whether a username is free.</p>
+<pre tabindex="0"><code class="language-js">rules: {
+  username: [&#39;required&#39;, { type: &#39;remote&#39;, url: &#39;/api/username-free&#39;, message: &#39;That name is taken.&#39; }]
+}
+</code></pre>
+<p>By default it sends a <code>GET</code> request with the value in the query string (<code>/api/username-free?username=bob</code>), like jQuery Validation. For a <code>POST</code>, set <code>method: &#39;POST&#39;</code> on the rule: the body is JSON <code>{ &quot;username&quot;: &quot;bob&quot; }</code>, or a classic form body with <code>encoding: &#39;form&#39;</code>. To make <code>POST</code> the default for every remote rule, set <code>FormValidator.remoteDefaults.method = &#39;POST&#39;</code> (and <code>.encoding = &#39;form&#39;</code> if you want form bodies). The server answers with JSON:</p>
+<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
+<thead>
+<tr>
+<th>Response</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>true</code> or <code>&quot;true&quot;</code></td>
+<td>valid</td>
+</tr>
+<tr>
+<td><code>false</code> or <code>&quot;false&quot;</code></td>
+<td>invalid, with the rule&#39;s message</td>
+</tr>
+<tr>
+<td><code>{ &quot;valid&quot;: false, &quot;message&quot;: &quot;Taken&quot; }</code></td>
+<td>invalid, with the server&#39;s message</td>
+</tr>
+<tr>
+<td>any other text, like <code>&quot;Already registered&quot;</code></td>
+<td>invalid, with that text as the message</td>
+</tr>
+</tbody></table></div>
+<p>Options:</p>
+<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>url</code></td>
+<td>required</td>
+<td>Endpoint to call</td>
+</tr>
+<tr>
+<td><code>method</code></td>
+<td><code>&#39;GET&#39;</code></td>
+<td><code>&#39;GET&#39;</code> puts the value in the query string, <code>&#39;POST&#39;</code> sends it in the body. Global default: <code>FormValidator.remoteDefaults.method</code>.</td>
+</tr>
+<tr>
+<td><code>encoding</code></td>
+<td><code>&#39;json&#39;</code></td>
+<td>Body of a <code>POST</code>: <code>&#39;json&#39;</code> or <code>&#39;form&#39;</code> (<code>application/x-www-form-urlencoded</code>). Global default: <code>FormValidator.remoteDefaults.encoding</code>.</td>
+</tr>
+<tr>
+<td><code>field</code></td>
+<td>field name</td>
+<td>Key that carries the value</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>none</td>
+<td>Extra fields, or a function <code>(value, env) =&gt; object</code></td>
+</tr>
+<tr>
+<td><code>headers</code>, <code>credentials</code></td>
+<td>none</td>
+<td>Passed to <code>fetch</code></td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>10000</code></td>
+<td>Milliseconds before the request is cancelled</td>
+</tr>
+<tr>
+<td><code>cache</code></td>
+<td><code>true</code></td>
+<td>Reuse the answer for the same value</td>
+</tr>
+<tr>
+<td><code>parse</code></td>
+<td>none</td>
+<td><code>(json, response) =&gt; result</code> to adapt a different response shape</td>
+</tr>
+<tr>
+<td><code>failOpen</code></td>
+<td><code>false</code></td>
+<td>Treat network or server errors as valid. By default they block the form.</td>
+</tr>
+</tbody></table></div>
+<p>The check never runs for blank values or while the user is typing. A newer request cancels an older one, and a slow answer for an old value is ignored.</p>
+<p><strong>File fields.</strong> Use the <code>file</code> rule to apply every FileValidator check, or the lighter <code>fileType</code>, <code>fileSize</code>, <code>minFiles</code> and <code>maxFiles</code> rules:</p>
+<pre tabindex="0"><code class="language-js">rules: {
+  resume: [&#39;required&#39;, { type: &#39;file&#39;, accept: &#39;.pdf,.docx&#39;, maxFileSizeMB: 5 }],
+  photos: [{ type: &#39;minFiles&#39;, min: 1 }, { type: &#39;maxFiles&#39;, max: 6 }, { type: &#39;fileType&#39;, types: [&#39;image/*&#39;] }]
+}
+</code></pre>
+<p>The first FileValidator message is shown under the field (with several files it starts with the file name, like <code>bad.exe: ...</code>), and the check also runs as soon as the user picks files. In the jQuery compatibility layer the same checks are available as the <code>fileValidator</code> method. The full FileValidator options are described in its own document (<a href="file.html">FileValidator.md</a>).</p>
+<h2 id="instance-api-callbacks-and-events">Instance API, callbacks and events</h2>
+<p><code>FormValidator.init(...)</code> returns an instance for one form, or an array when <code>formId</code> is an array.</p>
+<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>validate(options)</code></td>
+<td>Checks the whole form. Resolves to <code>true</code> or <code>false</code>. <code>{ focus: false }</code> skips focusing the first error.</td>
+</tr>
+<tr>
+<td><code>validateSync(options)</code></td>
+<td>Synchronous check of the whole form. Answers from asynchronous rules (<code>remote</code>, <code>file</code>, async <code>custom</code>) count as valid until they arrive, then the message appears.</td>
+</tr>
+<tr>
+<td><code>validateField(name)</code></td>
+<td>Checks one field by name</td>
+</tr>
+<tr>
+<td><code>validateElement(el)</code>, <code>validateElementSync(el)</code></td>
+<td>Checks the field that contains this element</td>
+</tr>
+<tr>
+<td><code>getErrors()</code></td>
+<td>Current errors as <code>[{ name, field, fields, message }]</code></td>
+</tr>
+<tr>
+<td><code>setError(name, message)</code>, <code>clearError(name)</code></td>
+<td>Show or remove a message by hand, for example from a server reply</td>
+</tr>
+<tr>
+<td><code>resetForm()</code></td>
+<td>Clears messages and forgets that a submit was attempted</td>
+</tr>
+<tr>
+<td><code>clearErrors()</code></td>
+<td>Removes all messages and invalid marks</td>
+</tr>
+<tr>
+<td><code>setRules(name, rules)</code>, <code>addRules(name, rules)</code>, <code>removeRules(name)</code></td>
+<td>Change rules at any time</td>
+</tr>
+<tr>
+<td><code>destroy()</code></td>
+<td>Removes listeners and messages, restores <code>novalidate</code>, and lets you <code>init</code> again</td>
+</tr>
+</tbody></table></div>
+<p>Static functions on <code>FormValidator</code>:</p>
+<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
+<thead>
+<tr>
+<th>Function</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>init(options)</code></td>
+<td>Set up one or more forms. Calling it again on the same form replaces the old setup.</td>
+</tr>
+<tr>
+<td><code>validate(formId)</code></td>
+<td>Check an initialised form</td>
+</tr>
+<tr>
+<td><code>validate(formId, rules)</code></td>
+<td>Check any form against ad-hoc rules, using the form&#39;s config if it has been set up</td>
+</tr>
+<tr>
+<td><code>getInstance(formId)</code></td>
+<td>Get the instance of a form, or <code>null</code></td>
+</tr>
+<tr>
+<td><code>registerRule(name, fn, options)</code></td>
+<td>Add a rule (engine style: <code>fn(value, rule, env)</code>)</td>
+</tr>
+<tr>
+<td><code>addMethod(name, fn, message)</code></td>
+<td>Add a rule, jQuery style: <code>fn.call(this, value, element, param)</code></td>
+</tr>
+<tr>
+<td><code>addClassRules(name, rules)</code></td>
+<td>Rules for every field that has a CSS class</td>
+</tr>
+<tr>
+<td><code>format(text, ...params)</code></td>
+<td>Fill <code>{0}</code>, <code>{1}</code>; with one argument it returns a message function</td>
+</tr>
+<tr>
+<td><code>setDefaults(options)</code></td>
+<td>Change the global config defaults</td>
+</tr>
+<tr>
+<td><code>messages</code>, <code>defaults</code>, <code>version</code></td>
+<td>Global messages, global defaults, and the version string</td>
+</tr>
+</tbody></table></div>
+<p>The older <code>form._manualValidate()</code> hook still works.</p>
+<p><strong>Callbacks</strong></p>
+<pre tabindex="0"><code class="language-js">config: {
+  onError:   errors =&gt; console.log(errors),   // [{ name, field, message }, ...]
+  onSuccess: () =&gt; console.log(&#39;all good&#39;)
+}
+</code></pre>
+<p><strong>DOM events</strong> fire on the form, and bubble, which suits frameworks and analytics:</p>
+<pre tabindex="0"><code class="language-js">form.addEventListener(&#39;fv:invalid&#39;, e =&gt; console.log(e.detail.errors));
+form.addEventListener(&#39;fv:valid&#39;, () =&gt; console.log(&#39;valid&#39;));
+</code></pre>
+<p><strong>Submitting.</strong> With no <code>submitHandler</code>, a valid form is submitted with <code>form.requestSubmit()</code>, so the button that was clicked, its name and value, and your other submit listeners are all preserved. With <code>submitHandler</code>, only your function runs.</p>
+<h2 id="jquery-style-api-on-the-native-engine">jQuery-style API on the native engine</h2>
+<p>If you know the jQuery Validation plugin, the native <code>FormValidator</code> speaks the same language, without jQuery.</p>
+<p><strong>Scalar rule parameters</strong></p>
+<pre tabindex="0"><code class="language-js">FormValidator.init({ formId: &#39;signup&#39;, rules: {
+  email:    { required: true, email: true, remote: &#39;/api/email-free&#39; },
+  password: { minlength: 8, normalizer: v =&gt; v.trim() },
+  confirm:  { equalTo: &#39;#password&#39; },                 // a selector, or a field name: equalTo: &#39;password&#39;
+  age:      { range: [18, 99] },                      // or &#39;18,99&#39;
+  role:     { oneOf: [&#39;admin&#39;, &#39;user&#39;] },
+  code:     { pattern: &#39;^[A-Z]{3}\\d+$&#39;, messages: { pattern: &#39;Three capitals and digits&#39; } },
+  company:  { required: &#39;#is-business:checked&#39; },     // a dependency: required only when the selector matches
+  vat:      { minlength: { param: 9, depends: () =&gt; needsVat() } }
+}});
+</code></pre>
+<p><code>required</code> is always checked first and <code>remote</code> last. A string value on a rule that has no parameter, such as <code>email: &#39;Not an email&#39;</code>, is the message. The object form <code>{ minlength: { min: 3, message: &#39;...&#39; } }</code> still works.</p>
+<p><strong>Your own methods with <code>addMethod</code></strong></p>
+<pre tabindex="0"><code class="language-js">FormValidator.addMethod(&#39;multipleOf&#39;, function (value, element, param) {
+  return this.optional(element) || value % param === 0;   // this.optional(el): blank fields pass
+}, FormValidator.format(&#39;Multiples of {0} only&#39;));
+
+FormValidator.init({ formId: &#39;f&#39;, rules: { qty: { multipleOf: 5 }, size: { between: [1, 9] } } });
+</code></pre>
+<p>The method gets <code>(value, element, param)</code>. Like in jQuery it also runs on blank values unless it calls <code>this.optional(element)</code>. It may return <code>true</code>, <code>false</code>, a message string, <code>{ valid, message }</code>, or a Promise, and <code>&#39;dependency-mismatch&#39;</code> skips the rule. The message can be text with <code>{0}</code>/<code>{1}</code> placeholders, or a function <code>(param, element) =&gt; string</code>.</p>
+<p><strong>Class rules and <code>data-rule-*</code></strong></p>
+<pre tabindex="0"><code class="language-js">FormValidator.addClassRules(&#39;zip&#39;, { required: true, digits: true, minlength: 5, maxlength: 5 });
+FormValidator.init({ formId: &#39;f&#39;, rules: {}, config: { classRules: { phone: { phone: true } } } });
+</code></pre>
+<pre tabindex="0"><code class="language-html">&lt;input name=&quot;zip&quot; class=&quot;zip&quot;&gt;
+&lt;input name=&quot;age&quot; data-rule-required data-rule-range=&quot;[18,99]&quot; data-msg-range=&quot;Between {0} and {1}&quot;&gt;
+</code></pre>
+<p>Class rules work without any other option. <code>data-rule-*</code> needs <code>autoRules: true</code>. Later sources win for the same rule type: class rules, then HTML and <code>data-rule-*</code>, then the rules you list in <code>init</code>.</p>
+<p><strong>Messages per field</strong></p>
+<pre tabindex="0"><code class="language-js">FormValidator.init({ formId: &#39;f&#39;, rules: { /* ... */ }, messages: {
+  email:    { required: &#39;We need your email&#39;, email: &#39;That is not an email&#39; },   // per field, per rule
+  nickname: &#39;Please fix your nickname&#39;,                                           // one message for the whole field
+  required: &#39;This field is required.&#39;                                             // by rule type, as before
+}});
+</code></pre>
+<p>Order: <code>message</code> on the rule, then per-field <code>messages</code>, <code>data-msg-&lt;rule&gt;</code>, a message returned by the check, <code>data-msg</code>, per-type <code>messages</code>, the global defaults.</p>
+<p><strong>Remote checks, jQuery style</strong></p>
+<pre tabindex="0"><code class="language-js">rules: { user: { remote: &#39;/check&#39; } }                    // GET /check?user=bob
+rules: { user: { remote: { url: &#39;/check&#39;, type: &#39;post&#39;, data: { token: () =&gt; csrf() }, dataFilter: r =&gt; r.ok } } }   // POST
+</code></pre>
+<p><code>type</code> is the HTTP method, values in <code>data</code> may be functions, and <code>dataFilter</code> adapts the response. While a check runs the field gets the class <code>fv-pending</code> and <code>aria-busy=&quot;true&quot;</code> (configurable with <code>pendingClass</code>), so you can show a spinner. Stale requests are cancelled, answers are cached per value, and a network error blocks unless <code>failOpen: true</code>.</p>
+<h2 id="replacing-the-jquery-validation-plugin">Replacing the jQuery Validation plugin</h2>
+<p><code>formValidator.jquery.js</code> is a compatibility layer that gives sites running the jQuery Validation plugin the same API on top of this engine. Load it after jQuery and <code>formValidator.js</code>, and remove <code>jquery.validate.js</code> and <code>additional-methods.js</code>:</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/formValidator.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;dist/formValidator.jquery.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<pre tabindex="0"><code class="language-js">$(&#39;#signup&#39;).validate({
+  rules: { email: { required: true, email: true }, confirm: { equalTo: &#39;#password&#39; } },
+  messages: { email: { required: &#39;We need your email&#39; } },
+  submitHandler: function (form) { form.submit(); }
+});
+$(&#39;#signup&#39;).valid();                  // synchronous, like the original
+$(&#39;#email&#39;).rules(&#39;add&#39;, { minlength: 3 });
+$.validator.addMethod(&#39;even&#39;, function (value, element) { return this.optional(element) || value % 2 === 0; }, &#39;Even numbers only&#39;);
+</code></pre>
+<p>It supports <code>$.fn.validate</code>, <code>valid</code> and <code>rules</code>, <code>$.validator.addMethod</code>, <code>addClassRules</code>, <code>setDefaults</code>, <code>format</code>, <code>messages</code> and <code>methods</code>, all built-in and additional methods, per-field messages, <code>data-rule-*</code>, <code>data-msg-*</code>, class and attribute rules, <code>depends</code>, <code>normalizer</code>, <code>remote</code>, and the options <code>errorPlacement</code>, <code>highlight</code>, <code>unhighlight</code>, <code>success</code>, <code>invalidHandler</code>, <code>submitHandler</code>, <code>onfocusout</code>, <code>onkeyup</code>, <code>onclick</code>, <code>ignore</code>, <code>focusCleanup</code>, <code>debug</code>, <code>errorContainer</code>, <code>errorLabelContainer</code> and <code>wrapper</code>. The <code>groups</code> and <code>showErrors</code> options are supported too. The full list, the differences, and a step-by-step migration are in <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
+<h2 id="migrating-from-v1">Migrating from v1</h2>
+<p>Existing pages keep working: <code>FormValidator.init({ formId, rules, config, context })</code>, <code>FormValidator.validate(id, rules)</code> and <code>form._manualValidate()</code> are unchanged. These behaviours are different, on purpose:</p>
+<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
+<thead>
+<tr>
+<th>Version 1</th>
+<th>Now</th>
+<th>To get the old behaviour</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Invalid forms could still submit, because the handler called <code>preventDefault()</code> too late</td>
+<td>Invalid forms are blocked</td>
+<td>none needed</td>
+</tr>
+<tr>
+<td>A blank optional email, url or number was an error</td>
+<td>Blank optional fields pass. Only <code>required</code> demands a value.</td>
+<td>Add <code>required</code> where a value is needed</td>
+</tr>
+<tr>
+<td><code>pwcheck</code> did nothing unless <code>passwordStrength.enabled</code> was set</td>
+<td><code>pwcheck</code> runs whenever it is listed</td>
+<td>Set <code>passwordStrength: { enabled: false }</code> or <code>enabled: false</code> on the rule</td>
+</tr>
+<tr>
+<td>jQuery was needed for any <code>&lt;select&gt;</code></td>
+<td>jQuery is optional</td>
+<td>none needed</td>
+</tr>
+<tr>
+<td>Passwords were trimmed</td>
+<td>Passwords are never trimmed</td>
+<td>none needed</td>
+</tr>
+<tr>
+<td><code>validate(id, rules)</code> ignored the form&#39;s config</td>
+<td>It reuses the form&#39;s config</td>
+<td>none needed</td>
+</tr>
+<tr>
+<td>Field names with <code>[</code>, <code>]</code> or quotes broke selectors</td>
+<td>They work</td>
+<td>none needed</td>
+</tr>
+<tr>
+<td>Errors were only removed while typing</td>
+<td>Errors are re-checked while typing, and confirm fields are re-checked</td>
+<td>none needed</td>
+</tr>
+<tr>
+<td><code>init</code> returned nothing</td>
+<td><code>init</code> returns an instance</td>
+<td>none needed</td>
+</tr>
+<tr>
+<td>Radio and checkbox errors were placed only for Bootstrap <code>btn-check</code> inputs</td>
+<td>Placed after the group for all radios and checkboxes</td>
+<td>Use <code>errorPlacement</code></td>
+</tr>
+<tr>
+<td>The <code>url</code> rule accepted odd strings</td>
+<td>It parses the URL properly and needs a dotted host (or <code>localhost</code>)</td>
+<td><code>allowLocal: true</code> for intranet names</td>
+</tr>
+</tbody></table></div>
+<p>A rule without a message now shows a default English sentence (version 1 showed nothing useful). A message you write always wins.</p>
+<h2 id="troubleshooting-and-limits">Troubleshooting and limits</h2>
+<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause and fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nothing happens on submit, or the form submits without checks</td>
+<td>The form id in <code>init</code> does not match, or <code>init</code> ran before the form existed. <code>init</code> throws <code>Form &quot;id&quot; not found</code> when the form is missing, so check the console.</td>
+</tr>
+<tr>
+<td>No message appears for a field</td>
+<td>The rules key must equal the field&#39;s <code>name</code> attribute, not its <code>id</code>.</td>
+</tr>
+<tr>
+<td>A field is never validated</td>
+<td>It is hidden, disabled, <code>type=&quot;hidden&quot;</code>, or matches <code>ignore</code>. Use <code>validateHidden: true</code> if it should be checked.</td>
+</tr>
+<tr>
+<td>Message appears in the wrong place</td>
+<td>Use <code>errorPlacement</code>, or wrap the field in a container the library knows (<code>.input-group</code>, <code>.form-floating</code>, <code>.answer</code>, ...).</td>
+</tr>
+<tr>
+<td>A blank field passes <code>email</code></td>
+<td>By design. Add <code>&#39;required&#39;</code> first.</td>
+</tr>
+<tr>
+<td><code>Unknown rule &quot;x&quot;</code> in the console</td>
+<td>The rule name is misspelt, or <code>registerRule</code> has not run yet. The rule is ignored.</td>
+</tr>
+<tr>
+<td>The <code>file</code> rule does nothing and logs a warning</td>
+<td><code>fileValidator.js</code> is not loaded. Add its script tag.</td>
+</tr>
+<tr>
+<td>A <code>remote</code> check keeps blocking</td>
+<td>A network or HTTP error blocks by default. Fix the endpoint or set <code>failOpen: true</code>.</td>
+</tr>
+<tr>
+<td>Your own submit listener runs twice</td>
+<td>It should run once: only valid submits reach other listeners. Make sure <code>init</code> was not called on two different wrappers of the same form.</td>
+</tr>
+<tr>
+<td>Page code sets <code>form.noValidate = false</code> later</td>
+<td>Browser pop-ups will appear again. Set <code>novalidate: false</code> in <code>config</code> if you want the browser&#39;s own checks too.</td>
+</tr>
+</tbody></table></div>
+<p><strong>Limits</strong></p>
+<ul>
+<li>Validation runs in the browser only. Repeat the checks on the server.</li>
+<li>There is no built-in translation of number formats: <code>1,5</code> is not a number. Normalise input, or add a <code>custom</code> rule.</li>
+<li>The <code>phone</code> rule checks shape and digit count, not that the number exists.</li>
+<li>Hidden-field detection uses layout, so a field inside a collapsed panel is skipped until the panel is shown.</li>
+</ul>
+<p><strong>Running the tests</strong></p>
+<pre tabindex="0"><code>npm install
+npm test
+</code></pre>
+<p>The suite has 101 tests for FormValidator, 70 for the jQuery compatibility layer, 6 accessibility tests and 15 for the one-file bundle, using jsdom (<code>npm run test:jquery3</code> repeats the jQuery tests on jQuery 3.x). Open <code>demo.html</code> or <code>demo-jquery.html</code> to try the libraries in a browser.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

@@ -282,15 +282,28 @@ The packs are machine-quality translations: please have a native speaker check t
 Always pin the exact version and keep the `integrity` attribute, so the file your visitors load can never change:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.2.0/dist/validator.min.js"
-        integrity="sha384-wGtxg6qi35vXijdi8x6MnGn/QwTQ+B5t6DBV5U9fTcAIzyxhfLJzrrVszhQd4Am4" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.2.0/dist/locales/de.min.js"
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.3.0/dist/validator.min.js"
+        integrity="sha384-svSisyYvXE2hHnnrqzXCheMMBv+uAz9qbd/DKeviE/GIZeaIeh5NCODe7vxwXlRK" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.3.0/dist/locales/de.min.js"
         integrity="sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>
 ```
 
-Hashes for every file are in `dist/SRI.json` (they are for version 3.2.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
+Hashes for every file are in `dist/SRI.json` (they are for version 3.3.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
 
 ## Contributing
 
 Anyone can contribute: fork, change `src/`, open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md). Only reviewed pull requests reach `main`.
+
+## Server, React, Vue, Alpine
+
+- **Server (Node):** `require('form-and-file-validator/server')`: `middleware(rules)` for Express (multer, formidable, express-fileupload) runs the same file rules on the uploaded files and answers 422 with JSON.
+- **React:** `import { useFormValidator, FileDropzone } from 'form-and-file-validator/react'`
+- **Vue 3:** `import { useFormValidator, FileDropzone, vFormValidator } from 'form-and-file-validator/vue'`
+- **Alpine.js:** `dist/integrations/alpine.min.js` adds `x-validate` and `x-dropzone`.
+
+Full examples: [Server and frameworks](docs/Server-and-Frameworks.md), languages: [Languages](docs/Languages.md). A live playground is in the docs site (`docs/playground.html`).
+
+## Tests
+
+`npm test` (jsdom, TypeScript typings, fuzz / ReDoS), `npm run test:jquery3`, and `npm run test:browser` (Chrome, Edge, Firefox and WebKit, headless, with an axe accessibility audit). CI runs them on every push and pull request.

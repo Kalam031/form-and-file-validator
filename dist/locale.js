@@ -32,6 +32,7 @@
         'Remove {name}', '…and {n} more.', '{n} selected.', '{name} removed. {n} selected.', 'All files removed.', 'status.added', 'status.rejected'];
 
     const packs = { en: { name: 'English', dir: 'ltr' } };
+    const seen = new Set();        // queued pack objects this registry already took in
     const snapshots = {};          // English originals, taken the first time a language is applied
     let current = 'en';
 
@@ -47,7 +48,8 @@
     function pullQueued() {
         const queued = root.FVLocalePacks;
         if (!isObj(queued)) return;
-        Object.keys(queued).forEach(code => { const pack = queued[code]; delete queued[code]; register(code, pack); });
+        // the queue stays as it is (another registry, for example the server's, may need the same packs); each pack object is taken in once per registry
+        Object.keys(queued).forEach(code => { const pack = queued[code]; if (seen.has(pack)) return; seen.add(pack); register(code, pack); });
     }
 
     const find = code => {

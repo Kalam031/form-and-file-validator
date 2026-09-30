@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessibility · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html" aria-current="page">Accessibility</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="accessibility-review">Accessibility review</h1>
+<p>This page says what was checked, what the libraries do for assistive technology, what you must still do in your own markup and CSS, and how to test with a real screen reader.</p>
+<p><strong>Honest scope.</strong> The automated part below runs in every <code>npm test</code>. A real screen reader was not run for this review, because that needs a person with NVDA, JAWS, VoiceOver or TalkBack. The manual script at the end is written so that someone can do it in about 20 minutes and report back.</p>
+<h2 id="1-what-is-tested-automatically">1. What is tested automatically</h2>
+<p><code>tests/a11y.test.js</code> runs <a href="https://github.com/dequelabs/axe-core">axe-core</a> (the engine behind most accessibility checkers) on:</p>
+<ul>
+<li>a form with seven field types (text, email, password, select, radio group, checkbox, file), before validation, with every field in error, and after every error is fixed;</li>
+<li>error messages rendered as <code>&lt;label&gt;</code> elements, with <code>data-msg-*</code> text;</li>
+<li>a field while a server (<code>remote</code>) check runs (<code>aria-busy</code>);</li>
+<li>the jQuery compatibility layer, including <code>groups</code>;</li>
+<li>the upload widget: empty, with files, previews and a rejection message, and with a keyboard-operable dropzone.</li>
+</ul>
+<p>All of these pass with no violations. The audit found and fixed two real problems:</p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Problem found</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>role=&quot;alert&quot;</code> on a <code>&lt;label&gt;</code> error element is not allowed by ARIA. This affected <code>errorElement: &#39;label&#39;</code> and the whole jQuery compatibility layer.</td>
+<td>Label errors now use <code>aria-live=&quot;polite&quot;</code> instead. Other elements keep <code>role=&quot;alert&quot;</code>. The field&#39;s <code>aria-describedby</code> makes a screen reader read the message when the field gets focus in both cases.</td>
+</tr>
+<tr>
+<td>The dropzone got <code>role=&quot;button&quot;</code> even when it held a visible file input, which nests interactive controls (axe &quot;serious&quot;).</td>
+<td>The zone only becomes a button when the real input cannot be reached by keyboard (hidden, <code>aria-hidden</code>, <code>tabindex=&quot;-1&quot;</code>) and the zone holds no other buttons. <code>keyboard: true / false</code> overrides it.</td>
+</tr>
+</tbody></table></div>
+<p>Two more improvements came from walking through the widget as a keyboard and screen reader user:</p>
+<ul>
+<li>After removing a file, keyboard focus used to be lost (the button that had focus disappeared). Focus now moves to the next remove button, the previous one, or the file input.</li>
+<li>Adding files gave a screen reader user no feedback. The <code>statusElement</code> option now announces &quot;2 files added. 1 file not accepted. 3 selected.&quot; in a polite live region.</li>
+</ul>
+<p><strong>What axe cannot check:</strong> colour contrast in jsdom (the libraries add no CSS, so contrast is yours), how a message actually sounds, whether the order of announcements is sensible, and touch-target size. Those are in the manual script.</p>
+<h2 id="2-what-the-libraries-do">2. What the libraries do</h2>
+<p><strong>FormValidator (and the jQuery layer)</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th>Behaviour</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Invalid field</td>
+<td><code>aria-invalid=&quot;true&quot;</code>, and the message&#39;s id is added to <code>aria-describedby</code> (existing <code>aria-describedby</code> values are kept). Both are removed when the field is fixed.</td>
+</tr>
+<tr>
+<td>Message element</td>
+<td><code>role=&quot;alert&quot;</code> on <code>div</code>/<code>span</code> messages, <code>aria-live=&quot;polite&quot;</code> on <code>&lt;label&gt;</code> messages. Text is inserted as text, never as HTML.</td>
+</tr>
+<tr>
+<td>Label link</td>
+<td>A <code>&lt;label&gt;</code> message gets <code>for=&quot;&lt;field id&gt;&quot;</code>.</td>
+</tr>
+<tr>
+<td>After a failed submit</td>
+<td>Focus moves to the first invalid field in page order, so the screen reader reads its label and then the message. <code>focusInvalid: false</code> turns it off.</td>
+</tr>
+<tr>
+<td>Server check</td>
+<td><code>aria-busy=&quot;true&quot;</code> and the <code>fv-pending</code> class while it runs.</td>
+</tr>
+<tr>
+<td>Groups (jQuery <code>groups</code>)</td>
+<td>Only the first message of a group is visible; the others get <code>hidden</code>, so they are not announced twice.</td>
+</tr>
+<tr>
+<td>Hidden or disabled fields</td>
+<td>Skipped, and their old messages are removed, so nothing stale is left for a screen reader.</td>
+</tr>
+<tr>
+<td>Browser pop-ups</td>
+<td><code>novalidate</code> is set so the browser&#39;s own bubbles do not fight with the messages (restored on <code>destroy()</code>).</td>
+</tr>
+</tbody></table></div>
+<p><strong>FileValidator upload widget</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<thead>
+<tr>
+<th>Behaviour</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Rejected files</td>
+<td>Listed in <code>messageElement</code>, which gets <code>role=&quot;alert&quot;</code> and <code>aria-live=&quot;polite&quot;</code>. One line per message, each starting with the file name.</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><code>statusElement</code> gets <code>role=&quot;status&quot;</code> and announces added, not accepted, removed, and how many are selected.</td>
+</tr>
+<tr>
+<td>File list</td>
+<td>A list of items. Each remove button has <code>aria-label=&quot;Remove &lt;file name&gt;&quot;</code>. Preview images are decorative (<code>alt=&quot;&quot;</code>) because the name is beside them.</td>
+</tr>
+<tr>
+<td>Focus</td>
+<td>After removing a file, focus stays inside the widget (see above).</td>
+</tr>
+<tr>
+<td>Dropzone</td>
+<td>Drag and drop is a convenience only. The file input stays the accessible way to add files, and paste is optional.</td>
+</tr>
+</tbody></table></div>
+<h2 id="3-what-you-still-have-to-do">3. What you still have to do</h2>
+<ul>
+<li><strong>Use real labels.</strong> Every field needs a <code>&lt;label for&gt;</code> or an <code>aria-label</code>. axe reports fields without one.</li>
+<li><strong>Colour contrast.</strong> Style <code>.error</code>, <code>.is-invalid</code> and the widget classes yourself, at least 4.5:1 for the message text (3:1 for borders), and do not rely on red alone. The message text itself already carries the meaning.</li>
+<li><strong>Do not hide the input completely.</strong> If you visually hide the file input, keep it focusable (a visually-hidden style, not <code>display:none</code>), or let the widget make the zone the control (<code>keyboard</code>).</li>
+<li><strong>Keep the file list outside a clickable zone.</strong> A list with remove buttons inside a <code>role=&quot;button&quot;</code> zone nests interactive controls.</li>
+<li><strong>Provide the live regions.</strong> Add empty <code>#messages</code> and <code>#status</code> elements to the page from the start. Live regions that are created at the same moment as their text are announced unreliably by some screen readers.</li>
+<li><strong>Many errors at once.</strong> Each <code>role=&quot;alert&quot;</code> message can be announced. If that is too noisy for a long form, move focus to a summary in <code>onError</code> and set <code>errorElement</code> to a <code>label</code> (polite).</li>
+</ul>
+<h2 id="4-manual-screen-reader-test-script">4. Manual screen reader test script</h2>
+<p>Do this once per release with at least two of: NVDA + Firefox (Windows), JAWS + Chrome (Windows), VoiceOver + Safari (macOS), VoiceOver + Safari (iOS), TalkBack + Chrome (Android). Use <code>demo.html</code> and <code>demo-upload.html</code>. Write down what is announced, and mark anything different from &quot;expected&quot;.</p>
+<p><strong>A. Form errors (<code>demo.html</code>)</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Expected</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1. Tab through the form without typing.</td>
+<td>Each field announces its label and type. Nothing about errors yet.</td>
+</tr>
+<tr>
+<td>2. Press the submit button with empty fields.</td>
+<td>Focus moves to the first invalid field. The screen reader announces its label, &quot;invalid&quot; (or &quot;invalid entry&quot;), and the message (&quot;This field is required.&quot;).</td>
+</tr>
+<tr>
+<td>3. Press Tab to the next invalid field.</td>
+<td>Label, invalid, message.</td>
+</tr>
+<tr>
+<td>4. Type a valid value, then Tab away.</td>
+<td>No error is announced for that field, and it is no longer reported as invalid.</td>
+</tr>
+<tr>
+<td>5. Radio group: submit without choosing.</td>
+<td>The group&#39;s message is read with the group (fieldset legend) when its first radio is focused.</td>
+</tr>
+<tr>
+<td>6. Type text in an email field, leave it.</td>
+<td>The error appears; when you come back to the field it reads the message.</td>
+</tr>
+<tr>
+<td>7. Browse mode / virtual cursor: read the page.</td>
+<td>The messages are read in order, next to their fields, not at the end of the page.</td>
+</tr>
+</tbody></table></div>
+<p><strong>B. Upload widget (<code>demo-upload.html</code>)</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Expected</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1. Tab to the file input or dropzone.</td>
+<td>It announces as a button or file input with a clear name (&quot;Choose files&quot;).</td>
+</tr>
+<tr>
+<td>2. Press Enter/Space, pick one valid and one invalid file.</td>
+<td>The status line announces &quot;1 file added. 1 file not accepted. 1 selected.&quot; and the rejection message names the file and the reason.</td>
+</tr>
+<tr>
+<td>3. Tab to the file list.</td>
+<td>Each item announces its file name and size; the remove button announces &quot;Remove <name>, button&quot;.</td>
+</tr>
+<tr>
+<td>4. Press the remove button.</td>
+<td>The status line announces &quot;<name> removed. N selected.&quot; and focus lands on the next remove button (or the input). Focus must never fall back to the top of the page.</td>
+</tr>
+<tr>
+<td>5. Paste an image (Ctrl+V) with paste enabled.</td>
+<td>The status line announces the added file.</td>
+</tr>
+</tbody></table></div>
+<p><strong>C. Pass criteria:</strong> no unlabeled control, every error announced once, focus never lost, no announcement that says only &quot;alert&quot; without the message text, and everything usable without a mouse.</p>
+<p>Report issues with: screen reader and version, browser and version, the step number, what was announced, and what was expected.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

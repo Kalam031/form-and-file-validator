@@ -188,3 +188,13 @@ test('the package name resolves to the right file for import, require and the su
     assert.equal(pkg.types, 'types/index.d.ts');
     for (const f of ['types/index.d.ts', 'types/formValidator.d.ts', 'types/fileValidator.d.ts', 'types/jquery-validate.d.ts', 'types/global.d.ts']) assert.ok(fs.existsSync(path.join(__dirname, '..', f)), f);
 });
+
+test('dist/SRI.json matches the built files (so the README script tags stay valid)', () => {
+    const crypto = require('crypto'), fs = require('fs'), path = require('path');
+    const sri = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'dist', 'SRI.json'), 'utf8'));
+    assert.ok(Object.keys(sri).length >= 10);
+    for (const f of Object.keys(sri)) {
+        const actual = 'sha384-' + crypto.createHash('sha384').update(fs.readFileSync(path.join(__dirname, '..', 'dist', f))).digest('base64');
+        assert.equal(actual, sri[f], f + ' changed: regenerate dist/SRI.json and the README hashes');
+    }
+});

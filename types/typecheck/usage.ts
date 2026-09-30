@@ -152,3 +152,17 @@ locales.auto('en');
 // @ts-expect-error a pack's dir is ltr or rtl
 locales.register('xx', { dir: 'up' });
 void dirValue;
+
+// ---- server companion
+import { middleware, validate } from "../server";
+const mw = middleware({ allowedExtensions: [".png"], maxFileSizeMB: 2 }, { status: 400 });
+mw({}, {}, () => undefined);
+validate([], { maxFiles: 1 }).then(r => { const ok: boolean = r.isValid; void ok; });
+
+// ---- framework bindings
+import { useFormValidator as useReactForm, FileDropzone as ReactDropzone } from '../react';
+import { useFormValidator as useVueForm } from '../vue';
+const reactHook: typeof useReactForm = useReactForm;
+const vueHook: typeof useVueForm = useVueForm;
+const dz: typeof ReactDropzone = ReactDropzone;
+void reactHook; void vueHook; void dz;

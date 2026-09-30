@@ -1,0 +1,31 @@
+:root{--bg:#fff;--fg:#1c2330;--muted:#5b6678;--line:#dfe4ec;--accent:#1a5fd0;--code:#f3f5f9;--side:#f7f8fb;--err:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#12161d;--fg:#e6eaf2;--muted:#9aa5b8;--line:#2a3140;--accent:#7fb0ff;--code:#1b212c;--side:#161b24;--err:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:var(--bg);padding:8px;z-index:9}
+.top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.brand{font-weight:700;color:var(--fg);text-decoration:none}.brand span{font-weight:400;color:var(--muted);font-size:.85em;margin-left:6px}
+.gh{color:var(--accent)}
+.wrap{display:flex;gap:32px;max-width:1180px;margin:0 auto;padding:0 16px}
+nav{flex:0 0 220px;padding:20px 0}nav ul{list-style:none;margin:0;padding:0;position:sticky;top:16px}
+nav a{display:block;padding:6px 10px;border-radius:6px;color:var(--fg);text-decoration:none}
+nav a:hover{background:var(--side)}nav a[aria-current=page]{background:var(--side);font-weight:600;color:var(--accent)}
+main{flex:1;min-width:0;padding:20px 0 60px}
+h1,h2,h3{line-height:1.25}h2{margin-top:2em;padding-top:.6em;border-top:1px solid var(--line)}
+a{color:var(--accent)}
+pre{background:var(--code);padding:14px;border-radius:8px;overflow:auto;font-size:.88em;line-height:1.5}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.9em}pre code{background:none;padding:0}
+table{border-collapse:collapse}.tablewrap{overflow:auto;max-width:100%}th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}th{background:var(--side)}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid var(--accent);background:var(--side)}
+footer{border-top:1px solid var(--line);padding:20px 16px;text-align:center;color:var(--muted)}
+.pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.card{border:1px solid var(--line);border-radius:10px;padding:16px}
+.card label{display:block;margin:10px 0 2px;font-weight:600}
+.card input[type=text],.card input[type=email],.card input[type=password],.card select{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+.card button{margin-top:12px;padding:8px 16px;border:0;border-radius:6px;background:var(--accent);color:var(--bg);font:inherit;cursor:pointer}
+.error{color:var(--err);font-size:.9em}input.error{border-color:var(--err)}
+.fv-zone{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center}.fv-dragover{border-color:var(--accent);background:var(--side)}
+.fv-list{list-style:none;padding:0;text-align:left}.fv-file{display:flex;align-items:center;gap:8px;padding:4px 0}.fv-preview{width:40px;height:40px;object-fit:cover;border-radius:4px}
+.fv-message{color:var(--err);text-align:left}
+#result{white-space:pre-wrap}
+@media (max-width:760px){.wrap{flex-direction:column;gap:0}nav{flex:none}nav ul{display:flex;flex-wrap:wrap;position:static}}
