@@ -1,4 +1,4 @@
-# FormValidator v2.5.0 — Documentation
+# FormValidator v2.6.0 — Documentation
 
 ## Overview
 
@@ -24,7 +24,7 @@ FormValidator checks an HTML form before it is submitted, shows a clear message 
 <script src="dist/formValidator.js"></script>
 ```
 
-One-file alternative: `<script src="dist/validator.min.js"></script>` carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: `const FormValidator = require('./dist/formValidator.js')`. Check the loaded version with `FormValidator.version` (currently 2.5.0). It is also the successor of the jQuery Validation plugin: see [Migrating-from-jQuery-Validate.md](Migrating-from-jQuery-Validate.md).
+One-file alternative: `<script src="dist/validator.min.js"></script>` carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: `const FormValidator = require('./dist/formValidator.js')`. Check the loaded version with `FormValidator.version` (currently 2.6.0). It is also the successor of the jQuery Validation plugin: see [Migrating-from-jQuery-Validate.md](Migrating-from-jQuery-Validate.md).
 
 ## Quick start
 
@@ -173,7 +173,9 @@ rules: {
 
 Combine it with `config.autoRules: true` to get rules and messages from the HTML alone. The attribute name is the rule name in lower case, or with dashes for camelCase rules (`data-msg-mindate` or `data-msg-min-date`). Placeholders such as `{min}` work in these messages too, and the text is always set as plain text.
 
-**Translating everything once**
+**Language packs.** 13 ready-made languages (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja) translate these messages, the FileValidator messages, the upload widget and the jQuery messages in one call: load `dist/locales/de.min.js`, then `FVLocales.use('de')` (or `FVLocales.auto()` for the visitor's browser language). See [Languages.md](Languages.md). Error messages carry `dir="auto"`, so right-to-left text reads correctly inside a left-to-right page.
+
+**Translating everything once, by hand**
 
 ```js
 Object.assign(FormValidator.messages, {
@@ -370,6 +372,9 @@ Static functions on `FormValidator`:
 | `validate(formId, rules)` | Check any form against ad-hoc rules, using the form's config if it has been set up |
 | `getInstance(formId)` | Get the instance of a form, or `null` |
 | `registerRule(name, fn, options)` | Add a rule (engine style: `fn(value, rule, env)`) |
+| `getRule(name)` | The registered rule function, or `null` |
+| `locales` | (one-file bundle) The language pack registry, same object as `FVLocales`: `use`, `auto`, `register`, `list` |
+| `useJQuery($)` | Install the jQuery Validation layer on a jQuery that loaded after the bundle |
 | `addMethod(name, fn, message)` | Add a rule, jQuery style: `fn.call(this, value, element, param)` |
 | `addClassRules(name, rules)` | Rules for every field that has a CSS class |
 | `format(text, ...params)` | Fill `{0}`, `{1}`; with one argument it returns a message function |
@@ -536,4 +541,13 @@ npm install
 npm test
 ```
 
-The suite has 101 tests for FormValidator, 70 for the jQuery compatibility layer, 6 accessibility tests and 15 for the one-file bundle, using jsdom (`npm run test:jquery3` repeats the jQuery tests on jQuery 3.x). Open `demo.html` or `demo-jquery.html` to try the libraries in a browser.
+The project is tested three ways. `npm test` runs about 370 tests in jsdom (every option and error code, false-positive guards, odd and hostile inputs, a fuzz and ReDoS suite, axe accessibility audits, the bundle, the language packs, the server companion, React / Vue / Alpine) and checks the TypeScript typings. `npm run test:jquery3` repeats the jQuery tests on jQuery 3.x. `npm run test:browser` runs 116 tests in real Chrome, Edge, Firefox and WebKit (headless Playwright): real file choosers, drag and drop, image decoding, hashing, focus, and an axe audit with colour contrast. Open `demo.html` or `demo-jquery.html` to try the libraries in a browser, or the live playground on the docs site.
+
+## Version history
+
+The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
+
+- **2.6.0**: error messages carry `dir="auto"`; language packs.
+- **2.5.2**: hardening: a bad CSS selector, an option of the wrong type or a user callback that throws no longer breaks the form.
+- **2.5.1**: a click is never lost when a blur removes an error message and the layout shifts (the change waits until the pointer is released).
+- **2.5.0**: `remote` sends `GET` by default, `POST` configurable; jQuery-style `addMethod`, `data-msg-*` and `data-rule-*`.

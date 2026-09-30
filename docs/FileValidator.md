@@ -1,4 +1,4 @@
-# FileValidator v2.6.0 — Documentation
+# FileValidator v2.7.0 — Documentation
 
 ## Overview
 
@@ -30,7 +30,7 @@ FileValidator decides whether selected files are safe and acceptable before you 
 
 Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: `<script src="dist/validator.min.js"></script>`.
 
-With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.6.0). The optional upload widget (`fileValidator.widget.js`) is version 1.1.0..
+With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.7.0). The optional upload widget (`fileValidator.widget.js`) is version 1.3.0.
 
 ## Quick start
 
@@ -284,7 +284,15 @@ It also calls `input.setCustomValidity(message)`, so the browser's own form vali
 
 **`getCategory(file)`** returns `'image'`, `'video'`, `'audio'` or `'file'`.
 
-**`formatBytes(n)`** turns `3145728` into `'3 MB'`.
+**`formatBytes(n)`** turns `3145728` into `'3 MB'` (the unit labels come from `FileValidator.units`).
+
+**`formatDuration(seconds)`** turns `3725` into `'1:02:05'` and `65` into `'1:05'`.
+
+**`hashFile(file, maxMB)`** resolves to the file's SHA-256 as a hex string, or `null` when the file is larger than `maxMB`. Files above 32 MB are hashed as a stream, and in a Web Worker when the browser allows it, so the page stays responsive. This is what duplicate-content detection uses.
+
+**`getPath(file)`** returns `'folder/sub/a.jpg'` for a file picked from a folder, else `''`. **`isIgnored(file, ignoreFiles)`** tells whether a file's name is on the `ignoreFiles` list (`true` for the built-in list, or names and regular expressions).
+
+**Translation.** `FileValidator.defaultMessages` (error code to text), `FileValidator.units` (`B`, `KB`, `MB`, `GB`) and `FileValidator.phrases` (English fragment to translation) hold every text the library writes; `phrase(text, values)` looks one up, `phraseN(key, count, values, englishForms)` picks the plural form for the current `FileValidator.locale`. You rarely touch them by hand: the 13 language packs fill them, see [Languages.md](Languages.md) (`FVLocales.use('de')`). Messages carry `dir="auto"` in the widget, so right-to-left text reads correctly.
 
 **Inside FormValidator.** Use the `file` rule, and pass FileValidator options right in the rule. Its message is shown under the field.
 
@@ -317,7 +325,7 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
 
 ## Upload widget
 
-`fileValidator.widget.js` (version 1.1.0) adds drag and drop, folder drops, paste, thumbnails, resizing and a file list on top of FileValidator. It is a separate optional file, and part of the one-file bundle.
+`fileValidator.widget.js` (version 1.3.0) adds drag and drop, folder drops, paste, thumbnails, resizing and a file list on top of FileValidator. It is a separate optional file, and part of the one-file bundle.
 
 ```html
 <div id="zone"><label for="in">Choose files</label> <input type="file" id="in" name="up" multiple> or drop them here</div>
@@ -613,7 +621,7 @@ The old flag names `filenamePattern`, `dangerousExt`, `extension`, `mimeType`, `
 
 ## Security notes and limits
 
-**Always check again on the server.** Anything running in a browser can be changed or skipped by an attacker. FileValidator gives honest users fast feedback and stops obvious mistakes and simple tricks. It does not replace server-side checks.
+**Always check again on the server.** Anything running in a browser can be changed or skipped by an attacker. FileValidator gives honest users fast feedback and stops obvious mistakes and simple tricks. It does not replace server-side checks. The server companion (`form-and-file-validator/server`) runs the same rules on the uploaded files in Node, with an Express middleware: see [Server-and-Frameworks.md](Server-and-Frameworks.md).
 
 **What the content check can do**
 
@@ -670,11 +678,12 @@ The old flag names `filenamePattern`, `dangerousExt`, `extension`, `mimeType`, `
 
 **Running the tests**
 
-The project has 122 tests for this library (including the widget), 101 for FormValidator, 70 for the jQuery layer, 6 accessibility tests and 15 tests for the bundle. From the project folder run:
+The project is tested three ways. `npm test` runs about 370 tests in jsdom (every option and error code, false-positive guards, odd and hostile inputs, a fuzz and ReDoS suite, axe accessibility audits, the bundle, the language packs, the server companion, React / Vue / Alpine) and checks the TypeScript typings. `npm run test:jquery3` repeats the jQuery tests on jQuery 3.x. `npm run test:browser` runs 116 tests in real Chrome, Edge, Firefox and WebKit (headless Playwright): real file choosers, drag and drop, image decoding, hashing, focus, and an axe audit with colour contrast. From the project folder run:
 
 ```
 npm install
 npm test
+npm run test:browser     # real browsers
 ```
 
-The tests cover every option, every error code, false-positive guards for plain text, and odd inputs that must not throw. Open `demo.html` in a browser to try the libraries by hand.
+The tests cover every option, every error code, false-positive guards for plain text, odd inputs that must not throw, and file names built to make a pattern slow (they must finish in milliseconds). Open `demo.html` in a browser to try the libraries by hand.

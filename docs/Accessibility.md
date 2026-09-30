@@ -2,7 +2,7 @@
 
 This page says what was checked, what the libraries do for assistive technology, what you must still do in your own markup and CSS, and how to test with a real screen reader.
 
-**Honest scope.** The automated part below runs in every `npm test`. A real screen reader was not run for this review, because that needs a person with NVDA, JAWS, VoiceOver or TalkBack. The manual script at the end is written so that someone can do it in about 20 minutes and report back.
+**Honest scope.** The automated part below runs in every `npm test` (jsdom) and in `npm run test:browser` (real browsers). A real screen reader was not run for this review, because that needs a person with NVDA, JAWS, VoiceOver or TalkBack. The manual script at the end is written so that someone can do it in about 20 minutes and report back.
 
 ## 1. What is tested automatically
 
@@ -26,7 +26,11 @@ Two more improvements came from walking through the widget as a keyboard and scr
 - After removing a file, keyboard focus used to be lost (the button that had focus disappeared). Focus now moves to the next remove button, the previous one, or the file input.
 - Adding files gave a screen reader user no feedback. The `statusElement` option now announces "2 files added. 1 file not accepted. 3 selected." in a polite live region.
 
-**What axe cannot check:** colour contrast in jsdom (the libraries add no CSS, so contrast is yours), how a message actually sounds, whether the order of announcements is sensible, and touch-target size. Those are in the manual script.
+**In real browsers.** `npm run test:browser` runs the same kind of axe audit in Chrome, Edge, Firefox and WebKit **with colour contrast** on `demo.html` (empty and with every error showing), `demo-upload.html` (with files and rejection messages), `demo-jquery.html` and the docs site pages including the playground. It found two problems that jsdom could not: the demo pages had no `<main>` landmark, and scrollable code blocks on the docs site could not be reached with the keyboard. Both are fixed.
+
+**Right-to-left languages.** Error messages and widget messages carry `dir="auto"`, and the Arabic language pack switches the page with `FVLocales.use('ar', { document: true })` (`lang` and `dir="rtl"`). The playground test checks this in all four browsers.
+
+**What is still not checked automatically:** how a message actually sounds in a screen reader, whether the order of announcements is sensible, and touch-target size. Those are in the manual script. Colour contrast of your own pages is yours: the libraries add no CSS.
 
 ## 2. What the libraries do
 

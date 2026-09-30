@@ -31,10 +31,10 @@
 <h1 id="formvalidator-filevalidator">FormValidator + FileValidator</h1>
 <p>Two dependency-free libraries for validating forms and file uploads in the browser (and, for files, in Node). They work as plain <code>&lt;script&gt;</code> tags or with a bundler. jQuery, Select2 and Bootstrap are optional.</p>
 <h2 id="which-file-do-i-load">Which file do I load?</h2>
-<p><strong>One file: <code>dist/validator.min.js</code></strong> (113 KB minified).</p>
+<p><strong>One file: <code>dist/validator.min.js</code></strong> (127 KB minified; gzip is about a third of that).</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
 </code></pre>
-<p>It holds FormValidator, FileValidator, the upload widget and the jQuery Validation layer. The jQuery layer switches on by itself when jQuery was loaded first. If jQuery loads after it, call <code>FormValidator.useJQuery(jQuery)</code>. With a bundler or Node: <code>const { FormValidator, FileValidator } = require(&#39;./dist/validator.js&#39;)</code>.</p>
+<p>It holds FormValidator, FileValidator, the upload widget, the jQuery Validation layer and the language registry (<code>FVLocales</code>). The jQuery layer switches on by itself when jQuery was loaded first. If jQuery loads after it, call <code>FormValidator.useJQuery(jQuery)</code>. With a bundler or Node: <code>const { FormValidator, FileValidator } = require(&#39;./dist/validator.js&#39;)</code>.</p>
 <p><strong>Project layout</strong></p>
 <div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
 <thead>
@@ -45,22 +45,26 @@
 </thead>
 <tbody><tr>
 <td><code>dist/</code></td>
-<td>Everything you load or ship. Do not edit.</td>
+<td>Everything you load or ship: the bundle, each part, <code>locales/</code> (13 languages), <code>integrations/</code> (React, Vue, Alpine), <code>server.js</code>, <code>SRI.json</code>. Do not edit.</td>
 </tr>
 <tr>
 <td><code>src/</code></td>
-<td>The four source files. Edit these, then run <code>npm run build</code>.</td>
+<td>The source files (four parts, the language registry, <code>locales/</code>, <code>integrations/</code>, <code>server.js</code>). Edit these, then run <code>npm run build</code>.</td>
 </tr>
 <tr>
 <td><code>docs/</code></td>
-<td>Documentation.</td>
+<td>Documentation as Markdown, and the same pages as a static site with a live playground (<code>docs/index.html</code>, GitHub Pages).</td>
 </tr>
 <tr>
-<td><code>tests/</code></td>
-<td>Tests.</td>
+<td><code>types/</code></td>
+<td>TypeScript typings.</td>
+</tr>
+<tr>
+<td><code>tests/</code>, <code>browser-tests/</code></td>
+<td>jsdom tests, and the real-browser tests (Chrome, Edge, Firefox, WebKit).</td>
 </tr>
 </tbody></table></div>
-<p><strong>Why does <code>src/</code> have four files?</strong> They are four separate jobs with different dependencies, so a page that needs only one part can load only that part (<code>dist/</code> has each one on its own, readable and minified):</p>
+<p><strong>Why does <code>src/</code> have four main files?</strong> They are four separate jobs with different dependencies, so a page that needs only one part can load only that part (<code>dist/</code> has each one on its own, readable and minified):</p>
 <div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
 <thead>
 <tr>
@@ -74,19 +78,19 @@
 <td><code>formValidator</code></td>
 <td>Form validation</td>
 <td>nothing</td>
-<td>28 KB</td>
+<td>31 KB</td>
 </tr>
 <tr>
 <td><code>fileValidator</code></td>
 <td>File checks. Works without any form, and in Node.</td>
 <td>nothing</td>
-<td>44 KB</td>
+<td>49 KB</td>
 </tr>
 <tr>
 <td><code>fileValidator.widget</code></td>
 <td>Upload widget: drag and drop, folders, paste, previews, resizing, file list</td>
 <td><code>fileValidator</code></td>
-<td>15 KB</td>
+<td>16 KB</td>
 </tr>
 <tr>
 <td><code>formValidator.jquery</code></td>
@@ -273,7 +277,7 @@ $(&#39;#email&#39;).valid();   // true or false, right away, like the original
 <li><strong>Form with a drop area:</strong> use example 1 for the form and example 3 for the zone. The widget puts the accepted files into the input, so FormValidator&#39;s <code>required</code> and <code>file</code> rules see them.</li>
 </ul>
 <h2 id="documentation">Documentation</h2>
-<p><code>docs/FormValidator.md</code>, <code>docs/FileValidator.md</code> (including the upload widget), <code>docs/Migrating-from-jQuery-Validate.md</code> and <code>docs/Accessibility.md</code>.</p>
+<p><code>docs/FormValidator.md</code>, <code>docs/FileValidator.md</code> (including the upload widget), <code>docs/Server-and-Frameworks.md</code>, <code>docs/Languages.md</code>, <code>docs/Migrating-from-jQuery-Validate.md</code> and <code>docs/Accessibility.md</code>. The same pages are a static site with a live playground: open <code>docs/index.html</code>, or turn on GitHub Pages for the <code>/docs</code> folder.</p>
 <p>Demos to open in a browser: <code>demo.html</code> (a form), <code>demo-upload.html</code> (the upload widget), <code>demo-jquery.html</code> (the jQuery-style API).</p>
 <h2 id="formvalidator">FormValidator</h2>
 <pre tabindex="0"><code class="language-js">FormValidator.init({
@@ -335,6 +339,8 @@ FileValidator.bind(&#39;#upload&#39;, config, { messageElement: &#39;#msg&#39;, 
 npm run build        # src/ -&gt; dist/: the one-file bundle and each part on its own (readable and minified)
 npm test             # builds, then runs all tests (jsdom; jQuery 4)
 npm run test:jquery3 # the jQuery and accessibility tests again on jQuery 3.x
+npm run test:browser # real Chrome, Edge, Firefox and WebKit (needs: npx playwright install)
+npm run site         # rebuild docs/*.html from the Markdown docs
 </code></pre>
 <h2 id="languages">Languages</h2>
 <p>13 language packs ship in <code>dist/locales/</code> (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja). One script per language, loaded after the bundle:</p>

@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v250-documentation">FormValidator v2.5.0 — Documentation</h1>
+<h1 id="formvalidator-v260-documentation">FormValidator v2.6.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -48,7 +48,7 @@
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/fileValidator.js&quot;&gt;&lt;/script&gt;  &lt;!-- optional: needed only for the &quot;file&quot; rule --&gt;
 &lt;script src=&quot;dist/formValidator.js&quot;&gt;&lt;/script&gt;
 </code></pre>
-<p>One-file alternative: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code> carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: <code>const FormValidator = require(&#39;./dist/formValidator.js&#39;)</code>. Check the loaded version with <code>FormValidator.version</code> (currently 2.5.0). It is also the successor of the jQuery Validation plugin: see <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
+<p>One-file alternative: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code> carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: <code>const FormValidator = require(&#39;./dist/formValidator.js&#39;)</code>. Check the loaded version with <code>FormValidator.version</code> (currently 2.6.0). It is also the successor of the jQuery Validation plugin: see <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
 <h2 id="quick-start">Quick start</h2>
 <p>Give the form an id, then call <code>FormValidator.init</code> with the rules for each field, keyed by the field&#39;s <code>name</code>.</p>
 <pre tabindex="0"><code class="language-html">&lt;form id=&quot;signup&quot; action=&quot;/register&quot; method=&quot;post&quot;&gt;
@@ -445,7 +445,8 @@
 &lt;input name=&quot;age&quot; data-msg=&quot;Please check this field&quot;&gt;      &lt;!-- used for any rule of this field --&gt;
 </code></pre>
 <p>Combine it with <code>config.autoRules: true</code> to get rules and messages from the HTML alone. The attribute name is the rule name in lower case, or with dashes for camelCase rules (<code>data-msg-mindate</code> or <code>data-msg-min-date</code>). Placeholders such as <code>{min}</code> work in these messages too, and the text is always set as plain text.</p>
-<p><strong>Translating everything once</strong></p>
+<p><strong>Language packs.</strong> 13 ready-made languages (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja) translate these messages, the FileValidator messages, the upload widget and the jQuery messages in one call: load <code>dist/locales/de.min.js</code>, then <code>FVLocales.use(&#39;de&#39;)</code> (or <code>FVLocales.auto()</code> for the visitor&#39;s browser language). See <a href="languages.html">Languages.md</a>. Error messages carry <code>dir=&quot;auto&quot;</code>, so right-to-left text reads correctly inside a left-to-right page.</p>
+<p><strong>Translating everything once, by hand</strong></p>
 <pre tabindex="0"><code class="language-js">Object.assign(FormValidator.messages, {
   required: &#39;Pflichtfeld&#39;,
   email: &#39;Bitte eine gültige E-Mail-Adresse eingeben.&#39;,
@@ -767,6 +768,18 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 <td>Add a rule (engine style: <code>fn(value, rule, env)</code>)</td>
 </tr>
 <tr>
+<td><code>getRule(name)</code></td>
+<td>The registered rule function, or <code>null</code></td>
+</tr>
+<tr>
+<td><code>locales</code></td>
+<td>(one-file bundle) The language pack registry, same object as <code>FVLocales</code>: <code>use</code>, <code>auto</code>, <code>register</code>, <code>list</code></td>
+</tr>
+<tr>
+<td><code>useJQuery($)</code></td>
+<td>Install the jQuery Validation layer on a jQuery that loaded after the bundle</td>
+</tr>
+<tr>
 <td><code>addMethod(name, fn, message)</code></td>
 <td>Add a rule, jQuery style: <code>fn.call(this, value, element, param)</code></td>
 </tr>
@@ -986,7 +999,15 @@ $.validator.addMethod(&#39;even&#39;, function (value, element) { return this.op
 <pre tabindex="0"><code>npm install
 npm test
 </code></pre>
-<p>The suite has 101 tests for FormValidator, 70 for the jQuery compatibility layer, 6 accessibility tests and 15 for the one-file bundle, using jsdom (<code>npm run test:jquery3</code> repeats the jQuery tests on jQuery 3.x). Open <code>demo.html</code> or <code>demo-jquery.html</code> to try the libraries in a browser.</p>
+<p>The project is tested three ways. <code>npm test</code> runs about 370 tests in jsdom (every option and error code, false-positive guards, odd and hostile inputs, a fuzz and ReDoS suite, axe accessibility audits, the bundle, the language packs, the server companion, React / Vue / Alpine) and checks the TypeScript typings. <code>npm run test:jquery3</code> repeats the jQuery tests on jQuery 3.x. <code>npm run test:browser</code> runs 116 tests in real Chrome, Edge, Firefox and WebKit (headless Playwright): real file choosers, drag and drop, image decoding, hashing, focus, and an axe audit with colour contrast. Open <code>demo.html</code> or <code>demo-jquery.html</code> to try the libraries in a browser, or the live playground on the docs site.</p>
+<h2 id="version-history">Version history</h2>
+<p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
+<ul>
+<li><strong>2.6.0</strong>: error messages carry <code>dir=&quot;auto&quot;</code>; language packs.</li>
+<li><strong>2.5.2</strong>: hardening: a bad CSS selector, an option of the wrong type or a user callback that throws no longer breaks the form.</li>
+<li><strong>2.5.1</strong>: a click is never lost when a blur removes an error message and the layout shifts (the change waits until the pointer is released).</li>
+<li><strong>2.5.0</strong>: <code>remote</code> sends <code>GET</code> by default, <code>POST</code> configurable; jQuery-style <code>addMethod</code>, <code>data-msg-*</code> and <code>data-rule-*</code>.</li>
+</ul>
 
   </main>
 </div>

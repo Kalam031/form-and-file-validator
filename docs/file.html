@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="filevalidator-v260-documentation">FileValidator v2.6.0 — Documentation</h1>
+<h1 id="filevalidator-v270-documentation">FileValidator v2.7.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FileValidator decides whether selected files are safe and acceptable before you upload them. It returns a clear list of problems per file, with human-readable messages. It has no dependencies and also runs in Node 18+ (Node 20+ has <code>File</code> built in).</p>
 <p><strong>What it can do</strong></p>
@@ -53,7 +53,7 @@
 &lt;script src=&quot;dist/fileValidator.widget.js&quot;&gt;&lt;/script&gt;   &lt;!-- optional: the upload widget --&gt;
 </code></pre>
 <p>Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code>.</p>
-<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.6.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.1.0..</p>
+<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.7.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.3.0.</p>
 <h2 id="quick-start">Quick start</h2>
 <p>Call <code>validateFiles</code> with the selected files and a config. It always resolves, and never throws on odd input.</p>
 <pre tabindex="0"><code class="language-js">const input = document.querySelector(&#39;#upload&#39;);
@@ -666,7 +666,11 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 <p><strong><code>getMessage(code, params, config)</code></strong> builds one message, for example <code>getMessage(&#39;SIZE_TOO_LARGE&#39;, { size: &#39;6 MB&#39;, max: &#39;5 MB&#39; })</code>.</p>
 <p><strong><code>detectSignature(file)</code></strong> reads the file&#39;s first bytes and returns the matching format (<code>{ name, mime, exts, executable }</code>), <code>null</code> when no known format matches, or <code>undefined</code> when the file cannot be read.</p>
 <p><strong><code>getCategory(file)</code></strong> returns <code>&#39;image&#39;</code>, <code>&#39;video&#39;</code>, <code>&#39;audio&#39;</code> or <code>&#39;file&#39;</code>.</p>
-<p><strong><code>formatBytes(n)</code></strong> turns <code>3145728</code> into <code>&#39;3 MB&#39;</code>.</p>
+<p><strong><code>formatBytes(n)</code></strong> turns <code>3145728</code> into <code>&#39;3 MB&#39;</code> (the unit labels come from <code>FileValidator.units</code>).</p>
+<p><strong><code>formatDuration(seconds)</code></strong> turns <code>3725</code> into <code>&#39;1:02:05&#39;</code> and <code>65</code> into <code>&#39;1:05&#39;</code>.</p>
+<p><strong><code>hashFile(file, maxMB)</code></strong> resolves to the file&#39;s SHA-256 as a hex string, or <code>null</code> when the file is larger than <code>maxMB</code>. Files above 32 MB are hashed as a stream, and in a Web Worker when the browser allows it, so the page stays responsive. This is what duplicate-content detection uses.</p>
+<p><strong><code>getPath(file)</code></strong> returns <code>&#39;folder/sub/a.jpg&#39;</code> for a file picked from a folder, else <code>&#39;&#39;</code>. <strong><code>isIgnored(file, ignoreFiles)</code></strong> tells whether a file&#39;s name is on the <code>ignoreFiles</code> list (<code>true</code> for the built-in list, or names and regular expressions).</p>
+<p><strong>Translation.</strong> <code>FileValidator.defaultMessages</code> (error code to text), <code>FileValidator.units</code> (<code>B</code>, <code>KB</code>, <code>MB</code>, <code>GB</code>) and <code>FileValidator.phrases</code> (English fragment to translation) hold every text the library writes; <code>phrase(text, values)</code> looks one up, <code>phraseN(key, count, values, englishForms)</code> picks the plural form for the current <code>FileValidator.locale</code>. You rarely touch them by hand: the 13 language packs fill them, see <a href="languages.html">Languages.md</a> (<code>FVLocales.use(&#39;de&#39;)</code>). Messages carry <code>dir=&quot;auto&quot;</code> in the widget, so right-to-left text reads correctly.</p>
 <p><strong>Inside FormValidator.</strong> Use the <code>file</code> rule, and pass FileValidator options right in the rule. Its message is shown under the field.</p>
 <pre tabindex="0"><code class="language-js">FormValidator.init({ formId: &#39;profile&#39;, rules: {
   avatar: [{ type: &#39;file&#39;, accept: &#39;.png,.jpg&#39;, maxFileSizeMB: 2, minImageWidth: 100 }]
@@ -687,7 +691,7 @@ $(&#39;#avatar&#39;).rules(&#39;add&#39;, { fileValidator: { accept: &#39;image/
 </code></pre>
 <p>Notes: the check is asynchronous, so <code>$(&#39;#avatar&#39;).valid()</code> counts it as valid until the answer arrives (then the message appears), exactly like <code>remote</code>. On form submit the check is awaited. An empty file selection is optional unless you add <code>required</code>. With several files, the message starts with the file name (<code>bad.exe: ...</code>). Without a per-field message, the detailed FileValidator message is shown. The method is also available as <code>$.validator.methods.fileValidator</code>.</p>
 <h2 id="upload-widget">Upload widget</h2>
-<p><code>fileValidator.widget.js</code> (version 1.1.0) adds drag and drop, folder drops, paste, thumbnails, resizing and a file list on top of FileValidator. It is a separate optional file, and part of the one-file bundle.</p>
+<p><code>fileValidator.widget.js</code> (version 1.3.0) adds drag and drop, folder drops, paste, thumbnails, resizing and a file list on top of FileValidator. It is a separate optional file, and part of the one-file bundle.</p>
 <pre tabindex="0"><code class="language-html">&lt;div id=&quot;zone&quot;&gt;&lt;label for=&quot;in&quot;&gt;Choose files&lt;/label&gt; &lt;input type=&quot;file&quot; id=&quot;in&quot; name=&quot;up&quot; multiple&gt; or drop them here&lt;/div&gt;
 &lt;div id=&quot;status&quot;&gt;&lt;/div&gt;&lt;div id=&quot;errors&quot;&gt;&lt;/div&gt;&lt;ul id=&quot;list&quot; aria-label=&quot;Selected files&quot;&gt;&lt;/ul&gt;
 
@@ -1064,7 +1068,7 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
 <p><code>imageLimit</code> and <code>fileLimit</code> cap the count for a selection made of only images, or only non-images. New code can use <code>accept</code>, <code>maxFiles</code> and <code>minFiles</code> instead, which are simpler.</p>
 <p>The old flag names <code>filenamePattern</code>, <code>dangerousExt</code>, <code>extension</code>, <code>mimeType</code>, <code>maxFileSize</code>, <code>minFileSize</code>, <code>imageWidth</code>, <code>imageHeight</code>, <code>aspectRatio</code>, <code>maxFiles</code> and <code>duplicateNames</code> are all still understood.</p>
 <h2 id="security-notes-and-limits">Security notes and limits</h2>
-<p><strong>Always check again on the server.</strong> Anything running in a browser can be changed or skipped by an attacker. FileValidator gives honest users fast feedback and stops obvious mistakes and simple tricks. It does not replace server-side checks.</p>
+<p><strong>Always check again on the server.</strong> Anything running in a browser can be changed or skipped by an attacker. FileValidator gives honest users fast feedback and stops obvious mistakes and simple tricks. It does not replace server-side checks. The server companion (<code>form-and-file-validator/server</code>) runs the same rules on the uploaded files in Node, with an Express middleware: see <a href="server-and-frameworks.html">Server-and-Frameworks.md</a>.</p>
 <p><strong>What the content check can do</strong></p>
 <ul>
 <li>Compare the first bytes of a file with its extension, and reject programs disguised as documents or images.</li>
@@ -1160,11 +1164,12 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
 </tr>
 </tbody></table></div>
 <p><strong>Running the tests</strong></p>
-<p>The project has 122 tests for this library (including the widget), 101 for FormValidator, 70 for the jQuery layer, 6 accessibility tests and 15 tests for the bundle. From the project folder run:</p>
+<p>The project is tested three ways. <code>npm test</code> runs about 370 tests in jsdom (every option and error code, false-positive guards, odd and hostile inputs, a fuzz and ReDoS suite, axe accessibility audits, the bundle, the language packs, the server companion, React / Vue / Alpine) and checks the TypeScript typings. <code>npm run test:jquery3</code> repeats the jQuery tests on jQuery 3.x. <code>npm run test:browser</code> runs 116 tests in real Chrome, Edge, Firefox and WebKit (headless Playwright): real file choosers, drag and drop, image decoding, hashing, focus, and an axe audit with colour contrast. From the project folder run:</p>
 <pre tabindex="0"><code>npm install
 npm test
+npm run test:browser     # real browsers
 </code></pre>
-<p>The tests cover every option, every error code, false-positive guards for plain text, and odd inputs that must not throw. Open <code>demo.html</code> in a browser to try the libraries by hand.</p>
+<p>The tests cover every option, every error code, false-positive guards for plain text, odd inputs that must not throw, and file names built to make a pattern slow (they must finish in milliseconds). Open <code>demo.html</code> in a browser to try the libraries by hand.</p>
 
   </main>
 </div>

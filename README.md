@@ -4,30 +4,31 @@ Two dependency-free libraries for validating forms and file uploads in the brows
 
 ## Which file do I load?
 
-**One file: `dist/validator.min.js`** (113 KB minified).
+**One file: `dist/validator.min.js`** (127 KB minified; gzip is about a third of that).
 
 ```html
 <script src="dist/validator.min.js"></script>
 ```
 
-It holds FormValidator, FileValidator, the upload widget and the jQuery Validation layer. The jQuery layer switches on by itself when jQuery was loaded first. If jQuery loads after it, call `FormValidator.useJQuery(jQuery)`. With a bundler or Node: `const { FormValidator, FileValidator } = require('./dist/validator.js')`.
+It holds FormValidator, FileValidator, the upload widget, the jQuery Validation layer and the language registry (`FVLocales`). The jQuery layer switches on by itself when jQuery was loaded first. If jQuery loads after it, call `FormValidator.useJQuery(jQuery)`. With a bundler or Node: `const { FormValidator, FileValidator } = require('./dist/validator.js')`.
 
 **Project layout**
 
 | Folder | What is in it |
 | --- | --- |
-| `dist/` | Everything you load or ship. Do not edit. |
-| `src/` | The four source files. Edit these, then run `npm run build`. |
-| `docs/` | Documentation. |
-| `tests/` | Tests. |
+| `dist/` | Everything you load or ship: the bundle, each part, `locales/` (13 languages), `integrations/` (React, Vue, Alpine), `server.js`, `SRI.json`. Do not edit. |
+| `src/` | The source files (four parts, the language registry, `locales/`, `integrations/`, `server.js`). Edit these, then run `npm run build`. |
+| `docs/` | Documentation as Markdown, and the same pages as a static site with a live playground (`docs/index.html`, GitHub Pages). |
+| `types/` | TypeScript typings. |
+| `tests/`, `browser-tests/` | jsdom tests, and the real-browser tests (Chrome, Edge, Firefox, WebKit). |
 
-**Why does `src/` have four files?** They are four separate jobs with different dependencies, so a page that needs only one part can load only that part (`dist/` has each one on its own, readable and minified):
+**Why does `src/` have four main files?** They are four separate jobs with different dependencies, so a page that needs only one part can load only that part (`dist/` has each one on its own, readable and minified):
 
 | Part | What it is | Needs | Minified |
 | --- | --- | --- | --- |
-| `formValidator` | Form validation | nothing | 28 KB |
-| `fileValidator` | File checks. Works without any form, and in Node. | nothing | 44 KB |
-| `fileValidator.widget` | Upload widget: drag and drop, folders, paste, previews, resizing, file list | `fileValidator` | 15 KB |
+| `formValidator` | Form validation | nothing | 31 KB |
+| `fileValidator` | File checks. Works without any form, and in Node. | nothing | 49 KB |
+| `fileValidator.widget` | Upload widget: drag and drop, folders, paste, previews, resizing, file list | `fileValidator` | 16 KB |
 | `formValidator.jquery` | The jQuery Validation plugin API (`$('#f').validate(...)`), for migrating old sites | jQuery, `formValidator` | 25 KB |
 
 If you do not care about size, ignore them and use the one file.
@@ -182,7 +183,7 @@ What it does:
 
 ## Documentation
 
-`docs/FormValidator.md`, `docs/FileValidator.md` (including the upload widget), `docs/Migrating-from-jQuery-Validate.md` and `docs/Accessibility.md`.
+`docs/FormValidator.md`, `docs/FileValidator.md` (including the upload widget), `docs/Server-and-Frameworks.md`, `docs/Languages.md`, `docs/Migrating-from-jQuery-Validate.md` and `docs/Accessibility.md`. The same pages are a static site with a live playground: open `docs/index.html`, or turn on GitHub Pages for the `/docs` folder.
 
 Demos to open in a browser: `demo.html` (a form), `demo-upload.html` (the upload widget), `demo-jquery.html` (the jQuery-style API).
 
@@ -257,6 +258,8 @@ npm install
 npm run build        # src/ -> dist/: the one-file bundle and each part on its own (readable and minified)
 npm test             # builds, then runs all tests (jsdom; jQuery 4)
 npm run test:jquery3 # the jQuery and accessibility tests again on jQuery 3.x
+npm run test:browser # real Chrome, Edge, Firefox and WebKit (needs: npx playwright install)
+npm run site         # rebuild docs/*.html from the Markdown docs
 ```
 
 ## Languages
