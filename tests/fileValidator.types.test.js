@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // FileValidator 2.4: built-in extension registry, extension-derived MIME checks, unknown types, dangerous MIME types.
 const test = require('node:test');
 const assert = require('node:assert/strict');

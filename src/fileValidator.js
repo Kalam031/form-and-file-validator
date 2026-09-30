@@ -1,7 +1,9 @@
 /*!
- * FileValidator v2.7.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.7.1 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.7.1  Fix: a fractional byte range (a small `maxScanMB` such as 0.0001) made Node 20 abort the whole process inside Blob.slice();
+ *          ranges are whole numbers now.
  *   2.7.0  Translatable: the English fragments that end up inside messages ("macros", "the ZIP directory ... is missing") go through
  *          FileValidator.phrases, and sizes use FileValidator.units, so a language pack can translate whole sentences.
  *   2.6.2  Content hashing for big files without loading them into memory: files above 32 MB are hashed in 4 MB slices by a streaming
@@ -474,6 +476,8 @@
     }
 
     async function readRange(file, from, to) {
+        from = Math.max(0, Math.floor(Number(from)) || 0);          // whole numbers only: Node 20 aborts the process on a fractional Blob.slice()
+        to = Math.max(from, Math.floor(Number(to)) || 0);
         const blob = file.slice(from, to);
         if (typeof blob.arrayBuffer === 'function') return new Uint8Array(await blob.arrayBuffer());
         if (root.FileReader) {
@@ -1163,7 +1167,7 @@
     }
 
     return {
-        version: '2.7.0',
+        version: '2.7.1',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         validateFile,    // async (File, config)
         addExtension,    // ('.xyz', 'application/x-xyz' | [..]) : teach the built-in registry an extension

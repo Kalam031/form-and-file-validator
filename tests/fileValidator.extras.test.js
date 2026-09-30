@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // FileValidator 2.2: custom methods, inline checks, server (remote) checks, duplicate content, media duration, global defaults.
 const test = require('node:test');
 const assert = require('node:assert/strict');

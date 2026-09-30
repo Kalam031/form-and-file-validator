@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // Automated accessibility audit (axe-core) of the error states, the jQuery layer and the upload widget.
 // axe finds structural problems (labels, ARIA, roles, ids, names). It cannot judge colour contrast or how a screen reader
 // actually sounds: see docs/Accessibility.md for the manual checklist.

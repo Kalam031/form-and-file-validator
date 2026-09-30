@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import './helpers/shim.js';
 import { JSDOM } from 'jsdom';
 
 // ---- a jsdom page as the global environment (before the libraries are loaded)

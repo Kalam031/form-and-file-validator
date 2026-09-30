@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // The one-file bundle (dist/validator.js and its minified copy) must behave like the separate sources in every way it is loaded.
 const test = require('node:test');
 const assert = require('node:assert/strict');

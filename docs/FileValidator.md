@@ -1,4 +1,4 @@
-# FileValidator v2.7.0 — Documentation
+# FileValidator v2.7.1 — Documentation
 
 ## Overview
 
@@ -30,7 +30,7 @@ FileValidator decides whether selected files are safe and acceptable before you 
 
 Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: `<script src="dist/validator.min.js"></script>`.
 
-With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.7.0). The optional upload widget (`fileValidator.widget.js`) is version 1.3.0.
+With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.7.1). The optional upload widget (`fileValidator.widget.js`) is version 1.3.0.
 
 ## Quick start
 

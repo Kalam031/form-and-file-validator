@@ -1,12 +1,14 @@
-/*! FormValidator 2.6.0 + FileValidator 2.7.0 + upload widget 1.3.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.6.0 + FileValidator 2.7.1 + upload widget 1.3.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
     mods["fileValidator"] = function (module, exports, require, define) {
 /*!
- * FileValidator v2.7.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.7.1 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.7.1  Fix: a fractional byte range (a small `maxScanMB` such as 0.0001) made Node 20 abort the whole process inside Blob.slice();
+ *          ranges are whole numbers now.
  *   2.7.0  Translatable: the English fragments that end up inside messages ("macros", "the ZIP directory ... is missing") go through
  *          FileValidator.phrases, and sizes use FileValidator.units, so a language pack can translate whole sentences.
  *   2.6.2  Content hashing for big files without loading them into memory: files above 32 MB are hashed in 4 MB slices by a streaming
@@ -479,6 +481,8 @@ const api = (function (root) {
     }
 
     async function readRange(file, from, to) {
+        from = Math.max(0, Math.floor(Number(from)) || 0);          // whole numbers only: Node 20 aborts the process on a fractional Blob.slice()
+        to = Math.max(from, Math.floor(Number(to)) || 0);
         const blob = file.slice(from, to);
         if (typeof blob.arrayBuffer === 'function') return new Uint8Array(await blob.arrayBuffer());
         if (root.FileReader) {
@@ -1168,7 +1172,7 @@ const api = (function (root) {
     }
 
     return {
-        version: '2.7.0',
+        version: '2.7.1',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         validateFile,    // async (File, config)
         addExtension,    // ('.xyz', 'application/x-xyz' | [..]) : teach the built-in registry an extension
@@ -3689,7 +3693,7 @@ const api = (function (root) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.7.0","fileValidator.widget":"1.3.0","formValidator":"2.6.0","formValidator.jquery":"1.2.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.7.1","fileValidator.widget":"1.3.0","formValidator":"2.6.0","formValidator.jquery":"1.2.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;

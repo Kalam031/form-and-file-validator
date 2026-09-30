@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // fileValidator.widget.js: drag and drop, folders, paste, previews, resizing, file list, input sync — plus core folder-path checks.
 const test = require('node:test');
 const assert = require('node:assert/strict');

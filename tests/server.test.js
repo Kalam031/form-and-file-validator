@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

@@ -27,4 +27,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium firefox webkit
-      - run: npm run test:browser
+      - name: Browser tests
+        shell: bash
+        env:
+          BROWSERS: chromium,firefox,webkit
+        run: |
+          set +e
+          npm run test:browser 2>&1 | tee browser.log
+          status=${PIPESTATUS[0]}
+          # failures as annotations, so they are readable without opening the log
+          grep -E "^\s*✖|AssertionError|Error:|TimeoutError" browser.log | head -12 | while IFS= read -r line; do echo "::error::${line:0:400}"; done
+          exit $status

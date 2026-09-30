@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // FileValidator 2.6: PDF / Office / ZIP inspection, macros, zip bombs, malware-scan hook, more file signatures.
 const test = require('node:test');
 const assert = require('node:assert/strict');

@@ -12,7 +12,7 @@ const { marked } = require('marked');
 
 const ROOT = __dirname, DOCS = path.join(ROOT, 'docs'), ASSETS = path.join(DOCS, 'assets');
 const pkg = require('./package.json');
-const REPO = 'https://github.com/Kalam031/-form-and-file-validator';
+const REPO = 'https://github.com/Kalam031/form-and-file-validator';
 
 const PAGES = [
     { file: 'index.html', title: 'Overview', src: 'README.md' },

@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // The jQuery-Validation-style API on the native FormValidator: addMethod, scalar rule parameters, depends, normalizer,
 // class rules, data-rule-*, per-field messages, {0} placeholders, remote shorthand, pending state, focusCleanup.
 const test = require('node:test');

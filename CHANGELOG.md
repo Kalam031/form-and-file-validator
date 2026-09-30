@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.3.1
+- Fix: PDF scanning with a fractional byte range (small `maxScanMB`) crashed Node 20 (`Blob.slice` assertion). FileValidator 2.7.1.
+- CI now passes on Node 18, 20 and 22; links use the repository's final name `form-and-file-validator`.
+
 ## 3.3.0
 - **Server companion** (`form-and-file-validator/server`): Express / Connect middleware and `validate()` that run the same FileValidator rules on uploads from multer, formidable, express-fileupload, buffers, paths and Web Files. Has its own `locales`.
 - **Framework bindings**: React (`useFormValidator`, `<FileDropzone>`), Vue 3 (composable, `v-form-validator`, `<FileDropzone>`, plugin), Alpine.js (`x-validate`, `x-dropzone`), with typings.

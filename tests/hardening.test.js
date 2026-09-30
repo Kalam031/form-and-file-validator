@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/shim.js');
 // Hardening: hostile and random inputs must never crash, hang, or take a long time.
 //  - fuzzing of the file inspection code (ZIP directory, PDF, Office, names, paths) with mutated real files
 //  - slow-input ("ReDoS") checks of every rule and regular expression on pathological strings

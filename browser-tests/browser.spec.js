@@ -16,6 +16,7 @@ const { start } = require('./server.js');
 const files = require('./files.js');
 
 const ALL = [
+    { name: 'chromium', launch: () => chromium.launch() },   // Playwright's own Chromium (what CI installs)
     { name: 'chrome', launch: () => chromium.launch({ channel: 'chrome' }) },
     { name: 'msedge', launch: () => chromium.launch({ channel: 'msedge' }) },
     { name: 'firefox', launch: () => firefox.launch() },

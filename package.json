@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "private": true,
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",

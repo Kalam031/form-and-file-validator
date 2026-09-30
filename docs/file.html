@@ -11,8 +11,8 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.0</span></a>
-  <a class="gh" href="https://github.com/Kalam031/-form-and-file-validator">GitHub</a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.1</span></a>
+  <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
   <nav aria-label="Documentation">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="filevalidator-v270-documentation">FileValidator v2.7.0 — Documentation</h1>
+<h1 id="filevalidator-v271-documentation">FileValidator v2.7.1 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FileValidator decides whether selected files are safe and acceptable before you upload them. It returns a clear list of problems per file, with human-readable messages. It has no dependencies and also runs in Node 18+ (Node 20+ has <code>File</code> built in).</p>
 <p><strong>What it can do</strong></p>
@@ -53,7 +53,7 @@
 &lt;script src=&quot;dist/fileValidator.widget.js&quot;&gt;&lt;/script&gt;   &lt;!-- optional: the upload widget --&gt;
 </code></pre>
 <p>Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code>.</p>
-<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.7.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.3.0.</p>
+<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.7.1). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.3.0.</p>
 <h2 id="quick-start">Quick start</h2>
 <p>Call <code>validateFiles</code> with the selected files and a config. It always resolves, and never throws on odd input.</p>
 <pre tabindex="0"><code class="language-js">const input = document.querySelector(&#39;#upload&#39;);
@@ -1173,6 +1173,6 @@ npm run test:browser     # real browsers
 
   </main>
 </div>
-<footer>MIT licensed · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/-form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
 </body>
 </html>
