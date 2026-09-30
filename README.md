@@ -276,3 +276,21 @@ npm run test:jquery3 # the jQuery and accessibility tests again on jQuery 3.x
 In a module project: `import { locales } from 'form-and-file-validator'; import 'form-and-file-validator/locales/de.js'; locales.use('de');`.
 Add your own with `FVLocales.register('sv', { name: 'Svenska', form: { required: '...' } })`; anything missing stays English, and `FVLocales.keys()` lists every text a full pack needs.
 The packs are machine-quality translations: please have a native speaker check them before shipping to end users.
+
+## Use from a CDN (jsDelivr)
+
+Always pin the exact version and keep the `integrity` attribute, so the file your visitors load can never change:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.2.0/dist/validator.min.js"
+        integrity="sha384-wGtxg6qi35vXijdi8x6MnGn/QwTQ+B5t6DBV5U9fTcAIzyxhfLJzrrVszhQd4Am4" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/-form-and-file-validator@3.2.0/dist/locales/de.min.js"
+        integrity="sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz" crossorigin="anonymous"></script>
+<script>FVLocales.use('de');</script>
+```
+
+Hashes for every file are in `dist/SRI.json` (they are for version 3.2.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
+
+## Contributing
+
+Anyone can contribute: fork, change `src/`, open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md). Only reviewed pull requests reach `main`.
