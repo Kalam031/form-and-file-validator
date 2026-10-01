@@ -2,6 +2,11 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## Unreleased
+- Fix (server): `validate()` crashed with "Maximum call stack size exceeded" on Fastify `@fastify/multipart` parts. They are now read through `toBuffer()`, and a too deeply nested or circular input gives a clear error. Server companion 1.0.1 (version string unchanged until release).
+- Tests: real HTTP uploads to Express (multer, express-fileupload, formidable), Fastify, Koa and Hono; iPhone and Pixel emulation in the browser suite and CI.
+- Docs: tested frameworks and a "Known limits" section.
+
 ## 3.3.1
 - Fix: PDF scanning with a fractional byte range (small `maxScanMB`) crashed Node 20 (`Blob.slice` assertion). FileValidator 2.7.1.
 - CI now passes on Node 18, 20 and 22; links use the repository's final name `form-and-file-validator`.

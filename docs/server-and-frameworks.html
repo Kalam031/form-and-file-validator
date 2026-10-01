@@ -57,7 +57,18 @@ middleware(req =&gt; req.user.isPro ? proRules : freeRules);           // rules 
 <pre tabindex="0"><code class="language-js">const result = await validate(req.files, rules);       // { isValid, errors, details, files }
 </code></pre>
 <h3 id="what-it-accepts">What it accepts</h3>
-<p>multer (memory and disk), formidable (<code>filepath</code>), express-fileupload (<code>data</code>, <code>tempFilePath</code>), busboy-style <code>{ filename, buffer }</code>, <code>Buffer</code>s, file paths and Web <code>File</code>/<code>Blob</code> objects, single or in arrays / field maps.</p>
+<p>multer (memory and disk), @koa/multer, formidable (<code>filepath</code>), express-fileupload (<code>data</code>, <code>tempFilePath</code>), Fastify <code>@fastify/multipart</code> parts (<code>req.files()</code> or <code>attachFieldsToBody</code>), Hono / Workers / Bun / Deno / Next.js route handlers (the <code>File</code>s from <code>formData()</code> or <code>parseBody()</code>), busboy-style <code>{ filename, buffer }</code>, <code>Buffer</code>s, file paths and Web <code>File</code>/<code>Blob</code> objects, single or in arrays / field maps.</p>
+<h3 id="frameworks-that-are-tested">Frameworks that are tested</h3>
+<p>The test suite uploads real multipart requests to Express (with multer, express-fileupload and formidable 3), Fastify (<code>@fastify/multipart</code>), Koa (<code>@koa/multer</code>) and Hono, and validates a Web <code>Request</code> body. <code>middleware()</code> is Express / Connect style; for the others call <code>validate()</code> yourself and send the answer your framework&#39;s way:</p>
+<pre tabindex="0"><code class="language-js">// Fastify
+const parts = []; for await (const p of req.files()) { await p.toBuffer(); parts.push(p); }
+const result = await validate(parts, rules);
+if (!result.isValid) return reply.code(422).send({ errors: result.errors });
+
+// Hono / Web standard
+const body = await c.req.parseBody({ all: true });
+const result = await validate(body.files, rules);
+</code></pre>
 <h3 id="good-to-know">Good to know</h3>
 <ul>
 <li>Image pixel sizes (<code>maxImageWidth</code>…) need a browser and are skipped on the server; everything else runs.</li>

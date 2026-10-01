@@ -30,7 +30,7 @@ jobs:
       - name: Browser tests
         shell: bash
         env:
-          BROWSERS: chromium,firefox,webkit
+          BROWSERS: chromium,firefox,webkit,mobile-safari,mobile-chrome
         run: |
           set +e
           npm run test:browser 2>&1 | tee browser.log

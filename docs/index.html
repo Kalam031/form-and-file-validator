@@ -374,8 +374,19 @@ The packs are machine-quality translations: please have a native speaker check t
 <li><strong>Alpine.js:</strong> <code>dist/integrations/alpine.min.js</code> adds <code>x-validate</code> and <code>x-dropzone</code>.</li>
 </ul>
 <p>Full examples: <a href="server-and-frameworks.html">Server and frameworks</a>, languages: <a href="languages.html">Languages</a>. A live playground is in the docs site (<code>docs/playground.html</code>).</p>
+<h2 id="known-limits">Known limits</h2>
+<p>What the package does not do, so you do not rely on it for more than it gives:</p>
+<ul>
+<li><strong>A file check is not a virus scan.</strong> Content (magic-byte) checks catch renamed files and many disguised types, but cannot prove a file is safe. Scan uploads on the server (the <code>scan</code> hook is for that). Many formats cannot be fully verified from their first bytes.</li>
+<li><strong>Browser checks are a convenience, never the only check.</strong> Repeat the rules on the server with <code>form-and-file-validator/server</code>.</li>
+<li><strong>Image pixel sizes and audio duration need a browser.</strong> On the server they are skipped. In a browser that cannot decode the media (e.g. WebKit builds without codecs) the check is skipped unless you set <code>requireMediaInfo</code>.</li>
+<li><strong>Files are read into memory</strong> for the checks: set an upload size limit in your upload library.</li>
+<li><strong>Folder picking differs by browser.</strong> For example, Playwright&#39;s WebKit on Linux does not pass hidden files such as <code>.DS_Store</code> from a picked folder.</li>
+<li><strong>Country-specific rules</strong> (phone numbers, postcodes, national IDs) are only as complete as the rules built in; add a custom rule for your market.</li>
+<li><strong>Tested</strong> on Node 18, 20 and 22; Chromium, Firefox and WebKit on Windows and Linux; iPhone and Pixel emulation; Express, Fastify, Koa and Hono. Not tested on real phones, old browsers, or Deno / Bun.</li>
+</ul>
 <h2 id="tests">Tests</h2>
-<p><code>npm test</code> (jsdom, TypeScript typings, fuzz / ReDoS), <code>npm run test:jquery3</code>, and <code>npm run test:browser</code> (Chrome, Edge, Firefox and WebKit, headless, with an axe accessibility audit). CI runs them on every push and pull request.</p>
+<p><code>npm test</code> (jsdom, TypeScript typings, fuzz / ReDoS, real Express / Fastify / Koa / Hono uploads), <code>npm run test:jquery3</code>, and <code>npm run test:browser</code> (Chrome, Edge, Firefox and WebKit plus iPhone and Pixel emulation, headless, with an axe accessibility audit). CI runs them on every push and pull request.</p>
 
   </main>
 </div>

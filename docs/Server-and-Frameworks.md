@@ -40,7 +40,22 @@ const result = await validate(req.files, rules);       // { isValid, errors, det
 
 ### What it accepts
 
-multer (memory and disk), formidable (`filepath`), express-fileupload (`data`, `tempFilePath`), busboy-style `{ filename, buffer }`, `Buffer`s, file paths and Web `File`/`Blob` objects, single or in arrays / field maps.
+multer (memory and disk), @koa/multer, formidable (`filepath`), express-fileupload (`data`, `tempFilePath`), Fastify `@fastify/multipart` parts (`req.files()` or `attachFieldsToBody`), Hono / Workers / Bun / Deno / Next.js route handlers (the `File`s from `formData()` or `parseBody()`), busboy-style `{ filename, buffer }`, `Buffer`s, file paths and Web `File`/`Blob` objects, single or in arrays / field maps.
+
+### Frameworks that are tested
+
+The test suite uploads real multipart requests to Express (with multer, express-fileupload and formidable 3), Fastify (`@fastify/multipart`), Koa (`@koa/multer`) and Hono, and validates a Web `Request` body. `middleware()` is Express / Connect style; for the others call `validate()` yourself and send the answer your framework's way:
+
+```js
+// Fastify
+const parts = []; for await (const p of req.files()) { await p.toBuffer(); parts.push(p); }
+const result = await validate(parts, rules);
+if (!result.isValid) return reply.code(422).send({ errors: result.errors });
+
+// Hono / Web standard
+const body = await c.req.parseBody({ all: true });
+const result = await validate(body.files, rules);
+```
 
 ### Good to know
 

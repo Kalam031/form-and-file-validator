@@ -307,6 +307,18 @@ Anyone can contribute: fork, change `src/`, open a pull request. See [CONTRIBUTI
 
 Full examples: [Server and frameworks](docs/Server-and-Frameworks.md), languages: [Languages](docs/Languages.md). A live playground is in the docs site (`docs/playground.html`).
 
+## Known limits
+
+What the package does not do, so you do not rely on it for more than it gives:
+
+- **A file check is not a virus scan.** Content (magic-byte) checks catch renamed files and many disguised types, but cannot prove a file is safe. Scan uploads on the server (the `scan` hook is for that). Many formats cannot be fully verified from their first bytes.
+- **Browser checks are a convenience, never the only check.** Repeat the rules on the server with `form-and-file-validator/server`.
+- **Image pixel sizes and audio duration need a browser.** On the server they are skipped. In a browser that cannot decode the media (e.g. WebKit builds without codecs) the check is skipped unless you set `requireMediaInfo`.
+- **Files are read into memory** for the checks: set an upload size limit in your upload library.
+- **Folder picking differs by browser.** For example, Playwright's WebKit on Linux does not pass hidden files such as `.DS_Store` from a picked folder.
+- **Country-specific rules** (phone numbers, postcodes, national IDs) are only as complete as the rules built in; add a custom rule for your market.
+- **Tested** on Node 18, 20 and 22; Chromium, Firefox and WebKit on Windows and Linux; iPhone and Pixel emulation; Express, Fastify, Koa and Hono. Not tested on real phones, old browsers, or Deno / Bun.
+
 ## Tests
 
-`npm test` (jsdom, TypeScript typings, fuzz / ReDoS), `npm run test:jquery3`, and `npm run test:browser` (Chrome, Edge, Firefox and WebKit, headless, with an axe accessibility audit). CI runs them on every push and pull request.
+`npm test` (jsdom, TypeScript typings, fuzz / ReDoS, real Express / Fastify / Koa / Hono uploads), `npm run test:jquery3`, and `npm run test:browser` (Chrome, Edge, Firefox and WebKit plus iPhone and Pixel emulation, headless, with an axe accessibility audit). CI runs them on every push and pull request.

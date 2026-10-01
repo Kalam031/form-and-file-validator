@@ -9,7 +9,7 @@
  *
  *   const result = await validate(req.files, rules);        // or call it yourself: same result object as FileValidator.validateFiles
  *
- * Accepts multer (memory or disk), formidable, express-fileupload, busboy-style { filename, buffer }, Buffers, file paths and Web File/Blob objects.
+ * Accepts multer (memory or disk), formidable, express-fileupload, Fastify multipart parts, busboy-style { filename, buffer }, Buffers, file paths and Web File/Blob objects.
  * Content signatures, dangerous types, ZIP/Office/PDF inspection, duplicate detection and the scan hook all run here; image pixel sizes need a DOM and are skipped.
  *
  * Changelog
@@ -33,7 +33,8 @@ async function toFile(item) {
     if (typeof item === 'string') item = { path: item };
     const name = item.originalname || item.originalFilename || item.filename || item.name || (item.path || item.filepath ? path.basename(item.path || item.filepath) : 'file');
     const type = item.mimetype || item.mimeType || item.type || '';
-    let data = item.buffer || item.data;
+    let data = item.buffer || item.data || item._buf;
+    if (!data && typeof item.toBuffer === 'function') data = await item.toBuffer();   // Fastify @fastify/multipart parts
     const onDisk = item.path || item.filepath || item.tempFilePath;
     if (!data && onDisk) data = await fs.promises.readFile(onDisk);
     if (!data && isBuf(item)) data = item;
@@ -45,12 +46,13 @@ async function toFile(item) {
 }
 
 /** req.file, req.files (array, or { field: [..] } for fields()/express-fileupload), or your own array/object -> flat array of entries. */
-function flatten(input) {
+function flatten(input, depth = 0) {
     if (input == null) return [];
-    if (Array.isArray(input)) return input.reduce((all, x) => all.concat(flatten(x)), []);
-    const looksLikeFile = ['buffer', 'data', 'path', 'filepath', 'tempFilePath', 'originalname', 'originalFilename', 'arrayBuffer'].some(k => k in Object(input)) || isBuf(input) || typeof input === 'string';
+    if (depth > 5) throw new TypeError('FileValidator server: could not find uploaded files in this object (too deeply nested or circular); pass the files themselves, e.g. req.files');
+    if (Array.isArray(input)) return input.reduce((all, x) => all.concat(flatten(x, depth + 1)), []);
+    const looksLikeFile = ['buffer', 'data', 'path', 'filepath', 'tempFilePath', 'originalname', 'originalFilename', 'arrayBuffer', 'toBuffer'].some(k => k in Object(input)) || isBuf(input) || typeof input === 'string';
     if (looksLikeFile) return [input];
-    return Object.keys(input).reduce((all, k) => all.concat(flatten(input[k])), []);
+    return Object.keys(input).reduce((all, k) => all.concat(flatten(input[k], depth + 1)), []);
 }
 
 /** Same as FileValidator.validateFiles, for uploads received by a Node server. Resolves to { isValid, errors, details, files }. */

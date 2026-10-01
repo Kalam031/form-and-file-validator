@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Real-browser tests: the same suite runs in Chrome, Edge, Firefox and WebKit (Safari's engine), headless.
+ * Real-browser tests: the same suite runs in Chrome, Edge, Firefox and WebKit (Safari's engine), plus iPhone and Android phone emulation, headless.
  *   npm run test:browser                  all browsers that are installed
  *   BROWSERS=chrome,firefox npm run test:browser
  * Covered: real file choosers and File objects, real drag and drop events, image decoding, canvas resizing, thumbnails,
@@ -11,7 +11,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { chromium, firefox, webkit } = require('playwright');
+const { chromium, firefox, webkit, devices } = require('playwright');
 const { start } = require('./server.js');
 const files = require('./files.js');
 
@@ -20,7 +20,10 @@ const ALL = [
     { name: 'chrome', launch: () => chromium.launch({ channel: 'chrome' }) },
     { name: 'msedge', launch: () => chromium.launch({ channel: 'msedge' }) },
     { name: 'firefox', launch: () => firefox.launch() },
-    { name: 'webkit', launch: () => webkit.launch() }
+    { name: 'webkit', launch: () => webkit.launch() },
+    // phones: small touch screens and mobile user agents (Safari on iPhone = WebKit, Chrome on Android = Chromium)
+    { name: 'mobile-safari', launch: () => webkit.launch(), context: devices['iPhone 15'] },
+    { name: 'mobile-chrome', launch: () => chromium.launch(), context: devices['Pixel 7'] }
 ];
 const wanted = (process.env.BROWSERS || '').split(',').map(s => s.trim()).filter(Boolean);
 const BROWSERS = ALL.filter(b => !wanted.length || wanted.includes(b.name));
@@ -43,7 +46,7 @@ for (const b of BROWSERS) {
         /** it() that gets a fresh page (and skips when the browser could not be started) */
         const it2 = (name, fn, url = '/browser-tests/pages/plain.html') => it(name, async t => {
             if (!browser) return t.skip('cannot launch ' + b.name + ': ' + String(launchError && launchError.message).split('\n')[0]);
-            const context = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+            const context = await browser.newContext(b.context || { viewport: { width: 1000, height: 900 } });
             const page = await context.newPage();
             const errors = [];
             page.on('pageerror', e => errors.push(e.message));
