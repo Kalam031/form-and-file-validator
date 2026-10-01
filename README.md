@@ -317,7 +317,7 @@ What the package does not do, so you do not rely on it for more than it gives:
 - **Files are read into memory** for the checks: set an upload size limit in your upload library.
 - **Folder picking differs by browser.** For example, Playwright's WebKit on Linux does not pass hidden files such as `.DS_Store` from a picked folder.
 - **Country-specific rules** (phone numbers, postcodes, national IDs) are only as complete as the rules built in; add a custom rule for your market.
-- **Tested** on Node 18, 20 and 22; Chromium, Firefox and WebKit on Windows and Linux; iPhone and Pixel emulation; Express, Fastify, Koa and Hono. Not tested on real phones, old browsers, or Deno / Bun.
+- **Tested** on Node 18, 20, 22, 24 and 26; Chromium, Firefox and WebKit on Windows and Linux; iPhone and Pixel emulation; Express, Fastify, Koa and Hono. Not tested on real phones, old browsers, or Deno / Bun.
 
 ## Tests
 
