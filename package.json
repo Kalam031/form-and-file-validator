@@ -3,6 +3,7 @@
   "version": "3.3.2",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
+  "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
   "repository": { "type": "git", "url": "git+https://github.com/Kalam031/form-and-file-validator.git" },
   "bugs": { "url": "https://github.com/Kalam031/form-and-file-validator/issues" },
   "homepage": "https://github.com/Kalam031/form-and-file-validator#readme",
@@ -50,7 +51,8 @@
     "dist",
     "src",
     "types",
-    "docs",
+    "!types/typecheck",
+    "docs/*.md",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
