@@ -258,7 +258,10 @@ for (const b of BROWSERS) {
                 return { paths: list.map(f => f.webkitRelativePath).sort(), ignored: res.ignored.map(f => f.name).sort(), errors: res.errors, bad: res.details.map(d => d.fileName + ': ' + d.code) };
             });
             assert.ok(r.paths.includes('project/src/deep/b.txt'));
-            assert.deepEqual(r.ignored, ['.DS_Store', 'Thumbs.db']);
+            // WebKit on Linux leaves hidden dotfiles out of a picked folder, so only expect the junk files the browser actually handed over
+            const junk = ['.DS_Store', 'Thumbs.db'].filter(n => r.paths.includes('project/' + n));
+            assert.ok(junk.includes('Thumbs.db'));
+            assert.deepEqual(r.ignored, junk);
             assert.deepEqual(r.errors, ['PATH_TOO_DEEP']);
             assert.deepEqual(r.bad, ['b.txt: PATH_TOO_DEEP']);
         });
