@@ -1,0 +1,3233 @@
+{
+ "description": "Language-neutral conformance vectors for the FormValidator rules. Every implementation (browser, Node, Angular, .NET) must give the same valid / failedRule for each case. rule is a rule object, a rule name or a list of them; values holds the other fields for equalTo / notEqualTo.",
+ "version": 1,
+ "cases": [
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "a",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "é",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "😀",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "   ",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "\t\n",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@b.co",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "first.last+tag@sub.example.org",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "ü@bücher.de",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@b.museum",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "x@y.zz",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "  a@b.co  ",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@b",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a b@c.de",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "@b.co",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@@b.co",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@b.c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "plain",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@b .co",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com/a?b=c#d",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "www.example.com/x",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://sub.example.co.uk:8080/p",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "ftp://x.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "not a url",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://exa mple.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "javascript:alert(1)",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://user:pw@example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com:65535",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com:",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com:0080",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://EXAMPLE.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "HTTP://example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://例え.jp",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://xn--r8jz45g.jp",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://a_b.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://ex%41mple.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example..com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://example.com\\path",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://1.2.3.4",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://0x7f.0.0.1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://3232235777",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://1.2.3",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://0xffffffff",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.org",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://a.b/c?d=e#f",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com:65536",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com:abc",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com:-1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.com.",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://.example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://exa<mple.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://exa|mple.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://exa%20mple.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://256.1.1.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://999.1.1.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://1.2.3.4.5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://0x100000000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://example.123",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://08.1.1.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://-",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https://",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://:80",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://[::1]",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http://exa mple.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "https:/example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url"
+   },
+   "value": "http//example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://localhost:3000",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://intranet",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://intranet:3000/x",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://[::1]",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://[::1]:8080",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://[2001:db8::1]/p",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://[::1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://[zz]",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://[::1]x",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "allowLocal": true
+   },
+   "value": "http://:80",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "protocols": [
+     "ftp:",
+     "http:"
+    ]
+   },
+   "value": "ftp://files.example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "protocols": [
+     "ftp:",
+     "http:"
+    ]
+   },
+   "value": "http://example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "protocols": [
+     "ftp:",
+     "http:"
+    ]
+   },
+   "value": "https://example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "protocols": [
+     "ftp:",
+     "http:"
+    ]
+   },
+   "value": "sftp://files.example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "requireProtocol": true
+   },
+   "value": "https://example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "url",
+    "requireProtocol": true
+   },
+   "value": "example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "url",
+    "requireProtocol": true
+   },
+   "value": "www.example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "-1.5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": ".5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1e3",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "+7",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1.",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "-0.0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "abc",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1,5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1.2.3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1 2",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "--1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "Infinity",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "0x10",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "NaN",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "１２",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "123",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "007",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "-1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "1.5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "1 2",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "a1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "digits"
+   },
+   "value": "١٢٣",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "abc",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "ÄÖÜ",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "Ünal",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "日本語",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "مرحبا",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "Привет",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "ñ",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "ab c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "ab1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "ab-c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "o'neil",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "😀",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "abc123",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "Ünal7",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "日本語2",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "مرحبا١",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "ab c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "a_b",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "a-b",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "😀1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "+1 (555) 123-4567",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "555-1234",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "+44 20 7946 0958",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "(02) 1234 5678",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "+8801712345678",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "123",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "abc",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "+",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "12345",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "+1234567890123456",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "555-ABCD",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "4111111111111111",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "4111 1111 1111 1111",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "4111-1111-1111-1111",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "5500005555555559",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "378282246310005",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "4111111111111112",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "1234",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "abcdabcdabcdabcd",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "41111111111111111111",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minlength",
+    "min": 3
+   },
+   "value": "abc",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minlength",
+    "min": 3
+   },
+   "value": "abcd",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minlength",
+    "min": 3
+   },
+   "value": "日本語",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minlength",
+    "min": 3
+   },
+   "value": "ab",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minlength",
+    "min": 3
+   },
+   "value": "日本",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxlength",
+    "max": 3
+   },
+   "value": "ab",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxlength",
+    "max": 3
+   },
+   "value": "abc",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxlength",
+    "max": 3
+   },
+   "value": "abcd",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "rangelength",
+    "min": 2,
+    "max": 4
+   },
+   "value": "ab",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "rangelength",
+    "min": 2,
+    "max": 4
+   },
+   "value": "abcd",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "rangelength",
+    "min": 2,
+    "max": 4
+   },
+   "value": "a",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "rangelength",
+    "min": 2,
+    "max": 4
+   },
+   "value": "abcde",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "5.0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "10",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "1e2",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "4.99",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "-1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "abc",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "max",
+    "max": 5
+   },
+   "value": "5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "max",
+    "max": 5
+   },
+   "value": "-3",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "max",
+    "max": 5
+   },
+   "value": "4.99",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "max",
+    "max": 5
+   },
+   "value": "5.01",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "max",
+    "max": 5
+   },
+   "value": "abc",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 1,
+    "max": 5
+   },
+   "value": "1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 1,
+    "max": 5
+   },
+   "value": "3.5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 1,
+    "max": 5
+   },
+   "value": "5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 1,
+    "max": 5
+   },
+   "value": "0",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 1,
+    "max": 5
+   },
+   "value": "5.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 1,
+    "max": 5
+   },
+   "value": "x",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5
+   },
+   "value": "0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5
+   },
+   "value": "5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5
+   },
+   "value": "-10",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5
+   },
+   "value": "25",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5
+   },
+   "value": "3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5
+   },
+   "value": "5.5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5
+   },
+   "value": "x",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 0.1
+   },
+   "value": "0.3",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 0.1
+   },
+   "value": "0.7",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 0.1
+   },
+   "value": "1.1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 0.1
+   },
+   "value": "0.35",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5,
+    "base": 2
+   },
+   "value": "2",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5,
+    "base": 2
+   },
+   "value": "7",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5,
+    "base": 2
+   },
+   "value": "12",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5,
+    "base": 2
+   },
+   "value": "5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "step",
+    "step": 5,
+    "base": 2
+   },
+   "value": "10",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     "red",
+     "green",
+     "blue"
+    ]
+   },
+   "value": "red",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     "red",
+     "green",
+     "blue"
+    ]
+   },
+   "value": "blue",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     "red",
+     "green",
+     "blue"
+    ]
+   },
+   "value": "Red",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     "red",
+     "green",
+     "blue"
+    ]
+   },
+   "value": "yellow",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     1,
+     2,
+     3
+    ]
+   },
+   "value": "1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     1,
+     2,
+     3
+    ]
+   },
+   "value": "3",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     1,
+     2,
+     3
+    ]
+   },
+   "value": "4",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "oneOf",
+    "values": [
+     1,
+     2,
+     3
+    ]
+   },
+   "value": "01",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pattern",
+    "pattern": "^[A-Z]{2}\\d{3}$"
+   },
+   "value": "AB123",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pattern",
+    "pattern": "^[A-Z]{2}\\d{3}$"
+   },
+   "value": "ab123",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pattern",
+    "pattern": "^[A-Z]{2}\\d{3}$"
+   },
+   "value": "AB12",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pattern",
+    "pattern": "^[A-Z]{2}\\d{3}$"
+   },
+   "value": "AB1234",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pattern",
+    "pattern": "^[a-z]+$",
+    "flags": "i"
+   },
+   "value": "abc",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pattern",
+    "pattern": "^[a-z]+$",
+    "flags": "i"
+   },
+   "value": "ABC",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pattern",
+    "pattern": "^[a-z]+$",
+    "flags": "i"
+   },
+   "value": "ab1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "Abcdef1!",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "Zz9$aaaaaa",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "Üpper1!aa",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "Abcdef1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "abcdef1!",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "ABCDEF1!",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "Abcdefg!",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "Abcdef1! x",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 8,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireDigit": true,
+    "requireSpecialChar": true,
+    "noWhitespace": true
+   },
+   "value": "Ab1!",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 6
+   },
+   "value": "abcdef",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 6
+   },
+   "value": "a b c d",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 6
+   },
+   "value": "abcde",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 6,
+    "maxLength": 10
+   },
+   "value": "abcdef",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 6,
+    "maxLength": 10
+   },
+   "value": "abcdefghij",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 6,
+    "maxLength": 10
+   },
+   "value": "abcdefghijk",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "a b",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": " ",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "﻿",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": " 　",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": " ",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "required"
+   },
+   "value": "   ﻿ ",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a @b.co",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@b .co",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "email"
+   },
+   "value": "a@b.cox z",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "555 1234",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "phone"
+   },
+   "value": "+49 151 2345 6789",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "4111 1111 1111 1111",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "creditcard"
+   },
+   "value": "4111111111111111",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "𠮷",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "𠮷野家",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "𝒜𝒷",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "á",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "𠮷1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alpha"
+   },
+   "value": "́",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "𠮷1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "٣a",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "á",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "alphanumeric"
+   },
+   "value": "𠮷_",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minlength",
+    "min": 4
+   },
+   "value": "😀😀",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minlength",
+    "min": 4
+   },
+   "value": "😀",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxlength",
+    "max": 2
+   },
+   "value": "😀",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxlength",
+    "max": 2
+   },
+   "value": "😀a",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "0x10",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "Infinity",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "٣",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "min",
+    "min": 5
+   },
+   "value": "1_000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "max",
+    "max": 5
+   },
+   "value": "Infinity",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "max",
+    "max": 5
+   },
+   "value": "-Infinity",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 0,
+    "max": 100
+   },
+   "value": "1e1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 0,
+    "max": 100
+   },
+   "value": "+5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 0,
+    "max": 100
+   },
+   "value": ".5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 0,
+    "max": 100
+   },
+   "value": "5.",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 0,
+    "max": 100
+   },
+   "value": "0b11",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "range",
+    "min": 0,
+    "max": 100
+   },
+   "value": "٥",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1_000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "٣",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "1e",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "e1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": "+",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "number"
+   },
+   "value": ".",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "İaaa",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "Éaaa",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "Дaaa",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "Σaaa",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "ǅaaa",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "ßaaa",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "aaaa",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireUppercase": true
+   },
+   "value": "１aaa",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireLowercase": true
+   },
+   "value": "Aaaa",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireLowercase": true
+   },
+   "value": "ÀÀÀà",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireLowercase": true
+   },
+   "value": "ДДДд",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireLowercase": true
+   },
+   "value": "AAAA",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireLowercase": true
+   },
+   "value": "ǅAAA",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireDigit": true
+   },
+   "value": "aaa٣",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireDigit": true
+   },
+   "value": "aaa5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireDigit": true
+   },
+   "value": "aaa５",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireDigit": true
+   },
+   "value": "aaaa",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireDigit": true
+   },
+   "value": "aaaⅣ",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "abc€",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "abc!",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "abc😀",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "abć",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "abcé",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "abcД",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "abc٣",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "pwcheck",
+    "minLength": 4,
+    "requireSpecialChar": true
+   },
+   "value": "a b c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "5/3/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "05/03/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "29/2/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "31/12/1999",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "1/1/0001",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "29/2/2023",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "31/4/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "0/1/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "1/0/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "1/13/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "5-3-2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "5/3/24",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "5/3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "a/b/c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "32/1/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y"
+   },
+   "value": "1/1/10000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "dd/MM/yyyy"
+   },
+   "value": "05/03/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "dd/MM/yyyy"
+   },
+   "value": "31/12/1999",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "dd/MM/yyyy"
+   },
+   "value": "5/3/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "dd/MM/yyyy"
+   },
+   "value": "05/03/24",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "dd/MM/yyyy"
+   },
+   "value": "5/03/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "MM/dd/yyyy"
+   },
+   "value": "02/29/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "MM/dd/yyyy"
+   },
+   "value": "12/31/1999",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "MM/dd/yyyy"
+   },
+   "value": "13/01/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "MM/dd/yyyy"
+   },
+   "value": "02/30/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "MM/dd/yyyy"
+   },
+   "value": "2/9/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd"
+   },
+   "value": "2024-02-29",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd"
+   },
+   "value": "1999-12-31",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd"
+   },
+   "value": "2024-2-9",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd"
+   },
+   "value": "2024-13-45",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd"
+   },
+   "value": "2023-02-29",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd"
+   },
+   "value": "24-02-29",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d.M.yyyy"
+   },
+   "value": "5.3.2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d.M.yyyy"
+   },
+   "value": "31.12.2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d.M.yyyy"
+   },
+   "value": "5/3/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d.M.yyyy"
+   },
+   "value": "31.2.2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/yy"
+   },
+   "value": "5/3/24",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/yy"
+   },
+   "value": "1/1/70",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/yy"
+   },
+   "value": "1/1/69",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/yy"
+   },
+   "value": "5/3/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/yy"
+   },
+   "value": "5/3/4",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y HH:mm"
+   },
+   "value": "5/3/2024 14:30",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y HH:mm"
+   },
+   "value": "1/1/2024 00:00",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y HH:mm"
+   },
+   "value": "1/1/2024 23:59",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y HH:mm"
+   },
+   "value": "5/3/2024 24:00",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y HH:mm"
+   },
+   "value": "5/3/2024 14:60",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y HH:mm"
+   },
+   "value": "5/3/2024 1:30",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "d/M/y HH:mm"
+   },
+   "value": "5/3/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd HH:mm:ss"
+   },
+   "value": "2024-02-29 23:59:59",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd HH:mm:ss"
+   },
+   "value": "2024-02-29 23:59:60",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "format": "yyyy-MM-dd HH:mm:ss"
+   },
+   "value": "2024-02-29T23:59:59",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-02-29",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-02-29T23:59:59",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-02-29T00:00",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "0001-01-01",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "9999-12-31",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "Jan 5 2020",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-13-45",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2023-02-29",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-2-9",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024/02/29",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "29-02-2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-02-29T24:00",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-02-29T10:00Z",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "date",
+    "strict": true
+   },
+   "value": "2024-02-29T10:00:00.5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "d/M/y",
+    "min": "01/03/2024"
+   },
+   "value": "1/3/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "d/M/y",
+    "min": "01/03/2024"
+   },
+   "value": "2/3/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "d/M/y",
+    "min": "01/03/2024"
+   },
+   "value": "1/1/2025",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "d/M/y",
+    "min": "01/03/2024"
+   },
+   "value": "29/2/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "d/M/y",
+    "min": "01/03/2024"
+   },
+   "value": "31/12/2023",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "d/M/y",
+    "min": "01/03/2024"
+   },
+   "value": "31/2/2025",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxDate",
+    "format": "d/M/y",
+    "max": "01/03/2024"
+   },
+   "value": "1/3/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxDate",
+    "format": "d/M/y",
+    "max": "01/03/2024"
+   },
+   "value": "29/2/2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxDate",
+    "format": "d/M/y",
+    "max": "01/03/2024"
+   },
+   "value": "2/3/2024",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxDate",
+    "format": "d/M/y",
+    "max": "01/03/2024"
+   },
+   "value": "31/2/2023",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "strict": true,
+    "min": "2024-02-29"
+   },
+   "value": "2024-02-29",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "strict": true,
+    "min": "2024-02-29"
+   },
+   "value": "2024-03-01",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "strict": true,
+    "min": "2024-02-29"
+   },
+   "value": "2024-02-29T00:01",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "strict": true,
+    "min": "2024-02-29"
+   },
+   "value": "2024-02-28",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "strict": true,
+    "min": "2024-02-29"
+   },
+   "value": "2024-02-28T23:59:59",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxDate",
+    "strict": true,
+    "max": "2024-02-29"
+   },
+   "value": "2024-02-29",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxDate",
+    "strict": true,
+    "max": "2024-02-29"
+   },
+   "value": "2024-02-28",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxDate",
+    "strict": true,
+    "max": "2024-02-29"
+   },
+   "value": "2024-03-01",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "yyyy-MM-dd",
+    "min": "2000-01-01"
+   },
+   "value": "2000-01-01",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minDate",
+    "format": "yyyy-MM-dd",
+    "min": "2000-01-01"
+   },
+   "value": "1999-12-31",
+   "valid": false
+  },
+  {
+   "rule": [
+    "required",
+    "email"
+   ],
+   "value": "",
+   "valid": false,
+   "failedRule": "required"
+  },
+  {
+   "rule": [
+    "email",
+    {
+     "type": "maxlength",
+     "max": 3
+    }
+   ],
+   "value": "",
+   "valid": true
+  },
+  {
+   "rule": [
+    {
+     "type": "required"
+    },
+    {
+     "type": "minlength",
+     "min": 5
+    },
+    {
+     "type": "email"
+    }
+   ],
+   "value": "a@b",
+   "valid": false,
+   "failedRule": "minlength"
+  },
+  {
+   "rule": [
+    {
+     "type": "required"
+    },
+    {
+     "type": "minlength",
+     "min": 3
+    },
+    {
+     "type": "email"
+    }
+   ],
+   "value": "a@b",
+   "valid": false,
+   "failedRule": "email"
+  },
+  {
+   "rule": [
+    "required",
+    "email"
+   ],
+   "value": "  a@b.co  ",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "equalTo",
+    "target": "password"
+   },
+   "value": "Secret1!",
+   "valid": true,
+   "values": {
+    "password": "Secret1!"
+   }
+  },
+  {
+   "rule": {
+    "type": "equalTo",
+    "target": "password"
+   },
+   "value": "secret1!",
+   "valid": false,
+   "values": {
+    "password": "Secret1!"
+   }
+  },
+  {
+   "rule": {
+    "type": "equalTo",
+    "target": "password"
+   },
+   "value": "Secret1",
+   "valid": false,
+   "values": {
+    "password": "Secret1!"
+   }
+  },
+  {
+   "rule": {
+    "type": "equalTo",
+    "target": "password"
+   },
+   "value": "",
+   "valid": false,
+   "values": {
+    "password": "Secret1!"
+   }
+  },
+  {
+   "rule": {
+    "type": "notEqualTo",
+    "target": "oldPassword"
+   },
+   "value": "new-one",
+   "valid": true,
+   "values": {
+    "oldPassword": "old-one"
+   }
+  },
+  {
+   "rule": {
+    "type": "notEqualTo",
+    "target": "oldPassword"
+   },
+   "value": "old-one",
+   "valid": false,
+   "values": {
+    "oldPassword": "old-one"
+   }
+  }
+ ]
+}

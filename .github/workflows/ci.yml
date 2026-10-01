@@ -38,3 +38,14 @@ jobs:
           # failures as annotations, so they are readable without opening the log
           grep -E "^\s*✖|AssertionError|Error:|TimeoutError" browser.log | head -12 | while IFS= read -r line; do echo "::error::${line:0:400}"; done
           exit $status
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      # the .NET port must give the same answers as the JavaScript package: both run spec/form-rules.vectors.json
+      - run: dotnet test dotnet/FormAndFileValidator.Tests

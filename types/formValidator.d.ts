@@ -29,6 +29,10 @@ export interface RuleObject {
     when?: (value: string, env: RuleEnv) => boolean;
     /** Transforms the value before the rule sees it. */
     normalizer?: (value: string, field: HTMLElement) => string;
+    /** date / minDate / maxDate: the exact format, for example 'd/M/y', 'dd/MM/yyyy', 'MM/dd/yyyy', 'yyyy-MM-dd HH:mm'. y = 4-digit year, yy = 2-digit year (00-69 is 20xx), d M H m s = 1 or 2 digits, dd MM HH mm ss = exactly 2. Same result on every platform. */
+    format?: string;
+    /** date / minDate / maxDate: only ISO 8601 (yyyy-MM-dd, optionally THH:mm[:ss]). Ignored when a format is given. */
+    strict?: boolean;
     min?: number | string;
     max?: number | string;
     step?: number;
@@ -163,6 +167,31 @@ export interface FormInstance {
 export type MethodFn = (this: { form: HTMLFormElement; field: HTMLElement; format: FormValidatorStatic['format']; optional(element: HTMLElement): boolean; elementValue(element: HTMLElement): string },
     value: string, element: HTMLElement, param: any, env: RuleEnv) => RuleResult | 'dependency-mismatch' | 'pending' | Promise<RuleResult>;
 
+/** The answer of checkValue for one value. */
+export interface ValueCheckResult {
+    valid: boolean;
+    /** The type of the first rule that failed (null when valid). */
+    rule: string | null;
+    message: string;
+}
+
+export interface ValueCheckOptions {
+    /** Trim the value first (default true; pwcheck never trims). */
+    trim?: boolean;
+    /** The other fields, for equalTo / notEqualTo. */
+    values?: Record<string, unknown>;
+    /** Replaces the default message of a rule type. */
+    messages?: Record<string, string>;
+    passwordStrength?: Partial<Pick<RuleObject, 'minLength' | 'maxLength' | 'requireUppercase' | 'requireLowercase' | 'requireDigit' | 'requireSpecialChar' | 'noWhitespace'>>;
+    context?: Record<string, unknown>;
+}
+
+export interface ValuesCheckResult {
+    valid: boolean;
+    errors: Record<string, string>;
+    details: Record<string, { rule: string | null; message: string }>;
+}
+
 export interface FormValidatorStatic {
     readonly version: string;
     /** Set up one form (returns its instance) or several (returns an array). */
@@ -171,6 +200,13 @@ export interface FormValidatorStatic {
     /** Check an initialised form, or any form against ad-hoc rules. */
     validate(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): Promise<boolean>;
     getInstance(form: string | HTMLFormElement): FormInstance | null;
+    /**
+     * Checks one value with the form rules and no DOM: Node, a server, a unit test, Angular validators.
+     * Not available: file, checkbox-count and remote rules (they throw). Synchronous: no async custom rules.
+     */
+    checkValue(value: unknown, rules: RulesForField, options?: ValueCheckOptions): ValueCheckResult;
+    /** Checks a whole object against `{ field: rules }`. */
+    checkValues(data: Record<string, unknown>, schema: Record<string, RulesForField>, options?: ValueCheckOptions): ValuesCheckResult;
     /** Engine-style rule: `fn(value, rule, env)`. */
     registerRule(name: string, fn: (value: string, rule: RuleObject, env: RuleEnv) => RuleResult | Promise<RuleResult>, options?: { runOnEmpty?: boolean; remote?: boolean }): void;
     /** jQuery-style rule: `fn(value, element, param)`. */

@@ -358,7 +358,7 @@ The packs are machine-quality translations: please have a native speaker check t
 <h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
 <p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.3.2/dist/validator.min.js&quot;
-        integrity=&quot;sha384-lagsKgt/wnJ5X0R1pr2reO2pCMcdJdN9ibX+rphhk50S5qZT0dL4Ilh90e6FNLIN&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+        integrity=&quot;sha384-1o8KlYGuuwu0sagmVsKs8LJSCXn9JlQrH7SYqUYPppuOPxW6o2DrxkZtk26ZAwHn&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.3.2/dist/locales/de.min.js&quot;
         integrity=&quot;sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;
@@ -369,6 +369,7 @@ The packs are machine-quality translations: please have a native speaker check t
 <h2 id="server-react-vue-alpine">Server, React, Vue, Alpine</h2>
 <ul>
 <li><strong>Server (Node):</strong> <code>require(&#39;form-and-file-validator/server&#39;)</code>: <code>middleware(rules)</code> for Express (multer, formidable, express-fileupload) runs the same file rules on the uploaded files and answers 422 with JSON.</li>
+<li><strong>.NET (ASP.NET Core):</strong> the NuGet package in <code>dotnet/</code> runs the same form rules with the same answers as the browser; both are tested against one file of shared vectors (<code>spec/form-rules.vectors.json</code>).</li>
 <li><strong>React:</strong> <code>import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;</code></li>
 <li><strong>Vue 3:</strong> <code>import { useFormValidator, FileDropzone, vFormValidator } from &#39;form-and-file-validator/vue&#39;</code></li>
 <li><strong>Alpine.js:</strong> <code>dist/integrations/alpine.min.js</code> adds <code>x-validate</code> and <code>x-dropzone</code>.</li>

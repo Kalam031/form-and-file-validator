@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks Condition="'$(Tfm)' == ''">net8.0;net10.0</TargetFrameworks>
+    <TargetFramework Condition="'$(Tfm)' != ''">$(Tfm)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>FormAndFileValidator</RootNamespace>
+    <AssemblyName>FormAndFileValidator</AssemblyName>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <PackageId>FormAndFileValidator</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>abu_kalam</Authors>
+    <Description>The server side of form-and-file-validator: the same form rules, with the same answers as the JavaScript package, verified against shared conformance vectors.</Description>
+    <PackageTags>validation;form;validator;aspnetcore</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/Kalam031/form-and-file-validator</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

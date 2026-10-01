@@ -286,7 +286,7 @@ Always pin the exact version and keep the `integrity` attribute, so the file you
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.3.2/dist/validator.min.js"
-        integrity="sha384-lagsKgt/wnJ5X0R1pr2reO2pCMcdJdN9ibX+rphhk50S5qZT0dL4Ilh90e6FNLIN" crossorigin="anonymous"></script>
+        integrity="sha384-1o8KlYGuuwu0sagmVsKs8LJSCXn9JlQrH7SYqUYPppuOPxW6o2DrxkZtk26ZAwHn" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.3.2/dist/locales/de.min.js"
         integrity="sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>
@@ -301,6 +301,7 @@ Anyone can contribute: fork, change `src/`, open a pull request. See [CONTRIBUTI
 ## Server, React, Vue, Alpine
 
 - **Server (Node):** `require('form-and-file-validator/server')`: `middleware(rules)` for Express (multer, formidable, express-fileupload) runs the same file rules on the uploaded files and answers 422 with JSON.
+- **.NET (ASP.NET Core):** the NuGet package in `dotnet/` runs the same form rules with the same answers as the browser; both are tested against one file of shared vectors (`spec/form-rules.vectors.json`).
 - **React:** `import { useFormValidator, FileDropzone } from 'form-and-file-validator/react'`
 - **Vue 3:** `import { useFormValidator, FileDropzone, vFormValidator } from 'form-and-file-validator/vue'`
 - **Alpine.js:** `dist/integrations/alpine.min.js` adds `x-validate` and `x-dropzone`.

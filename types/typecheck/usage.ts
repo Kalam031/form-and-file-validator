@@ -166,3 +166,11 @@ const reactHook: typeof useReactForm = useReactForm;
 const vueHook: typeof useVueForm = useVueForm;
 const dz: typeof ReactDropzone = ReactDropzone;
 void reactHook; void vueHook; void dz;
+
+// value-only checks (no DOM) and date formats
+const one = FormValidator.checkValue('31/04/2024', [{ type: 'required' }, { type: 'date', format: 'd/M/y' }]);
+const oneValid: boolean = one.valid;
+const oneRule: string | null = one.rule;
+const manyChecked = FormValidator.checkValues({ a: '1' }, { a: { required: true, date: { format: 'yyyy-MM-dd' } } }, { messages: { required: 'Pflichtfeld' } });
+const manyMessage: string | undefined = manyChecked.errors['a'];
+void oneValid; void oneRule; void manyMessage;

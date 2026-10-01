@@ -74,7 +74,7 @@ Blank values skip every rule except `required`, `equalTo`, `custom`, `minFiles` 
 | `digits` | | `123` | `-1`, `1.5` |
 | `alpha`, `alphanumeric` | | letters (any language), letters and digits | spaces, symbols |
 | `phone` | | `+1 (555) 123-4567`, `555-1234` | `123`, `abc` |
-| `date` | | `2024-02-29` | `2024-13-45` |
+| `date` | `format`, `strict` | `2024-02-29`; with `format: 'd/M/y'`: `5/3/2024` | `2024-13-45`; `31/4/2024` |
 | `minDate`, `maxDate` | `min` / `max` (date or `'today'`) | on or after / before the limit | outside the limit |
 | `creditcard` | | numbers that pass the Luhn check | `4111111111111112` |
 | `pattern` | `pattern` (string or RegExp), `flags` | matches the pattern | does not match |
@@ -91,6 +91,48 @@ Blank values skip every rule except `required`, `equalTo`, `custom`, `minFiles` 
 | `file` | any FileValidator option | passes every FileValidator check | see the FileValidator doc |
 | `remote` | `url`, `method`, `field`, `data`, `headers`, `timeout`, `cache`, `failOpen`, `parse` | server says valid | server says invalid, or network error |
 | `custom` | `validate(value, context, field)` | your function returns true | returns false, a message string, or throws |
+
+### Dates: name the format
+
+`05/03/2024` is the 5th of March in one country and the 3rd of May in another, so the `date`, `minDate` and `maxDate` rules never guess. Say what you expect:
+
+```js
+rules: {
+  born:  { date: { format: 'd/M/y' } },                                   // 5/3/2024, 05/03/2024, 29/2/2024 (leap year checked)
+  start: { date: { format: 'MM/dd/yyyy' }, minDate: { format: 'MM/dd/yyyy', min: 'today' } },
+  slot:  { date: { format: 'yyyy-MM-dd HH:mm' } },
+  iso:   { date: { strict: true } }                                       // only yyyy-MM-dd or yyyy-MM-ddTHH:mm[:ss]
+}
+```
+
+| Token | Meaning |
+| --- | --- |
+| `yyyy`, `y` | four-digit year (0001 to 9999) |
+| `yy` | two-digit year: 00-69 is 20xx, 70-99 is 19xx |
+| `MM` / `M`, `dd` / `d` | month, day: two digits / one or two digits |
+| `HH` / `H`, `mm` / `m`, `ss` / `s` | hour (0-23), minute, second |
+
+Any other character is literal. The calendar is checked (`31/4`, `29/2/2023` fail). The answer is identical in every browser, in Node, in Angular and in the .NET package. A `date` rule with neither `format` nor `strict` keeps the old behaviour (the browser's own `Date.parse`), which differs between browsers, so use one of the two in shared rules. `min` / `max` are written in the same format; `'today'` is the current calendar date.
+
+### Checking values without a form
+
+```js
+FormValidator.checkValue('a@b', ['required', 'email']);
+// { valid: false, rule: 'email', message: 'Please enter a valid email address.' }
+
+FormValidator.checkValues(body, {                      // a JSON body, a model, a unit test
+  email: ['required', 'email'],
+  pw:    { required: true, pwcheck: { minLength: 8, requireUppercase: true } },
+  pw2:   { equalTo: 'pw' }
+});
+// { valid, errors: { pw2: 'Values do not match.' }, details: { pw2: { rule: 'equalTo', message: '...' } } }
+```
+
+No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: `trim`, `values` (the other fields), `messages` (per rule type).
+
+### One answer on every platform
+
+`spec/form-rules.vectors.json` lists hundreds of values with the expected result for every rule (letters of every script, JavaScript's whitespace, URL edge cases, leap years, passwords). The JavaScript engine, the Angular package and the [.NET package](Server-and-Frameworks.md#net-aspnet-core) all run that same file in their tests.
 
 Passwords are never trimmed. All other values are trimmed before checking unless you set `config.trim` to `false`.
 

@@ -64,6 +64,27 @@ const result = await validate(body.files, rules);
 - The languages of the messages: see [Languages](Languages.md), `require('form-and-file-validator/server').locales`.
 - Never trust the browser's MIME type. The companion checks the content, not only the name.
 
+## .NET (ASP.NET Core)
+
+The NuGet package `FormAndFileValidator` (folder `dotnet/`) runs the **same form rules with the same answers** as the browser. Both sides are tested against `spec/form-rules.vectors.json`, so a form the browser accepts is accepted by your API, and the other way round.
+
+```csharp
+using FormAndFileValidator;
+
+var rules = FormValidator.ParseRules("""["required", {"type":"date","format":"d/M/y"}]""");   // the very JSON the browser uses
+var result = FormValidator.CheckValue(dto.BirthDate, rules);
+if (!result.Valid) return Results.UnprocessableEntity(new { result.Rule, result.Message });
+```
+
+```csharp
+var r = FormValidator.CheckValues(body, new Dictionary<string, IReadOnlyList<Rule>> {
+    ["email"] = new[] { Rule.Required(), Rule.Email() },
+    ["pw"]    = new[] { Rule.Required(), Rule.PwCheck(minLength: 8, requireUppercase: true) },
+    ["pw2"]   = new[] { Rule.EqualTo("pw") } });
+```
+
+Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Targets .NET 8 and .NET 10. Keep `pattern` rules portable (write `[0-9]`, not `\d`) because regular expression engines differ slightly.
+
 ## React
 
 ```jsx

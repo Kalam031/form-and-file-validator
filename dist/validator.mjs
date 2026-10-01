@@ -1915,7 +1915,9 @@ const api = (function (root) {
     /** querySelector / matches that treat an invalid selector as "no match" instead of throwing. */
     const safeQuery = (scope, sel) => { try { return scope.querySelector(sel); } catch (e) { return null; } };
     const safeMatches = (el, sel) => { try { return !!el.matches(sel); } catch (e) { return false; } };
-    const num = v => (typeof v === 'string' && v.trim() === '') ? NaN : Number(v);
+    // plain decimal numbers only (sign, digits, one point, exponent): no 0x10, no Infinity, no digits of other scripts. min / max / range / step use it too.
+    const NUMBER_RE = /^[-+]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?$/;
+    const num = v => NUMBER_RE.test(String(v).trim()) ? Number(v) : NaN;
     const fmt = (tpl, rule) => String(tpl).replace(/\{(\w+)\}/g, (m, k) => (rule && rule[k] !== undefined ? rule[k] : m));
 
     function resolveForm(target) {
@@ -1936,6 +1938,44 @@ const api = (function (root) {
         if (v === 'today') { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
         const t = Date.parse(v);
         return isNaN(t) ? NaN : t;
+    }
+
+    // ---- dates with an explicit format: identical in every browser and in the .NET port (no Date.parse guessing)
+    //  tokens: yyyy / y (4-digit year), yy (00-69 -> 20xx, 70-99 -> 19xx), MM / M, dd / d, HH / H, mm / m, ss / s; any other character is literal.
+    //  d / M / H / m / s accept 1 or 2 digits, the doubled tokens need exactly 2. The calendar is checked (leap years, 30/31-day months).
+    const DATE_TOKEN = /yyyy|yy|y|MM|M|dd|d|HH|H|mm|m|ss|s/g;
+    const ISO_FORMATS = ['yyyy-MM-dd', 'yyyy-MM-ddTHH:mm', 'yyyy-MM-ddTHH:mm:ss'];
+    const daysIn = (y, m) => m === 2 ? ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31;
+    /** -> milliseconds since 1970-01-01T00:00 UTC (the wall-clock time read as UTC), or NaN when v does not fit the format */
+    function parseDateFormat(v, format) {
+        v = String(v);
+        let pos = 0, last = 0, out = null; const f = { y: null, M: 1, d: 1, H: 0, m: 0, s: 0 }; let ok = true;
+        const digits = (min, max) => { const m = new RegExp('^\\d{' + min + ',' + max + '}').exec(v.slice(pos)); if (!m) return null; pos += m[0].length; return +m[0]; };
+        const lit = text => { if (v.substr(pos, text.length) !== text) return false; pos += text.length; return true; };
+        DATE_TOKEN.lastIndex = 0;
+        while ((out = DATE_TOKEN.exec(format))) {
+            if (out.index > last && !lit(format.slice(last, out.index))) return NaN;
+            last = out.index + out[0].length;
+            const t = out[0];
+            const n = t === 'yyyy' || t === 'y' ? digits(4, 4) : t.length === 2 ? digits(2, 2) : digits(1, 2);
+            if (n === null) return NaN;
+            if (t === 'yyyy' || t === 'y') f.y = n; else if (t === 'yy') f.y = n < 70 ? 2000 + n : 1900 + n;
+            else f[t[0]] = n;
+        }
+        if (last < format.length && !lit(format.slice(last))) return NaN;
+        if (pos !== v.length || f.y === null || f.y < 1) ok = false;
+        if (!ok || f.M < 1 || f.M > 12 || f.d < 1 || f.d > daysIn(f.y, f.M) || f.H > 23 || f.m > 59 || f.s > 59) return NaN;
+        const dt = new Date(0); dt.setUTCFullYear(f.y, f.M - 1, f.d); dt.setUTCHours(f.H, f.m, f.s, 0);
+        return dt.getTime();
+    }
+    /** strict ISO 8601: yyyy-MM-dd, optionally with THH:mm[:ss]; no time zone, no other spellings */
+    function parseIso(v) { for (const f of ISO_FORMATS) { const t = parseDateFormat(v, f); if (!isNaN(t)) return t; } return NaN; }
+    /** the value of a date rule under its options: explicit format > strict ISO > the browser's own Date.parse (legacy) */
+    function dateValue(v, rule) {
+        if (v === 'today' && (rule.format || rule.strict)) { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); }   // today's calendar date, as a wall-clock date
+        if (rule.format) return parseDateFormat(v, rule.format);
+        if (rule.strict) return parseIso(v);
+        return toDate(v);
     }
 
     function luhn(v) {
@@ -1980,14 +2020,14 @@ const api = (function (root) {
             return rule.allowLocal ? true : (u.hostname.includes('.') || u.hostname === 'localhost') && !/^\.|\.$/.test(u.hostname);
         } catch (e) { return false; }
     });
-    R('number', v => /^[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$/.test(v));
+    R('number', v => NUMBER_RE.test(v));
     R('digits', v => /^\d+$/.test(v));
     R('alpha', v => /^\p{L}+$/u.test(v));
     R('alphanumeric', v => /^[\p{L}\p{N}]+$/u.test(v));
     R('phone', v => /^\+?[\d\s\-().]{7,25}$/.test(v) && (v.match(/\d/g) || []).length >= 7 && (v.match(/\d/g) || []).length <= 15);
-    R('date', v => !isNaN(Date.parse(v)));
-    R('minDate', (v, r) => { const a = toDate(v), b = toDate(r.min); return !isNaN(a) && !isNaN(b) && a >= b; });
-    R('maxDate', (v, r) => { const a = toDate(v), b = toDate(r.max); return !isNaN(a) && !isNaN(b) && a <= b; });
+    R('date', (v, r) => r.format || r.strict ? !isNaN(dateValue(v, r)) : !isNaN(Date.parse(v)));   // format: 'd/M/yyyy' | strict: true (ISO 8601) | neither: Date.parse (legacy)
+    R('minDate', (v, r) => { const a = dateValue(v, r), b = dateValue(r.min, r); return !isNaN(a) && !isNaN(b) && a >= b; });
+    R('maxDate', (v, r) => { const a = dateValue(v, r), b = dateValue(r.max, r); return !isNaN(a) && !isNaN(b) && a <= b; });
     R('creditcard', v => luhn(v));
     R('pattern', (v, r) => { const re = r.pattern instanceof RegExp ? r.pattern : new RegExp(r.pattern || r.regex, r.flags || ''); re.lastIndex = 0; return re.test(v); });
     R('maxlength', (v, r) => v.length <= r.max);
@@ -2010,10 +2050,10 @@ const api = (function (root) {
         if (c.enabled === false) return true;
         if (v.length < c.minLength) return false;
         if (c.maxLength && v.length > c.maxLength) return false;
-        if (c.requireUppercase && !/[A-Z]/.test(v)) return false;
-        if (c.requireLowercase && !/[a-z]/.test(v)) return false;
-        if (c.requireDigit && !/\d/.test(v)) return false;
-        if (c.requireSpecialChar && !/[^A-Za-z0-9\s]/.test(v)) return false;
+        if (c.requireUppercase && !/\p{Lu}/u.test(v)) return false;   // capital letters of any alphabet, not only A-Z
+        if (c.requireLowercase && !/\p{Ll}/u.test(v)) return false;
+        if (c.requireDigit && !/\p{Nd}/u.test(v)) return false;       // digits of any script
+        if (c.requireSpecialChar && !/[^\p{L}\p{N}\s]/u.test(v)) return false;   // anything that is not a letter, number or space
         if (c.noWhitespace && /\s/.test(v)) return false;
         return true;
     });
@@ -2726,9 +2766,67 @@ const api = (function (root) {
         return tmp.validate();
     }
 
+    // ------------------------------------------------------------------ values without a form (Node, servers, unit tests)
+    const NEEDS_FORM = ['file', 'fileType', 'fileSize', 'minFiles', 'maxFiles', 'minChecked', 'maxChecked'];
+    /**
+     * Checks one value against the same rules the form uses, with no DOM:
+     *   FormValidator.checkValue('a@b', ['required', 'email'])            -> { valid: false, rule: 'email', message: 'Please enter a valid email address.' }
+     *   FormValidator.checkValue('x', { equalTo: 'password' }, { values: { password: 'y' } })
+     * Rules: everything except file, checkbox-count and remote rules (they need a form, files or a server). Synchronous only (no async custom rules).
+     * options: trim (default true; pwcheck never trims), values (other fields, for equalTo / notEqualTo), messages ({ rule: text }), passwordStrength, context.
+     */
+    function checkValue(value, rules, options) {
+        const o = options || {};
+        const raw = value == null ? '' : String(value);
+        const trimmed = o.trim === false ? raw : raw.trim();
+        for (const rule of normalizeRules(rules)) {
+            const def = validators[rule.type];
+            if (!def) throw new Error('checkValue: unknown rule "' + rule.type + '"');
+            if (def.remote || NEEDS_FORM.includes(rule.type)) throw new Error('checkValue: the "' + rule.type + '" rule needs a form, files or a server and cannot run on a plain value');
+            const v = rule.type === 'pwcheck' ? raw : trimmed;
+            const empty = v === '';
+            const env = { value: v, empty, count: empty ? 0 : 1, files: null, field: null, fields: [], form: null, inst: null, badInput: false,
+                config: { passwordStrength: o.passwordStrength || {} }, context: o.context || {} };
+            if (isFn(rule.when) && !guard(rule.when, true, v, env)) continue;
+            if (empty && !def.runOnEmpty && rule.type !== 'equalTo') continue;
+            let res;
+            if (rule.type === 'equalTo' || rule.type === 'notEqualTo') {
+                const other = o.values && rule.target in o.values ? String(o.values[rule.target] == null ? '' : o.values[rule.target]) : undefined;
+                if (other === undefined) throw new Error('checkValue: pass the other field in options.values for the "' + rule.type + '" rule');
+                res = rule.type === 'equalTo' ? v === other.trim() || v === other : v !== other.trim() && v !== other;
+                if (rule.type === 'notEqualTo' && empty) continue;
+            } else {
+                res = def.fn(rule.normalizer ? rule.normalizer(v, null) : v, rule, env);
+            }
+            if (res && isFn(res.then)) throw new Error('checkValue: the "' + rule.type + '" rule is asynchronous; use a form for it');
+            const r = normalizeResult(res);
+            if (!r.valid) {
+                const custom = typeof rule.message === 'string' ? rule.message : (o.messages && o.messages[rule.type]) || r.message || DEFAULT_MESSAGES[rule.type] || 'Invalid value.';
+                return { valid: false, rule: rule.type, message: format(fmt(custom, rule), paramsOf(rule)) };
+            }
+        }
+        return { valid: true, rule: null, message: '' };
+    }
+
+    /**
+     * Checks a whole object (a JSON request body, a model) against { field: rules }:
+     *   FormValidator.checkValues(body, { email: ['required', 'email'], pw: { required: true, pwcheck: { minLength: 8 } }, pw2: { equalTo: 'pw' } })
+     *   -> { valid, errors: { field: message }, details: { field: { rule, message } } }
+     */
+    function checkValues(data, schema, options) {
+        const o = options || {}, errors = {}, details = {};
+        Object.keys(schema || {}).forEach(name => {
+            const r = checkValue(data ? data[name] : undefined, schema[name], Object.assign({}, o, { values: Object.assign({}, data, o.values) }));
+            if (!r.valid) { errors[name] = r.message; details[name] = { rule: r.rule, message: r.message }; }
+        });
+        return { valid: Object.keys(errors).length === 0, errors, details };
+    }
+
     return {
         init,
         validate,
+        checkValue,
+        checkValues,
         registerRule,
         remoteDefaults: REMOTE_DEFAULTS,
         addMethod,

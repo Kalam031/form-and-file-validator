@@ -3,3 +3,8 @@ node_modules/
 .DS_Store
 browser-tests/.artifacts/
 _original_backup/
+
+# .NET build output
+bin/
+obj/
+*.nupkg

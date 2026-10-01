@@ -2,6 +2,13 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## Unreleased
+- **Dates with a named format**: `date`, `minDate`, `maxDate` take `format` (`d/M/y`, `MM/dd/yyyy`, `yyyy-MM-dd HH:mm`...) or `strict: true` (ISO 8601). Same result in every browser, Node, Angular and .NET. The old `Date.parse` behaviour stays when neither is given.
+- **`FormValidator.checkValue()` / `checkValues()`**: check values with the form rules and no DOM (Node, servers, tests, Angular).
+- Fix: `pwcheck` counted only A-Z, a-z and 0-9; capital letters, small letters, digits and symbols of every script now count (`Ü`, `Д`, `٣`, `€`), and accented letters are no longer "special characters".
+- Fix: `min`, `max`, `range`, `step` no longer accept `0x10`, `Infinity` or other non-decimal numbers (same grammar as `number`).
+- **Shared conformance vectors** (`spec/form-rules.vectors.json`, 400 cases) and a **.NET port** (`dotnet/`, NuGet `FormAndFileValidator`) that passes all of them on .NET 8 and 10.
+
 ## 3.3.2
 - Fix (server): `validate()` crashed with "Maximum call stack size exceeded" on Fastify `@fastify/multipart` parts. They are now read through `toBuffer()`, and a too deeply nested or circular input gives a clear error. Server companion 1.0.1.
 - Tests: real HTTP uploads to Express (multer, express-fileupload, formidable), Fastify, Koa and Hono; iPhone and Pixel emulation in the browser suite and CI.

@@ -76,6 +76,20 @@ const result = await validate(body.files, rules);
 <li>The languages of the messages: see <a href="languages.html">Languages</a>, <code>require(&#39;form-and-file-validator/server&#39;).locales</code>.</li>
 <li>Never trust the browser&#39;s MIME type. The companion checks the content, not only the name.</li>
 </ul>
+<h2 id="net-aspnet-core">.NET (ASP.NET Core)</h2>
+<p>The NuGet package <code>FormAndFileValidator</code> (folder <code>dotnet/</code>) runs the <strong>same form rules with the same answers</strong> as the browser. Both sides are tested against <code>spec/form-rules.vectors.json</code>, so a form the browser accepts is accepted by your API, and the other way round.</p>
+<pre tabindex="0"><code class="language-csharp">using FormAndFileValidator;
+
+var rules = FormValidator.ParseRules(&quot;&quot;&quot;[&quot;required&quot;, {&quot;type&quot;:&quot;date&quot;,&quot;format&quot;:&quot;d/M/y&quot;}]&quot;&quot;&quot;);   // the very JSON the browser uses
+var result = FormValidator.CheckValue(dto.BirthDate, rules);
+if (!result.Valid) return Results.UnprocessableEntity(new { result.Rule, result.Message });
+</code></pre>
+<pre tabindex="0"><code class="language-csharp">var r = FormValidator.CheckValues(body, new Dictionary&lt;string, IReadOnlyList&lt;Rule&gt;&gt; {
+    [&quot;email&quot;] = new[] { Rule.Required(), Rule.Email() },
+    [&quot;pw&quot;]    = new[] { Rule.Required(), Rule.PwCheck(minLength: 8, requireUppercase: true) },
+    [&quot;pw2&quot;]   = new[] { Rule.EqualTo(&quot;pw&quot;) } });
+</code></pre>
+<p>Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Targets .NET 8 and .NET 10. Keep <code>pattern</code> rules portable (write <code>[0-9]</code>, not <code>\d</code>) because regular expression engines differ slightly.</p>
 <h2 id="react">React</h2>
 <pre tabindex="0"><code class="language-jsx">import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;;
 
