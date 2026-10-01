@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.4.1
+- Docs: an Install section in the README (npm, bundlers, Node, Angular, React / Vue / Alpine, .NET).
+- Releases are now published from GitHub Actions with npm trusted publishing (signed provenance, no tokens).
+
 ## 3.4.0
 - **Dates with a named format**: `date`, `minDate`, `maxDate` take `format` (`d/M/y`, `MM/dd/yyyy`, `yyyy-MM-dd HH:mm`...) or `strict: true` (ISO 8601). Same result in every browser, Node, Angular and .NET. The old `Date.parse` behaviour stays when neither is given.
 - **`FormValidator.checkValue()` / `checkValues()`**: check values with the form rules and no DOM (Node, servers, tests, Angular).

@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.4.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.4.1</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -30,13 +30,53 @@
   <main id="content">
 <h1 id="formvalidator-filevalidator">FormValidator + FileValidator</h1>
 <p>Two dependency-free libraries for validating forms and file uploads in the browser (and, for files, in Node). They work as plain <code>&lt;script&gt;</code> tags or with a bundler. jQuery, Select2 and Bootstrap are optional.</p>
+<h2 id="install">Install</h2>
+<pre tabindex="0"><code>npm install form-and-file-validator
+</code></pre>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>You use</th>
+<th>Import</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Plain <code>&lt;script&gt;</code> tag</td>
+<td><code>dist/validator.min.js</code> (or the CDN below)</td>
+</tr>
+<tr>
+<td>A bundler or ES modules</td>
+<td><code>import { FormValidator, FileValidator } from &#39;form-and-file-validator&#39;</code></td>
+</tr>
+<tr>
+<td>Node / CommonJS</td>
+<td><code>const { FormValidator, FileValidator } = require(&#39;form-and-file-validator&#39;)</code></td>
+</tr>
+<tr>
+<td>Node server (uploads and plain values)</td>
+<td><code>require(&#39;form-and-file-validator/server&#39;)</code> and <code>FormValidator.checkValue()</code></td>
+</tr>
+<tr>
+<td>Angular (Reactive Forms)</td>
+<td><code>import { fvValidator, fvControls } from &#39;form-and-file-validator/angular&#39;</code></td>
+</tr>
+<tr>
+<td>React / Vue / Alpine</td>
+<td><code>form-and-file-validator/react</code>, <code>/vue</code>, <code>/alpine</code></td>
+</tr>
+<tr>
+<td>.NET (ASP.NET MVC 5, ASP.NET Core)</td>
+<td>the <code>FormAndFileValidator</code> package in <code>dotnet/</code> (same rules, same answers)</td>
+</tr>
+</tbody></table></div>
+<p>TypeScript types are included.</p>
 <h2 id="which-file-do-i-load">Which file do I load?</h2>
 <p><strong>One file: <code>dist/validator.min.js</code></strong> (127 KB minified; gzip is about a third of that).</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
 </code></pre>
 <p>It holds FormValidator, FileValidator, the upload widget, the jQuery Validation layer and the language registry (<code>FVLocales</code>). The jQuery layer switches on by itself when jQuery was loaded first. If jQuery loads after it, call <code>FormValidator.useJQuery(jQuery)</code>. With a bundler or Node: <code>const { FormValidator, FileValidator } = require(&#39;./dist/validator.js&#39;)</code>.</p>
 <p><strong>Project layout</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
 <thead>
 <tr>
 <th>Folder</th>
@@ -65,7 +105,7 @@
 </tr>
 </tbody></table></div>
 <p><strong>Why does <code>src/</code> have four main files?</strong> They are four separate jobs with different dependencies, so a page that needs only one part can load only that part (<code>dist/</code> has each one on its own, readable and minified):</p>
-<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
 <thead>
 <tr>
 <th>Part</th>
@@ -102,7 +142,7 @@
 <p>If you do not care about size, ignore them and use the one file.</p>
 <h2 id="the-four-parts-with-examples">The four parts, with examples</h2>
 <p>All four are in <code>dist/validator.min.js</code>. Pick by what your page has:</p>
-<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
 <thead>
 <tr>
 <th>Your page has...</th>
@@ -177,7 +217,7 @@
 if (!result.isValid) alert(FileValidator.summary(result).join(&#39;\n&#39;));
 </code></pre>
 <p>What it does for files the user picks (the message goes into <code>#cv-msg</code> and the input is cleared):</p>
-<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
 <thead>
 <tr>
 <th>File</th>
@@ -357,13 +397,13 @@ Add your own with <code>FVLocales.register(&#39;sv&#39;, { name: &#39;Svenska&#3
 The packs are machine-quality translations: please have a native speaker check them before shipping to end users.</p>
 <h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
 <p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
-<pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.4.0/dist/validator.min.js&quot;
-        integrity=&quot;sha384-2obBhZIVCILc39nidHsSUR/OR1ymE9wlqTHLLRt69a5M3XEZ1/WaHaNzB9z/h7TL&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.4.0/dist/locales/de.min.js&quot;
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.4.1/dist/validator.min.js&quot;
+        integrity=&quot;sha384-5X3Ta3jrJMv4a4TY3i+NITWce6hBdB/qSP2Y5kzM6Vse9kxuZe8Oqun5BmKwFo8y&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.4.1/dist/locales/de.min.js&quot;
         integrity=&quot;sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;
 </code></pre>
-<p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.4.0; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or <code>locales/all.min.js</code>.</p>
+<p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.4.1; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or <code>locales/all.min.js</code>.</p>
 <h2 id="contributing">Contributing</h2>
 <p>Anyone can contribute: fork, change <code>src/</code>, open a pull request. See <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>. Only reviewed pull requests reach <code>main</code>.</p>
 <h2 id="server-react-vue-alpine">Server, React, Vue, Alpine</h2>
