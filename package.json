@@ -1,9 +1,11 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.3.1",
-  "private": true,
+  "version": "3.3.2",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/Kalam031/form-and-file-validator.git" },
+  "bugs": { "url": "https://github.com/Kalam031/form-and-file-validator/issues" },
+  "homepage": "https://github.com/Kalam031/form-and-file-validator#readme",
   "main": "dist/validator.js",
   "module": "dist/validator.mjs",
   "types": "types/index.d.ts",

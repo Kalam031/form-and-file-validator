@@ -1,5 +1,5 @@
 /*!
- * FileValidator server companion v1.0.0 — runs the SAME file rules on the server (Node >= 18), so a browser check is never the only check.
+ * FileValidator server companion v1.0.1 — runs the SAME file rules on the server (Node >= 18), so a browser check is never the only check.
  *
  *   const { middleware, validate } = require('form-and-file-validator/server');
  *   const upload = multer({ storage: multer.memoryStorage() });
@@ -13,6 +13,7 @@
  * Content signatures, dangerous types, ZIP/Office/PDF inspection, duplicate detection and the scan hook all run here; image pixel sizes need a DOM and are skipped.
  *
  * Changelog
+ *   1.0.1  Accepts Fastify @fastify/multipart parts (read through toBuffer()); a too deeply nested or circular input gives a clear error instead of a stack overflow.
  *   1.0.0  First release. `locales` translates the server's messages (same packs as the browser).
  */
 'use strict';
@@ -92,4 +93,4 @@ function middleware(config, options) {
     };
 }
 
-module.exports = { validate, middleware, toFile, flatten, FileValidator, locales, version: '1.0.0' };
+module.exports = { validate, middleware, toFile, flatten, FileValidator, locales, version: '1.0.1' };
