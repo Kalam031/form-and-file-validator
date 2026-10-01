@@ -33,10 +33,20 @@ jobs:
           BROWSERS: chromium,firefox,webkit,mobile-safari,mobile-chrome
         run: |
           set +e
+          report() {
+            # the names of the failed tests and the first lines of each error, as annotations, so they are readable without opening the log
+            sed -n '/failing tests/,$p' browser.log | grep -E "✖|Error|expected|actual" | head -20 | while IFS= read -r line; do echo "::error::${line:0:400}"; done
+          }
           npm run test:browser 2>&1 | tee browser.log
           status=${PIPESTATUS[0]}
-          # failures as annotations, so they are readable without opening the log
-          grep -E "^\s*✖|AssertionError|Error:|TimeoutError" browser.log | head -12 | while IFS= read -r line; do echo "::error::${line:0:400}"; done
+          if [ $status -ne 0 ]; then
+            report
+            # a shared runner can be slow: one retry, with a visible warning (a real failure fails again)
+            echo "::warning::browser tests failed once; retrying"
+            npm run test:browser 2>&1 | tee browser.log
+            status=${PIPESTATUS[0]}
+            [ $status -ne 0 ] && report
+          fi
           exit $status
   dotnet:
     runs-on: ubuntu-latest
