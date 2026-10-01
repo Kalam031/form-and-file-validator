@@ -11,6 +11,8 @@ const { validate, middleware } = require('../dist/server.js');
 
 const PNG = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000', 'hex');
 const EXE = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);   // "MZ": a Windows program
+// Fastify 5, @koa/router 15 and @hono/node-server 2 need Node 20+; the library itself supports Node 18, which still runs the Express tests
+const modern = { skip: parseInt(process.versions.node, 10) < 20 && 'the framework itself needs Node 20 or newer' };
 const rules = { allowedExtensions: ['.png'], maxFileSizeMB: 1 };
 
 const upload = (url, parts) => {
@@ -70,7 +72,7 @@ test('Express + formidable (v3): validate() on the parsed files', async () => {
     try { await checks(await listen(server)); } finally { await close(server); }
 });
 
-test('Fastify + @fastify/multipart: validate() accepts the parts (req.files()) directly', async () => {
+test('Fastify + @fastify/multipart: validate() accepts the parts (req.files()) directly', modern, async () => {
     const Fastify = require('fastify');
     const app = Fastify();
     await app.register(require('@fastify/multipart'));
@@ -84,7 +86,7 @@ test('Fastify + @fastify/multipart: validate() accepts the parts (req.files()) d
     try { await checks('http://127.0.0.1:' + app.server.address().port + '/upload'); } finally { await app.close(); }
 });
 
-test('Fastify + @fastify/multipart with attachFieldsToBody: validate() accepts req.body.files', async () => {
+test('Fastify + @fastify/multipart with attachFieldsToBody: validate() accepts req.body.files', modern, async () => {
     const Fastify = require('fastify');
     const app = Fastify();
     await app.register(require('@fastify/multipart'), { attachFieldsToBody: true });
@@ -96,7 +98,7 @@ test('Fastify + @fastify/multipart with attachFieldsToBody: validate() accepts r
     try { await checks('http://127.0.0.1:' + app.server.address().port + '/upload'); } finally { await app.close(); }
 });
 
-test('Koa + @koa/multer: validate() on ctx.files', async () => {
+test('Koa + @koa/multer: validate() on ctx.files', modern, async () => {
     const Koa = require('koa'), Router = require('@koa/router'), multer = require('@koa/multer');
     const app = new Koa(), router = new Router();
     router.post('/upload', multer({ storage: multer.memoryStorage() }).array('files'), async ctx => {
@@ -108,7 +110,7 @@ test('Koa + @koa/multer: validate() on ctx.files', async () => {
     try { await checks(await listen(server)); } finally { await close(server); }
 });
 
-test('Hono (Web standard): validate() on the File objects from parseBody', async () => {
+test('Hono (Web standard): validate() on the File objects from parseBody', modern, async () => {
     const { Hono } = require('hono'), { serve } = require('@hono/node-server');
     const app = new Hono();
     app.post('/upload', async c => {
