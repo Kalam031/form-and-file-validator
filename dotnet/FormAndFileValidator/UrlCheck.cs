@@ -18,7 +18,7 @@ internal static class UrlCheck
         if (JsText.HasWhiteSpace(v)) return false;
 
         int sep = v.IndexOf("://", StringComparison.Ordinal);
-        bool hasProto = sep > 0 && IsScheme(v.AsSpan(0, sep));
+        bool hasProto = sep > 0 && IsScheme(v.Substring(0, sep));
         if (!hasProto && requireProtocol) return false;
         string full = hasProto ? v : "http://" + v;
         sep = full.IndexOf("://", StringComparison.Ordinal);
@@ -36,14 +36,14 @@ internal static class UrlCheck
         string hostPort = at >= 0 ? authority.Substring(at + 1) : authority;
 
         string host, port = "";
-        if (hostPort.StartsWith('['))
+        if (hostPort.Length > 0 && hostPort[0] == '[')
         {
             int close = hostPort.IndexOf(']');
             if (close < 0) return false;
             host = hostPort.Substring(0, close + 1);
             string after = hostPort.Substring(close + 1);
             if (after.Length > 0) { if (after[0] != ':') return false; port = after.Substring(1); }
-            if (!IPAddress.TryParse(host.AsSpan(1, host.Length - 2), out var ip6) || ip6.AddressFamily != AddressFamily.InterNetworkV6) return false;
+            if (!IPAddress.TryParse(host.Substring(1, host.Length - 2), out var ip6) || ip6.AddressFamily != AddressFamily.InterNetworkV6) return false;
         }
         else
         {
@@ -53,7 +53,7 @@ internal static class UrlCheck
             if (host.Length == 0) return false;
             host = Normalize(host);
             if (host.Length == 0) return false;
-            foreach (char c in host) if (c <= '\u001f' || c == '\u007f' || ForbiddenHost.Contains(c)) return false;
+            foreach (char c in host) if (c <= (char)0x1f || c == (char)0x7f || ForbiddenHost.IndexOf(c) >= 0) return false;
             if (EndsInNumber(host)) { var ip = ParseIpv4(host); if (ip is null) return false; host = ip; }   // the URL standard: a host that ends in a number must be an IPv4 address
         }
 
@@ -64,10 +64,10 @@ internal static class UrlCheck
         }
 
         if (allowLocal) return true;
-        return (host.Contains('.') || host == "localhost") && !host.StartsWith('.') && !host.EndsWith('.');
+        return (host.IndexOf('.') >= 0 || host == "localhost") && host[0] != '.' && host[host.Length - 1] != '.';
     }
 
-    static bool IsScheme(ReadOnlySpan<char> s)
+    static bool IsScheme(string s)
     {
         if (s.Length == 0 || !((s[0] >= 'a' && s[0] <= 'z') || (s[0] >= 'A' && s[0] <= 'Z'))) return false;
         foreach (char c in s)
@@ -80,7 +80,7 @@ internal static class UrlCheck
     {
         try
         {
-            if (host.Contains('%')) host = Uri.UnescapeDataString(host);
+            if (host.IndexOf('%') >= 0) host = Uri.UnescapeDataString(host);
             host = host.ToLowerInvariant();
             bool ascii = true;
             foreach (char c in host) if (c > '\u007f') { ascii = false; break; }
@@ -92,7 +92,7 @@ internal static class UrlCheck
     static bool EndsInNumber(string host)
     {
         var labels = host.TrimEnd('.').Split('.');
-        string last = labels[^1];
+        string last = labels[labels.Length - 1];
         if (last.Length == 0) return false;
         if (last.All(c => c is >= '0' and <= '9')) return true;
         return last.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && last.Skip(2).All(Uri.IsHexDigit);
@@ -102,7 +102,7 @@ internal static class UrlCheck
     static string? ParseIpv4(string host)
     {
         var parts = host.Split('.').ToList();
-        if (parts[^1].Length == 0 && parts.Count > 1) parts.RemoveAt(parts.Count - 1);
+        if (parts[parts.Count - 1].Length == 0 && parts.Count > 1) parts.RemoveAt(parts.Count - 1);
         if (parts.Count > 4) return null;
         var numbers = new List<long>();
         foreach (var p in parts)
@@ -113,8 +113,8 @@ internal static class UrlCheck
         }
         for (int i = 0; i < numbers.Count - 1; i++) if (numbers[i] > 255) return null;
         long lastMax = (long)Math.Pow(256, 5 - numbers.Count);
-        if (numbers[^1] >= lastMax) return null;
-        long ipv4 = numbers[^1];
+        if (numbers[numbers.Count - 1] >= lastMax) return null;
+        long ipv4 = numbers[numbers.Count - 1];
         for (int i = 0; i < numbers.Count - 1; i++) ipv4 += numbers[i] * (long)Math.Pow(256, 3 - i);
         return $"{(ipv4 >> 24) & 255}.{(ipv4 >> 16) & 255}.{(ipv4 >> 8) & 255}.{ipv4 & 255}";
     }

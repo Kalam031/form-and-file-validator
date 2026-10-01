@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- ASP.NET MVC 5 runs on .NET Framework 4.x -->
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>FormAndFileValidator.Mvc</RootNamespace>
+    <AssemblyName>FormAndFileValidator.Mvc5</AssemblyName>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <PackageId>FormAndFileValidator.Mvc5</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>abu_kalam</Authors>
+    <Description>Razor helpers for ASP.NET MVC 5: put [FormRules] on your model once and get the same rules in the browser (Html.FormValidatorInit) and on the server (ModelState).</Description>
+    <PackageTags>aspnetmvc;mvc5;validation;form;razor</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/Kalam031/form-and-file-validator</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.3.0" />
+    <Reference Include="System.Web" />
+    <ProjectReference Include="..\FormAndFileValidator\FormAndFileValidator.csproj" />
+  </ItemGroup>
+
+</Project>

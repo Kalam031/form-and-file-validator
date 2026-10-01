@@ -26,7 +26,7 @@ internal static class DateFormat
             int n = 0;
             while (n < max && pos + n < v.Length && v[pos + n] is >= '0' and <= '9') n++;
             if (n < min) return null;
-            int value = int.Parse(v.AsSpan(pos, n), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture);
+            int value = int.Parse(v.Substring(pos, n), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture);
             pos += n;
             return value;
         }

@@ -102,16 +102,18 @@ public static class FormValidator
     public static ValuesResult CheckValues(IReadOnlyDictionary<string, string?> data, IReadOnlyDictionary<string, IReadOnlyList<Rule>> schema, CheckOptions? options = null)
     {
         options ??= new CheckOptions();
-        var merged = new Dictionary<string, string?>(data);
+        var merged = new Dictionary<string, string?>();
+        foreach (var kv in data) merged[kv.Key] = kv.Value;
         if (options.Values is not null) foreach (var kv in options.Values) merged[kv.Key] = kv.Value;
         var perField = new CheckOptions { Trim = options.Trim, Messages = options.Messages, Today = options.Today, Values = merged };
 
         var errors = new Dictionary<string, string>();
         var details = new Dictionary<string, CheckResult>();
-        foreach (var (field, rules) in schema)
+        foreach (var entry in schema)
         {
+            string field = entry.Key;
             data.TryGetValue(field, out var value);
-            var r = CheckValue(value, rules, perField);
+            var r = CheckValue(value, entry.Value, perField);
             if (!r.Valid) { errors[field] = r.Message; details[field] = r; }
         }
         return new ValuesResult(errors.Count == 0, errors, details);
@@ -135,8 +137,8 @@ public static class FormValidator
                 return UrlCheck.IsValid(v, r.Flag("requireProtocol"), r.Flag("allowLocal"), protocols);
             case "number": return Numbers.IsDecimal(v);
             case "digits": return DigitsRe.IsMatch(v);
-            case "alpha": return JsText.Runes(v).All(x => JsText.IsLetter(x.Category));
-            case "alphanumeric": return JsText.Runes(v).All(x => JsText.IsLetter(x.Category) || JsText.IsNumber(x.Category));
+            case "alpha": return JsText.CodePoints(v).All(x => JsText.IsLetter(x.Category));
+            case "alphanumeric": return JsText.CodePoints(v).All(x => JsText.IsLetter(x.Category) || JsText.IsNumber(x.Category));
             case "phone": return Phone(v);
             case "date": return DateFormat.ValueOf(v, r.Str("format"), today) is not null;
             case "minDate":
@@ -213,9 +215,9 @@ public static class FormValidator
         string pattern = r.Str("pattern") ?? r.Str("regex") ?? "";
         string flags = r.Str("flags") ?? "";
         var opt = RegexOptions.CultureInvariant;
-        if (flags.Contains('i')) opt |= RegexOptions.IgnoreCase;
-        if (flags.Contains('m')) opt |= RegexOptions.Multiline;
-        if (flags.Contains('s')) opt |= RegexOptions.Singleline;
+        if (flags.IndexOf('i') >= 0) opt |= RegexOptions.IgnoreCase;
+        if (flags.IndexOf('m') >= 0) opt |= RegexOptions.Multiline;
+        if (flags.IndexOf('s') >= 0) opt |= RegexOptions.Singleline;
         try { return new Regex(pattern, opt, RegexTimeout).IsMatch(v); }
         catch (RegexMatchTimeoutException) { return false; }
     }
@@ -226,11 +228,11 @@ public static class FormValidator
         if (r.Options.TryGetValue("enabled", out var en) && en is false) return true;
         if (v.Length < minLength) return false;
         if (r.Has("maxLength") && r.Num("maxLength") > 0 && v.Length > r.Num("maxLength")) return false;
-        var runes = JsText.Runes(v).ToList();
+        var runes = JsText.CodePoints(v).ToList();
         if (r.Flag("requireUppercase") && !runes.Any(x => x.Category == UnicodeCategory.UppercaseLetter)) return false;
         if (r.Flag("requireLowercase") && !runes.Any(x => x.Category == UnicodeCategory.LowercaseLetter)) return false;
         if (r.Flag("requireDigit") && !runes.Any(x => x.Category == UnicodeCategory.DecimalDigitNumber)) return false;
-        if (r.Flag("requireSpecialChar") && !runes.Any(x => !JsText.IsLetter(x.Category) && !JsText.IsNumber(x.Category) && !(x.Rune.IsBmp && JsText.IsWhiteSpace((char)x.Rune.Value)))) return false;
+        if (r.Flag("requireSpecialChar") && !runes.Any(x => !JsText.IsLetter(x.Category) && !JsText.IsNumber(x.Category) && !(x.CodePoint <= 0xFFFF && JsText.IsWhiteSpace((char)x.CodePoint)))) return false;
         if (r.Flag("noWhitespace") && JsText.HasWhiteSpace(v)) return false;
         return true;
     }

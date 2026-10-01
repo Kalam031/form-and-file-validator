@@ -83,7 +83,41 @@ var r = FormValidator.CheckValues(body, new Dictionary<string, IReadOnlyList<Rul
     ["pw2"]   = new[] { Rule.EqualTo("pw") } });
 ```
 
-Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Targets .NET 8 and .NET 10. Keep `pattern` rules portable (write `[0-9]`, not `\d`) because regular expression engines differ slightly.
+### ASP.NET MVC 5 (.NET Framework) and ASP.NET Core MVC: one definition for server and browser
+
+Put the rules on the model once. They run in `ModelState` on the server (plain DataAnnotations) and are written to the page for the browser, so the two can never drift apart.
+
+```csharp
+public class SignupModel
+{
+    [FormRules("[\"required\", \"email\"]")]
+    public string Email { get; set; }
+
+    [FormRules("[\"required\", {\"type\":\"pwcheck\",\"minLength\":8,\"requireUppercase\":true,\"requireDigit\":true}]")]
+    public string Password { get; set; }
+
+    [FormRules("[{\"type\":\"equalTo\",\"target\":\"Password\"}]")]
+    public string ConfirmPassword { get; set; }
+
+    // keep dates as the text the user typed and name the format
+    [FormRules("[\"required\", {\"type\":\"date\",\"format\":\"d/M/y\"}]")]
+    public string BirthDate { get; set; }
+}
+
+// controller: nothing special
+[HttpPost] public ActionResult Signup(SignupModel m) { if (!ModelState.IsValid) return View(m); ... }
+```
+
+```cshtml
+@* Razor view (MVC 5): add the package FormAndFileValidator.Mvc5, then *@
+<script src="~/Scripts/validator.min.js"></script>
+@using (Html.BeginForm("Signup", "Account", FormMethod.Post, new { id = "signup" })) { ... }
+@Html.FormValidatorInit("signup")      @* FormValidator.init({ formId: "signup", rules: { Email: [...], ... } }) *@
+```
+
+Outside MVC, `ModelRules.For<SignupModel>()` gives the rules and `ModelRules.ToJson<SignupModel>()` the JSON. Field names are the property names, which is what MVC puts in the `name` attribute. The libraries are tested on the real .NET Framework 4.8 (Windows), .NET 8 and .NET 10; `FormAndFileValidator` targets netstandard2.0 (.NET Framework 4.6.1 and up), the helpers package `FormAndFileValidator.Mvc5` targets .NET Framework 4.8.
+
+Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Keep `pattern` rules portable (write `[0-9]`, not `\d`) because regular expression engines differ slightly.
 
 ## React
 

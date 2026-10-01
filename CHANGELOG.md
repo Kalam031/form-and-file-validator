@@ -7,6 +7,7 @@ Versions of the package follow semver. Each source file also keeps its own chang
 - **`FormValidator.checkValue()` / `checkValues()`**: check values with the form rules and no DOM (Node, servers, tests, Angular).
 - Fix: `pwcheck` counted only A-Z, a-z and 0-9; capital letters, small letters, digits and symbols of every script now count (`Ü`, `Д`, `٣`, `€`), and accented letters are no longer "special characters".
 - Fix: `min`, `max`, `range`, `step` no longer accept `0x10`, `Infinity` or other non-decimal numbers (same grammar as `number`).
+- **.NET Framework and ASP.NET MVC 5**: the .NET package targets netstandard2.0 (and net8.0, net10.0), has a `[FormRules]` model attribute (one definition for `ModelState` and the browser) and a Razor helper package `FormAndFileValidator.Mvc5`; the vectors pass on the real .NET Framework 4.8.
 - **Shared conformance vectors** (`spec/form-rules.vectors.json`, 400 cases) and a **.NET port** (`dotnet/`, NuGet `FormAndFileValidator`) that passes all of them on .NET 8 and 10.
 
 ## 3.3.2

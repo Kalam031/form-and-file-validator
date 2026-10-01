@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="'$(Tfm)' == ''">net8.0;net10.0</TargetFrameworks>
+    <!-- netstandard2.0 = .NET Framework 4.6.1+ (ASP.NET MVC 5, Web API 2, WebForms), .NET Core 2.0+ and everything newer -->
+    <TargetFrameworks Condition="'$(Tfm)' == ''">netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <TargetFramework Condition="'$(Tfm)' != ''">$(Tfm)</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -15,12 +16,17 @@
     <PackageId>FormAndFileValidator</PackageId>
     <Version>0.1.0</Version>
     <Authors>abu_kalam</Authors>
-    <Description>The server side of form-and-file-validator: the same form rules, with the same answers as the JavaScript package, verified against shared conformance vectors.</Description>
-    <PackageTags>validation;form;validator;aspnetcore</PackageTags>
+    <Description>The server side of form-and-file-validator: the same form rules, with the same answers as the JavaScript package, verified against shared conformance vectors. For ASP.NET MVC 5, ASP.NET Core and any .NET.</Description>
+    <PackageTags>validation;form;validator;aspnetcore;aspnetmvc;mvc5;dataannotations</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/Kalam031/form-and-file-validator</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />

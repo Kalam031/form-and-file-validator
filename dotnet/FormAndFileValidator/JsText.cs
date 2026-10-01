@@ -52,10 +52,19 @@ internal static class JsText
     public static bool IsNumber(UnicodeCategory c) =>
         c is UnicodeCategory.DecimalDigitNumber or UnicodeCategory.LetterNumber or UnicodeCategory.OtherNumber;
 
-    /// <summary>Every code point (not UTF-16 unit) of the text with its Unicode category.</summary>
-    public static IEnumerable<(Rune Rune, UnicodeCategory Category)> Runes(string s)
+    /// <summary>Every code point (not UTF-16 unit) of the text with its Unicode category. The same code on every .NET version, including .NET Framework.</summary>
+    public static IEnumerable<(int CodePoint, UnicodeCategory Category)> CodePoints(string s)
     {
-        foreach (var r in s.EnumerateRunes()) yield return (r, Rune.GetUnicodeCategory(r));
+        for (int i = 0; i < s.Length; i++)
+        {
+            char c = s[i];
+            if (char.IsHighSurrogate(c) && i + 1 < s.Length && char.IsLowSurrogate(s[i + 1]))
+            {
+                yield return (char.ConvertToUtf32(c, s[i + 1]), CharUnicodeInfo.GetUnicodeCategory(s, i));
+                i++;
+            }
+            else yield return (c, char.IsSurrogate(c) ? UnicodeCategory.Surrogate : CharUnicodeInfo.GetUnicodeCategory(c));
+        }
     }
 
     /// <summary>JavaScript's String(number): 5 not 5.0, no exponent for ordinary sizes.</summary>
