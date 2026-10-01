@@ -1,4 +1,4 @@
-# FormValidator v2.6.0 — Documentation
+# FormValidator v2.7.0 — Documentation
 
 ## Overview
 
@@ -24,7 +24,7 @@ FormValidator checks an HTML form before it is submitted, shows a clear message 
 <script src="dist/formValidator.js"></script>
 ```
 
-One-file alternative: `<script src="dist/validator.min.js"></script>` carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: `const FormValidator = require('./dist/formValidator.js')`. Check the loaded version with `FormValidator.version` (currently 2.6.0). It is also the successor of the jQuery Validation plugin: see [Migrating-from-jQuery-Validate.md](Migrating-from-jQuery-Validate.md).
+One-file alternative: `<script src="dist/validator.min.js"></script>` carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: `const FormValidator = require('./dist/formValidator.js')`. Check the loaded version with `FormValidator.version` (currently 2.7.0). It is also the successor of the jQuery Validation plugin: see [Migrating-from-jQuery-Validate.md](Migrating-from-jQuery-Validate.md).
 
 ## Quick start
 
@@ -589,6 +589,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.7.0**: named date formats (`format`, `strict`), `checkValue()` / `checkValues()` without a DOM, a `url` rule that is the same in every browser, Unicode-aware `pwcheck`, plain-decimal `min` / `max` / `range` / `step`.
 - **2.6.0**: error messages carry `dir="auto"`; language packs.
 - **2.5.2**: hardening: a bad CSS selector, an option of the wrong type or a user callback that throws no longer breaks the form.
 - **2.5.1**: a click is never lost when a blur removes an error message and the layout shifts (the change waits until the pointer is released).

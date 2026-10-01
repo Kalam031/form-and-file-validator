@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.3.2</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.4.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v260-documentation">FormValidator v2.6.0 — Documentation</h1>
+<h1 id="formvalidator-v270-documentation">FormValidator v2.7.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -48,7 +48,7 @@
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/fileValidator.js&quot;&gt;&lt;/script&gt;  &lt;!-- optional: needed only for the &quot;file&quot; rule --&gt;
 &lt;script src=&quot;dist/formValidator.js&quot;&gt;&lt;/script&gt;
 </code></pre>
-<p>One-file alternative: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code> carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: <code>const FormValidator = require(&#39;./dist/formValidator.js&#39;)</code>. Check the loaded version with <code>FormValidator.version</code> (currently 2.6.0). It is also the successor of the jQuery Validation plugin: see <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
+<p>One-file alternative: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code> carries FormValidator, FileValidator, the upload widget and the jQuery layer. With CommonJS or a bundler: <code>const FormValidator = require(&#39;./dist/formValidator.js&#39;)</code>. Check the loaded version with <code>FormValidator.version</code> (currently 2.7.0). It is also the successor of the jQuery Validation plugin: see <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
 <h2 id="quick-start">Quick start</h2>
 <p>Give the form an id, then call <code>FormValidator.init</code> with the rules for each field, keyed by the field&#39;s <code>name</code>.</p>
 <pre tabindex="0"><code class="language-html">&lt;form id=&quot;signup&quot; action=&quot;/register&quot; method=&quot;post&quot;&gt;
@@ -1051,6 +1051,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.7.0</strong>: named date formats (<code>format</code>, <code>strict</code>), <code>checkValue()</code> / <code>checkValues()</code> without a DOM, a <code>url</code> rule that is the same in every browser, Unicode-aware <code>pwcheck</code>, plain-decimal <code>min</code> / <code>max</code> / <code>range</code> / <code>step</code>.</li>
 <li><strong>2.6.0</strong>: error messages carry <code>dir=&quot;auto&quot;</code>; language packs.</li>
 <li><strong>2.5.2</strong>: hardening: a bad CSS selector, an option of the wrong type or a user callback that throws no longer breaks the form.</li>
 <li><strong>2.5.1</strong>: a click is never lost when a blur removes an error message and the layout shifts (the change waits until the pointer is released).</li>

@@ -1,7 +1,9 @@
 /*!
- * FormValidator v2.6.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.7.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.7.0  Dates with a named format (date / minDate / maxDate: `format`, `strict`); checkValue() / checkValues() without a DOM; url rule independent of the browser's URL parser;
+ *          pwcheck counts capital letters, small letters, digits and symbols of every script; min / max / range / step take plain decimals only.
  *   2.6.0  Error messages get dir="auto", so right-to-left text (Arabic, Hebrew) reads correctly inside a left-to-right page and the other way round.
  *   2.5.3  Hardening: a CSS selector that is not valid (equalTo: '[1,2]') no longer throws, and an error thrown by one of your callbacks
  *          (when, message, resolveMessage, normalizer, errorPlacement, highlight, ...) is logged and ignored instead of aborting the validation.
@@ -1149,6 +1151,6 @@
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.6.0'
+        version: '2.7.0'
     };
 });

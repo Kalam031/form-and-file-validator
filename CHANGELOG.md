@@ -2,7 +2,7 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
-## Unreleased
+## 3.4.0
 - **Dates with a named format**: `date`, `minDate`, `maxDate` take `format` (`d/M/y`, `MM/dd/yyyy`, `yyyy-MM-dd HH:mm`...) or `strict: true` (ISO 8601). Same result in every browser, Node, Angular and .NET. The old `Date.parse` behaviour stays when neither is given.
 - **`FormValidator.checkValue()` / `checkValues()`**: check values with the form rules and no DOM (Node, servers, tests, Angular).
 - Fix: `pwcheck` counted only A-Z, a-z and 0-9; capital letters, small letters, digits and symbols of every script now count (`Ü`, `Д`, `٣`, `€`), and accented letters are no longer "special characters".

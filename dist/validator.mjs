@@ -1,4 +1,4 @@
-/*! FormValidator 2.6.0 + FileValidator 2.7.1 + upload widget 1.3.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.7.0 + FileValidator 2.7.1 + upload widget 1.3.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
@@ -1776,9 +1776,11 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.6.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.7.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.7.0  Dates with a named format (date / minDate / maxDate: `format`, `strict`); checkValue() / checkValues() without a DOM; url rule independent of the browser's URL parser;
+ *          pwcheck counts capital letters, small letters, digits and symbols of every script; min / max / range / step take plain decimals only.
  *   2.6.0  Error messages get dir="auto", so right-to-left text (Arabic, Hebrew) reads correctly inside a left-to-right page and the other way round.
  *   2.5.3  Hardening: a CSS selector that is not valid (equalTo: '[1,2]') no longer throws, and an error thrown by one of your callbacks
  *          (when, message, resolveMessage, normalizer, errorPlacement, highlight, ...) is logged and ignored instead of aborting the validation.
@@ -2926,7 +2928,7 @@ const api = (function (root) {
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.6.0'
+        version: '2.7.0'
     };
 });
 
@@ -3880,7 +3882,7 @@ const api = (function (root) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.7.1","fileValidator.widget":"1.3.0","formValidator":"2.6.0","formValidator.jquery":"1.2.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.7.1","fileValidator.widget":"1.3.0","formValidator":"2.7.0","formValidator.jquery":"1.2.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;
