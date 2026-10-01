@@ -157,6 +157,38 @@ const { formRef, validate, errors } = useFormValidator({ rules: { email: ['requi
 
 Also available: the directive `v-form-validator="{ rules: {...} }" ` (register with `app.directive('form-validator', vFormValidator)` or `app.use(FormValidatorPlugin)`).
 
+## Angular
+
+Validators for Reactive Forms. They are plain functions (no decorators, no build step), so they work with any Angular version from 14, standalone or NgModule, and in unit tests. They give the same answers as the browser engine, Node and the .NET package.
+
+```ts
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { fvValidator, fvControls, fvWatch, fvMessage } from 'form-and-file-validator/angular';
+
+const schema = {
+  email: ['required', 'email'],
+  born:  ['required', { type: 'date', format: 'd/M/y' }],
+  pw:    { required: true, pwcheck: { minLength: 8, requireUppercase: true, requireDigit: true } },
+  pw2:   { equalTo: 'pw' }                                  // looks at the sibling control named "pw"
+};
+
+form = this.fb.group(fvControls(schema, { email: '' }));    // or: new FormControl('', fvValidator(['required', 'email']))
+private stop = fvWatch(this.form, schema);                  // re-check pw2 when pw changes; call this.stop() in ngOnDestroy
+fvMessage = fvMessage;
+```
+
+```html
+<input formControlName="email">
+<small *ngIf="form.get('email')?.touched && form.get('email')?.errors">{{ fvMessage(form.get('email')) }}</small>
+<small *ngIf="form.get('email')?.hasError('required')">Required</small>      <!-- hasError('<rule>') works too -->
+```
+
+- A failed control has `errors = { <rule>: { message }, fv: { rule, message } }`.
+- `null` / `undefined` is blank, numbers and booleans become text, a `Date` becomes its local `yyyy-MM-dd` (use a `format` or `strict` date rule with it).
+- `fvGroupValidator(schema)` on the FormGroup returns every field's error at once.
+- The same rules, written once as JSON, can be shared with the server (`checkValue` in Node, `FormAndFileValidator` in .NET).
+- Template-driven forms: wrap `fvValidator` in a one-line directive (`NG_VALIDATORS`) in your app.
+
 ## Alpine.js
 
 ```html

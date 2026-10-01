@@ -24,7 +24,8 @@ add({ type: 'url' }, ['https://user:pw@example.com', 'http://example.com:65535',
   ['http://example.com:65536', 'http://example.com:abc', 'http://example.com:-1', 'http://example.com.', 'http://.example.com', 'http://exa<mple.com', 'http://exa|mple.com', 'http://exa%20mple.com',
     'http://256.1.1.1', 'http://999.1.1.1', 'http://1.2.3.4.5', 'http://0x100000000', 'http://example.123', 'http://08.1.1.1', 'http://-', 'https://', 'http://:80',
     'http://[::1]', 'http://exa mple.com', 'https:/example.com', 'http//example.com']);
-add({ type: 'url', allowLocal: true }, ['http://localhost:3000', 'http://intranet', 'http://intranet:3000/x', 'http://[::1]', 'http://[::1]:8080', 'http://[2001:db8::1]/p', 'http://.com'], ['http://[::1', 'http://[zz]', 'http://[::1]x', 'http://:80']);
+add({ type: 'url', allowLocal: true }, ['http://localhost:3000', 'http://intranet', 'http://intranet:3000/x', 'http://[::1]', 'http://[::1]:8080', 'http://[2001:db8::1]/p', 'http://.com', 'http://[::]', 'http://[::ffff:1.2.3.4]', 'http://[1:2:3:4:5:6:7:8]', 'http://[1::]', 'http://[::1]/path?q=1'],
+  ['http://[::1', 'http://[zz]', 'http://[::1]x', 'http://:80', 'http://[1:2:3:4:5:6:7:8:9]', 'http://[:::1]', 'http://[1::2::3]', 'http://[12345::1]', 'http://[fe80::1%25eth0]', 'http://[::1.2.3.256]', 'http://[]']);
 add({ type: 'url', protocols: ['ftp:', 'http:'] }, ['ftp://files.example.com', 'http://example.com'], ['https://example.com', 'sftp://files.example.com']);
 add({ type: 'url', requireProtocol: true }, ['https://example.com'], ['example.com', 'www.example.com']);
 add({ type: 'number' }, ['1', '-1.5', '.5', '1e3', '+7', '0', '1.', '-0.0'], ['abc', '1,5', '1.2.3', '1 2', '--1', 'Infinity', '0x10', 'NaN', '１２']);

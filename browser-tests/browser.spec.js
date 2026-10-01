@@ -269,6 +269,22 @@ for (const b of BROWSERS) {
             assert.deepEqual(r.bad, ['b.txt: PATH_TOO_DEEP']);
         });
 
+        // ============================================================ one answer in every browser engine
+        it2('every shared conformance vector gives the same answer in this browser (value-only engine and the real DOM form engine)', async page => {
+            const vectors = require('../spec/form-rules.vectors.json').cases;
+            await page.addScriptTag({ content: fs.readFileSync(path.join(__dirname, '..', 'spec', 'dom-vectors.js'), 'utf8') });
+            const bad = await page.evaluate(async cases => {
+                const wrong = [];
+                cases.forEach(c => {
+                    const r = window.FormValidator.checkValue(c.value, c.rule, { values: c.values });
+                    if (r.valid !== c.valid) wrong.push('checkValue ' + JSON.stringify(c.rule) + ' on ' + JSON.stringify(c.value) + ': expected ' + c.valid + ', got ' + r.valid);
+                });
+                (await window.runDomVectors(window.FormValidator, cases)).forEach(m => wrong.push('form engine ' + m));
+                return wrong;
+            }, vectors);
+            assert.deepEqual(bad.slice(0, 20), [], bad.length + ' of ' + vectors.length + ' vectors differ in ' + b.name);
+        });
+
         // ============================================================ the upload widget in a real browser
         const WIDGET_HTML = `<div id="zone"><label for="in">Choose files</label> <input type="file" id="in" multiple></div><div id="status"></div><div id="errors"></div><ul id="list"></ul>`;
         const widget = (page, cfg, opts) => setup(page, WIDGET_HTML, `window.zone = FileValidator.widget('#zone', ${JSON.stringify(cfg)}, Object.assign({ list: '#list', messageElement: '#errors', statusElement: '#status' }, ${JSON.stringify(opts || {})})); 0`);

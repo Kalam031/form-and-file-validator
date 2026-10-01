@@ -89,7 +89,34 @@ if (!result.Valid) return Results.UnprocessableEntity(new { result.Rule, result.
     [&quot;pw&quot;]    = new[] { Rule.Required(), Rule.PwCheck(minLength: 8, requireUppercase: true) },
     [&quot;pw2&quot;]   = new[] { Rule.EqualTo(&quot;pw&quot;) } });
 </code></pre>
-<p>Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Targets .NET 8 and .NET 10. Keep <code>pattern</code> rules portable (write <code>[0-9]</code>, not <code>\d</code>) because regular expression engines differ slightly.</p>
+<h3 id="aspnet-mvc-5-net-framework-and-aspnet-core-mvc-one-definition-for-server-and-browser">ASP.NET MVC 5 (.NET Framework) and ASP.NET Core MVC: one definition for server and browser</h3>
+<p>Put the rules on the model once. They run in <code>ModelState</code> on the server (plain DataAnnotations) and are written to the page for the browser, so the two can never drift apart.</p>
+<pre tabindex="0"><code class="language-csharp">public class SignupModel
+{
+    [FormRules(&quot;[\&quot;required\&quot;, \&quot;email\&quot;]&quot;)]
+    public string Email { get; set; }
+
+    [FormRules(&quot;[\&quot;required\&quot;, {\&quot;type\&quot;:\&quot;pwcheck\&quot;,\&quot;minLength\&quot;:8,\&quot;requireUppercase\&quot;:true,\&quot;requireDigit\&quot;:true}]&quot;)]
+    public string Password { get; set; }
+
+    [FormRules(&quot;[{\&quot;type\&quot;:\&quot;equalTo\&quot;,\&quot;target\&quot;:\&quot;Password\&quot;}]&quot;)]
+    public string ConfirmPassword { get; set; }
+
+    // keep dates as the text the user typed and name the format
+    [FormRules(&quot;[\&quot;required\&quot;, {\&quot;type\&quot;:\&quot;date\&quot;,\&quot;format\&quot;:\&quot;d/M/y\&quot;}]&quot;)]
+    public string BirthDate { get; set; }
+}
+
+// controller: nothing special
+[HttpPost] public ActionResult Signup(SignupModel m) { if (!ModelState.IsValid) return View(m); ... }
+</code></pre>
+<pre tabindex="0"><code class="language-cshtml">@* Razor view (MVC 5): add the package FormAndFileValidator.Mvc5, then *@
+&lt;script src=&quot;~/Scripts/validator.min.js&quot;&gt;&lt;/script&gt;
+@using (Html.BeginForm(&quot;Signup&quot;, &quot;Account&quot;, FormMethod.Post, new { id = &quot;signup&quot; })) { ... }
+@Html.FormValidatorInit(&quot;signup&quot;)      @* FormValidator.init({ formId: &quot;signup&quot;, rules: { Email: [...], ... } }) *@
+</code></pre>
+<p>Outside MVC, <code>ModelRules.For&lt;SignupModel&gt;()</code> gives the rules and <code>ModelRules.ToJson&lt;SignupModel&gt;()</code> the JSON. Field names are the property names, which is what MVC puts in the <code>name</code> attribute. The libraries are tested on the real .NET Framework 4.8 (Windows), .NET 8 and .NET 10; <code>FormAndFileValidator</code> targets netstandard2.0 (.NET Framework 4.6.1 and up), the helpers package <code>FormAndFileValidator.Mvc5</code> targets .NET Framework 4.8.</p>
+<p>Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Keep <code>pattern</code> rules portable (write <code>[0-9]</code>, not <code>\d</code>) because regular expression engines differ slightly.</p>
 <h2 id="react">React</h2>
 <pre tabindex="0"><code class="language-jsx">import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;;
 
@@ -120,6 +147,33 @@ const { formRef, validate, errors } = useFormValidator({ rules: { email: [&#39;r
 &lt;/template&gt;
 </code></pre>
 <p>Also available: the directive <code>v-form-validator=&quot;{ rules: {...} }&quot; </code> (register with <code>app.directive(&#39;form-validator&#39;, vFormValidator)</code> or <code>app.use(FormValidatorPlugin)</code>).</p>
+<h2 id="angular">Angular</h2>
+<p>Validators for Reactive Forms. They are plain functions (no decorators, no build step), so they work with any Angular version from 14, standalone or NgModule, and in unit tests. They give the same answers as the browser engine, Node and the .NET package.</p>
+<pre tabindex="0"><code class="language-ts">import { FormBuilder, FormGroup } from &#39;@angular/forms&#39;;
+import { fvValidator, fvControls, fvWatch, fvMessage } from &#39;form-and-file-validator/angular&#39;;
+
+const schema = {
+  email: [&#39;required&#39;, &#39;email&#39;],
+  born:  [&#39;required&#39;, { type: &#39;date&#39;, format: &#39;d/M/y&#39; }],
+  pw:    { required: true, pwcheck: { minLength: 8, requireUppercase: true, requireDigit: true } },
+  pw2:   { equalTo: &#39;pw&#39; }                                  // looks at the sibling control named &quot;pw&quot;
+};
+
+form = this.fb.group(fvControls(schema, { email: &#39;&#39; }));    // or: new FormControl(&#39;&#39;, fvValidator([&#39;required&#39;, &#39;email&#39;]))
+private stop = fvWatch(this.form, schema);                  // re-check pw2 when pw changes; call this.stop() in ngOnDestroy
+fvMessage = fvMessage;
+</code></pre>
+<pre tabindex="0"><code class="language-html">&lt;input formControlName=&quot;email&quot;&gt;
+&lt;small *ngIf=&quot;form.get(&#39;email&#39;)?.touched &amp;&amp; form.get(&#39;email&#39;)?.errors&quot;&gt;{{ fvMessage(form.get(&#39;email&#39;)) }}&lt;/small&gt;
+&lt;small *ngIf=&quot;form.get(&#39;email&#39;)?.hasError(&#39;required&#39;)&quot;&gt;Required&lt;/small&gt;      &lt;!-- hasError(&#39;&lt;rule&gt;&#39;) works too --&gt;
+</code></pre>
+<ul>
+<li>A failed control has <code>errors = { &lt;rule&gt;: { message }, fv: { rule, message } }</code>.</li>
+<li><code>null</code> / <code>undefined</code> is blank, numbers and booleans become text, a <code>Date</code> becomes its local <code>yyyy-MM-dd</code> (use a <code>format</code> or <code>strict</code> date rule with it).</li>
+<li><code>fvGroupValidator(schema)</code> on the FormGroup returns every field&#39;s error at once.</li>
+<li>The same rules, written once as JSON, can be shared with the server (<code>checkValue</code> in Node, <code>FormAndFileValidator</code> in .NET).</li>
+<li>Template-driven forms: wrap <code>fvValidator</code> in a one-line directive (<code>NG_VALIDATORS</code>) in your app.</li>
+</ul>
 <h2 id="alpinejs">Alpine.js</h2>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;dist/integrations/alpine.min.js&quot;&gt;&lt;/script&gt;

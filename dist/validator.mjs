@@ -1978,6 +1978,104 @@ const api = (function (root) {
         return toDate(v);
     }
 
+    // ---- the url rule. Written out here instead of asking `new URL()`: browsers disagree on edge cases (Chrome accepts "http://exa%20mple.com",
+    //      the others do not), and the .NET package follows exactly this algorithm, so the answer is the same in every browser, Node and .NET.
+    //      Follows the URL standard: scheme, user info, host (percent-decoding, forbidden characters, IPv4 forms, IPv6 in brackets, IDN), port.
+    const URL_SPECIAL = ['http', 'https', 'ftp', 'ws', 'wss', 'file'];
+    const URL_FORBIDDEN_HOST = ' #/:<>?@[\\]^|%';
+    function ipv4Part(s) {
+        if (s === '') return null;
+        let radix = 10;
+        if (s.length >= 2 && s[0] === '0' && (s[1] === 'x' || s[1] === 'X')) { s = s.slice(2); radix = 16; }
+        else if (s.length >= 2 && s[0] === '0') { s = s.slice(1); radix = 8; }
+        if (s === '') return 0;
+        let value = 0;
+        for (const ch of s) {
+            const d = parseInt(ch, 16);
+            if (isNaN(d) || d >= radix || (radix === 10 && !/[0-9]/.test(ch)) || (radix === 8 && !/[0-7]/.test(ch))) return null;
+            value = value * radix + d;
+            if (value > 0xFFFFFFFF * 256) return null;
+        }
+        return value;
+    }
+    /** a host that ends in a number must be an IPv4 address (1-4 parts, decimal / 0x hex / 0 octal); returns the dotted form or null */
+    function ipv4Of(host) {
+        const parts = host.split('.');
+        if (parts[parts.length - 1] === '' && parts.length > 1) parts.pop();
+        if (parts.length > 4) return null;
+        const nums = [];
+        for (const p of parts) { const n = ipv4Part(p); if (n === null) return null; nums.push(n); }
+        for (let i = 0; i < nums.length - 1; i++) if (nums[i] > 255) return null;
+        if (nums[nums.length - 1] >= Math.pow(256, 5 - nums.length)) return null;
+        let ip = nums[nums.length - 1];
+        for (let i = 0; i < nums.length - 1; i++) ip += nums[i] * Math.pow(256, 3 - i);
+        return [Math.floor(ip / 16777216) % 256, Math.floor(ip / 65536) % 256, Math.floor(ip / 256) % 256, ip % 256].join('.');
+    }
+    function endsInNumber(host) {
+        const labels = host.split('.');
+        if (labels[labels.length - 1] === '' && labels.length > 1) labels.pop();
+        const last = labels[labels.length - 1];
+        return /^[0-9]+$/.test(last) || /^0[xX][0-9a-fA-F]*$/.test(last);
+    }
+    function ipv6Ok(s) {
+        if (!/^[0-9a-fA-F:.]+$/.test(s) || s.indexOf(':') < 0) return false;
+        let tail = s, groups = 0;
+        const dbl = s.indexOf('::');
+        if (dbl !== s.lastIndexOf('::')) return false;
+        const lastColon = s.lastIndexOf(':');
+        const v4 = s.slice(lastColon + 1);
+        if (v4.indexOf('.') >= 0) { if (!/^(\d{1,3})(\.\d{1,3}){3}$/.test(v4) || v4.split('.').some(n => +n > 255)) return false; tail = s.slice(0, lastColon + 1) + '0:0'; }
+        const halves = tail.split('::');
+        for (const half of halves) {
+            if (half === '') continue;
+            for (const g of half.split(':')) { if (!/^[0-9a-fA-F]{1,4}$/.test(g)) return false; groups++; }
+        }
+        return dbl >= 0 ? groups < 8 : groups === 8;
+    }
+    function hostOf(host) {   // percent-decoding, lower case, ASCII (punycode) form of an international name; '' = invalid
+        try {
+            if (host.indexOf('%') >= 0) host = decodeURIComponent(host);
+            host = host.toLowerCase();
+            if (/[^\x00-\x7f]/.test(host)) { const u = new URL('http://' + host + '/'); host = u.hostname; }   // only international names go to the engine's IDNA
+            return host;
+        } catch (e) { return ''; }
+    }
+    function urlOk(v, rule) {
+        if (/\s/.test(v)) return false;
+        const hasProto = /^[a-z][a-z0-9+.-]*:\/\//i.test(v);
+        if (!hasProto && rule.requireProtocol) return false;
+        const full = hasProto ? v : 'http://' + v;
+        const sep = full.indexOf('://');
+        const scheme = full.slice(0, sep).toLowerCase();
+        if (!(rule.protocols || ['http:', 'https:']).includes(scheme + ':')) return false;
+        const rest = full.slice(sep + 3), special = URL_SPECIAL.includes(scheme);
+        let end = rest.length;
+        for (let i = 0; i < rest.length; i++) { const ch = rest[i]; if (ch === '/' || ch === '?' || ch === '#' || (special && ch === String.fromCharCode(92))) { end = i; break; } }
+        const authority = rest.slice(0, end), at = authority.lastIndexOf('@');
+        const hostPort = at >= 0 ? authority.slice(at + 1) : authority;
+        let host, port = '';
+        if (hostPort[0] === '[') {
+            const close = hostPort.indexOf(']');
+            if (close < 0) return false;
+            host = hostPort.slice(0, close + 1);
+            const after = hostPort.slice(close + 1);
+            if (after !== '') { if (after[0] !== ':') return false; port = after.slice(1); }
+            if (!ipv6Ok(host.slice(1, -1))) return false;
+        } else {
+            const colon = hostPort.indexOf(':');
+            host = colon >= 0 ? hostPort.slice(0, colon) : hostPort;
+            if (colon >= 0) port = hostPort.slice(colon + 1);
+            if (host === '') return false;
+            host = hostOf(host);
+            if (host === '') return false;
+            for (let i = 0; i < host.length; i++) { const c = host.charCodeAt(i); if (c <= 0x1f || c === 0x7f || URL_FORBIDDEN_HOST.indexOf(host[i]) >= 0) return false; }
+            if (endsInNumber(host)) { const ip = ipv4Of(host); if (ip === null) return false; host = ip; }
+        }
+        if (port !== '') { if (!/^[0-9]{1,5}$/.test(port) || +port > 65535) return false; }
+        if (rule.allowLocal) return true;
+        return (host.indexOf('.') >= 0 || host === 'localhost') && host[0] !== '.' && host[host.length - 1] !== '.';
+    }
+
     function luhn(v) {
         const s = v.replace(/[\s-]/g, '');
         if (!/^\d{12,19}$/.test(s)) return false;
@@ -2010,16 +2108,7 @@ const api = (function (root) {
 
     R('required', (v, r, env) => !env.empty, { runOnEmpty: true });
     R('email', v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v));
-    R('url', (v, rule) => {
-        if (/\s/.test(v)) return false;
-        try {
-            const hasProto = /^[a-z][a-z0-9+.-]*:\/\//i.test(v);
-            if (!hasProto && rule.requireProtocol) return false;
-            const u = new URL(hasProto ? v : 'http://' + v);
-            if (!(rule.protocols || ['http:', 'https:']).includes(u.protocol)) return false;
-            return rule.allowLocal ? true : (u.hostname.includes('.') || u.hostname === 'localhost') && !/^\.|\.$/.test(u.hostname);
-        } catch (e) { return false; }
-    });
+    R('url', (v, rule) => urlOk(v, rule));
     R('number', v => NUMBER_RE.test(v));
     R('digits', v => /^\d+$/.test(v));
     R('alpha', v => /^\p{L}+$/u.test(v));

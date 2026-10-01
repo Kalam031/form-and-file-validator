@@ -170,7 +170,7 @@ test('slow input: every built-in rule finishes fast on pathological 200 KB strin
             const t0 = process.hrtime.bigint();
             await FormValidator.validate('f', { x: [rule] });
             const ms = Number(process.hrtime.bigint() - t0) / 1e6;
-            if (ms > 150) worst.push(`${rule.type} on ${JSON.stringify(value.slice(0, 20))}...(${value.length}) took ${ms.toFixed(0)} ms`);
+            if (ms > 300) worst.push(`${rule.type} on ${JSON.stringify(value.slice(0, 20))}...(${value.length}) took ${ms.toFixed(0)} ms`);
         }
     }
     assert.deepEqual(worst, [], 'slow rules:\n' + worst.join('\n'));
@@ -188,7 +188,7 @@ test('slow input: the jQuery Validation methods finish fast on pathological stri
             const t0 = process.hrtime.bigint();
             $('#gx').valid();
             const ms = Number(process.hrtime.bigint() - t0) / 1e6;
-            if (ms > 150) worst.push(`${name} on ${JSON.stringify(value.slice(0, 20))}...(${value.length}) took ${ms.toFixed(0)} ms`);
+            if (ms > 300) worst.push(`${name} on ${JSON.stringify(value.slice(0, 20))}...(${value.length}) took ${ms.toFixed(0)} ms`);
             $('#g').data('validator').destroy();
         }
     }

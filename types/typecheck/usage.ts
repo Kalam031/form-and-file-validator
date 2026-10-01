@@ -174,3 +174,14 @@ const oneRule: string | null = one.rule;
 const manyChecked = FormValidator.checkValues({ a: '1' }, { a: { required: true, date: { format: 'yyyy-MM-dd' } } }, { messages: { required: 'Pflichtfeld' } });
 const manyMessage: string | undefined = manyChecked.errors['a'];
 void oneValid; void oneRule; void manyMessage;
+
+// Angular: our validators must be accepted wherever Angular wants a ValidatorFn
+import { FormControl, FormGroup, FormBuilder, type ValidatorFn } from '@angular/forms';
+import { fvValidator, fvControls, fvGroupValidator, fvMessage, fvWatch } from '../angular';
+const ngValidator: ValidatorFn = fvValidator(['required', { type: 'date', format: 'd/M/y' }], { messages: { required: 'Pflichtfeld' } });
+const ngControl = new FormControl('', ngValidator);
+const ngGroup = new FormGroup({ pw: new FormControl(''), pw2: new FormControl('', fvValidator({ equalTo: 'pw' })) }, { validators: fvGroupValidator({ pw: ['required'] }) });
+const ngBuilt = new FormBuilder().group(fvControls({ email: ['required', 'email'] }, { email: 'a@b.co' }));
+const ngMessage: string = fvMessage(ngControl);
+const ngStop: () => void = fvWatch(ngGroup, { pw2: { equalTo: 'pw' } });
+void ngBuilt; void ngMessage; void ngStop;

@@ -8,6 +8,9 @@ Versions of the package follow semver. Each source file also keeps its own chang
 - Fix: `pwcheck` counted only A-Z, a-z and 0-9; capital letters, small letters, digits and symbols of every script now count (`Ü`, `Д`, `٣`, `€`), and accented letters are no longer "special characters".
 - Fix: `min`, `max`, `range`, `step` no longer accept `0x10`, `Infinity` or other non-decimal numbers (same grammar as `number`).
 - **.NET Framework and ASP.NET MVC 5**: the .NET package targets netstandard2.0 (and net8.0, net10.0), has a `[FormRules]` model attribute (one definition for `ModelState` and the browser) and a Razor helper package `FormAndFileValidator.Mvc5`; the vectors pass on the real .NET Framework 4.8.
+- **Angular** (`form-and-file-validator/angular`): `fvValidator`, `fvControls`, `fvGroupValidator`, `fvWatch`, `fvMessage` for Reactive Forms, tested on real `@angular/forms` against the shared vectors.
+- Fix: the `url` rule no longer asks the browser's `new URL()`: Chrome accepted `http://exa%20mple.com` while Firefox, Safari and Node rejected it. It now follows the URL standard in code that is the same in every browser, Node and .NET.
+- Tests: the vectors also run through the real DOM form engine in Chromium, Firefox, WebKit and the iPhone and Pixel profiles.
 - **Shared conformance vectors** (`spec/form-rules.vectors.json`, 400 cases) and a **.NET port** (`dotnet/`, NuGet `FormAndFileValidator`) that passes all of them on .NET 8 and 10.
 
 ## 3.3.2

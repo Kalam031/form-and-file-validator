@@ -43,7 +43,8 @@ internal static class UrlCheck
             host = hostPort.Substring(0, close + 1);
             string after = hostPort.Substring(close + 1);
             if (after.Length > 0) { if (after[0] != ':') return false; port = after.Substring(1); }
-            if (!IPAddress.TryParse(host.Substring(1, host.Length - 2), out var ip6) || ip6.AddressFamily != AddressFamily.InterNetworkV6) return false;
+            string inner = host.Substring(1, host.Length - 2);
+            if (inner.IndexOf('%') >= 0 || !IPAddress.TryParse(inner, out var ip6) || ip6.AddressFamily != AddressFamily.InterNetworkV6) return false;
         }
         else
         {
