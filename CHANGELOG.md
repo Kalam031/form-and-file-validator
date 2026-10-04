@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.6.0
+- **.NET: server-side file validation.** `FileValidator.Validate` / `ValidateRaw` check `IFormFile`, `HttpPostedFileBase`, streams and bytes with the same checks, error codes and messages as the JavaScript `FileValidator` (dangerous and disguised names, program content under a harmless name, ~45 magic-byte signatures, macros / scripts / bombs in PDF, Office and ZIP, scripts in SVG, image size from the header, limits, allow lists, `Scan` and `Custom` hooks). `[FileRules]` puts the rules on a model property (`ModelState`), `ModelFileRules.ToJson` / `Html.FileRulesJson()` give the matching browser config. Tested against `spec/file-rules.vectors.json` (167 files) on .NET 8, 10, netstandard2.0 and .NET Framework 4.8.
+- **19 new form rules** (FormValidator 2.8.0): `integer`, `uuid`, `hexColor`, `slug`, `ipv4`, `ipv6`, `iban`, `time`, `domain`, `base64`, `mac`, `latitude`, `longitude`, `startsWith`, `endsWith`, `contains`, `notOneOf`, `minWords`, `maxWords`. The same answers in JavaScript, Angular and .NET (230 new shared vectors), messages in all 13 language packs.
+- **Photo privacy** (FileValidator 2.9.0, widget 1.4.0): `FileValidator.readMetadata(file)` shows what a JPEG, PNG or WebP gives away (EXIF, GPS position, XMP, IPTC, comments); `stripMetadata(file)` removes it without re-encoding and keeps the orientation so photos stay upright; `stripMetadata: true` in the upload widget. .NET: `PhotoPrivacy.Read` / `Strip`, byte for byte the same (`spec/metadata-vectors.json`).
+- Tests: the generated .NET tables and all shared vectors are checked for staleness by the JavaScript suite.
+
 ## 3.5.0
 - **Complete jQuery Validation successor**: every method of the plugin's `additional-methods.js` is now built in (44 country and bank checks that were missing: `cpfBR`, `cnpjBR`, `bic`, `nifES`, `nieES`, `cifES`, `phoneUK`, `postcodeUK`, `postalCodeCA`, `zipcodeUS`, `vinUS`, `abaRoutingNumber`, `currency`, `greaterThan`, `lessThan`, `maxsize`, `maxfiles`, ...) with the same names, parameters and messages. `dist/formValidator.additional.js` (export `./jquery-additional`) is the same set for people who load the separate files. A new test runs the real plugin and this package on the same inputs and requires identical answers.
 - jQuery layer: the `onfocusin` and `ariaDescribedByCleanup` settings, `$.validator.normalizeAttributeRule`, and the validator helpers `errorsFor`, `idOrName`, `escapeCssMeta`, `objectLength`, `findLastActive`.

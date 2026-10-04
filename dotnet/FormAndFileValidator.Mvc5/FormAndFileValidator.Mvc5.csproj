@@ -12,7 +12,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <PackageId>FormAndFileValidator.Mvc5</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>abu_kalam</Authors>
     <Description>Razor helpers for ASP.NET MVC 5: put [FormRules] on your model once and get the same rules in the browser (Html.FormValidatorInit) and on the server (ModelState).</Description>
     <PackageTags>aspnetmvc;mvc5;validation;form;razor</PackageTags>

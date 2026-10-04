@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { build } = require('../spec/make-file-vectors.js');
 const tables = require('../spec/make-file-tables.js');
+const metadata = require('../spec/make-metadata-vectors.js');
 
 test('spec/file-rules.vectors.json is what the JavaScript FileValidator answers (run: node spec/make-file-vectors.js)', async () => {
     const onDisk = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'spec', 'file-rules.vectors.json'), 'utf8'));
@@ -20,4 +21,11 @@ test('spec/file-rules.vectors.json is what the JavaScript FileValidator answers 
 test('dotnet/FormAndFileValidator/FileTables.g.cs is generated from the JavaScript tables (run: node spec/make-file-tables.js)', () => {
     const onDisk = fs.readFileSync(tables.file, 'utf8').replace(/\r\n/g, '\n');
     assert.equal(onDisk, tables.generate(), 'FileTables.g.cs is stale: run node spec/make-file-tables.js');
+});
+
+test('spec/metadata-vectors.json is what the JavaScript stripMetadata produces (run: node spec/make-metadata-vectors.js)', async () => {
+    const onDisk = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'spec', 'metadata-vectors.json'), 'utf8'));
+    const fresh = JSON.parse(JSON.stringify(await metadata.build()));
+    assert.equal(onDisk.cases.length, fresh.length);
+    for (let i = 0; i < fresh.length; i++) assert.deepEqual(onDisk.cases[i], fresh[i], 'metadata vector "' + fresh[i].id + '" is stale');
 });

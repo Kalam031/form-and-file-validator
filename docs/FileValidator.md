@@ -30,7 +30,7 @@ FileValidator decides whether selected files are safe and acceptable before you 
 
 Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: `<script src="dist/validator.min.js"></script>`.
 
-With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.7.1). The optional upload widget (`fileValidator.widget.js`) is version 1.3.0.
+With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.9.0). The optional upload widget (`fileValidator.widget.js`) is version 1.4.0.
 
 ## Quick start
 
@@ -356,7 +356,7 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
 
 ## Upload widget
 
-`fileValidator.widget.js` (version 1.3.0) adds drag and drop, folder drops, paste, thumbnails, resizing and a file list on top of FileValidator. It is a separate optional file, and part of the one-file bundle.
+`fileValidator.widget.js` (version 1.4.0) adds drag and drop, folder drops, paste, thumbnails, resizing and a file list on top of FileValidator. It is a separate optional file, and part of the one-file bundle.
 
 ```html
 <div id="zone"><label for="in">Choose files</label> <input type="file" id="in" name="up" multiple> or drop them here</div>
@@ -369,6 +369,7 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
     statusElement: '#status',    // "2 files added. 1 file not accepted. 3 selected." for screen readers
     preview: true,               // thumbnails for images
     resize: true,                // shrink too-big images to the config limits instead of rejecting them
+    stripMetadata: true,         // remove EXIF / GPS / XMP / IPTC from photos (see "Photos and privacy")
     paste: true                  // Ctrl+V of a screenshot
   });
 </script>
@@ -391,6 +392,7 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
 | `statusElement` | none | Element for polite status announcements (gets `role="status"`). `statusText(kind, info, total)` replaces the wording. |
 | `preview` | `false` | `true` or `{ maxWidth: 160, maxHeight: 160, type, quality, thumbnail }` |
 | `resize` | none | `true` (limits from `maxImageWidth`, `maxImageHeight`, `maxFileSizeMB`) or `{ maxWidth, maxHeight, maxSizeMB, quality, type }` |
+| `stripMetadata` | none | `true` or `{ keepOrientation, keepColorProfile }`: remove EXIF, GPS, XMP, IPTC and comments from JPEG, PNG and WebP photos; entries get `stripped` |
 | `folder` | `false` | `true` also ignores junk files like `.DS_Store` in folders |
 | `paste` | `false` | `true` listens on the zone, `'document'` on the whole page |
 | `browse` | `true` | Clicking the zone opens the file dialog |
@@ -406,7 +408,7 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
 | --- | --- |
 | `add(files)` | Add files by code (returns `{ accepted, rejected, ignored }`) |
 | `remove(entry \| index \| file)`, `clear()` | Remove one or all files |
-| `files`, `entries` | The accepted files, and entries with `id`, `file`, `path`, `preview`, `resized` |
+| `files`, `entries` | The accepted files, and entries with `id`, `file`, `path`, `preview`, `resized`, `stripped` |
 | `validate()` | Full check of the selection |
 | `appendTo(formData, name)` | Append the files to a `FormData`. Folder files keep their path as the file name. |
 | `destroy()` | Remove listeners, revoke previews, clear the list |
@@ -420,6 +422,26 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
 **Helpers you can use alone:** `FileValidator.filesFromDrop(dataTransfer)` (call it inside the drop handler), `filesFromClipboard(clipboardData)` (names unnamed screenshots `pasted-2025-01-31T12-00-00.png`), `resizeImage`, `createPreview`.
 
 **Accessibility.** The list, the live regions, the remove buttons and the focus handling are covered in `Accessibility.md`. Keep the file input available: dragging is not possible with a keyboard.
+
+## Photos and privacy
+
+A photo from a phone carries more than the picture: the camera and phone model, the exact time, often the **GPS position** where it was taken, sometimes the name of the person who edited it. If you store or publish uploads, strip it first. `FileValidator` does it on the bytes of the file, without re-encoding, so the picture stays identical and there is no quality loss. It works for JPEG, PNG and WebP, in the browser and in Node.
+
+```js
+const meta = await FileValidator.readMetadata(file);
+// { format: 'jpeg', exif: true, gps: true, xmp: false, iptc: false, comments: false, orientation: 6, kinds: ['EXIF', 'GPS location'] }
+// null for any other kind of file. `gps` is true only when a latitude or longitude is really stored.
+
+const clean = await FileValidator.stripMetadata(file);
+// a new File without EXIF, GPS, XMP, IPTC / Photoshop data and comments; clean.fvStripped = { removed: ['EXIF', 'GPS location'], from: 3100000, to: 3050000 }
+// the SAME file when there is nothing to remove, or when it is not a readable JPEG, PNG or WebP
+```
+
+- **The orientation is kept.** Phones store a photo sideways and put the turn into the EXIF `Orientation` tag. Removing all of EXIF would show such photos on their side, so the tag is rewritten into a minimal EXIF block that holds nothing else. `{ keepOrientation: false }` drops it too.
+- **The colour profile is kept** (it changes how colours look), unless `{ keepColorProfile: false }`.
+- Name, type and modification date of the file stay. Files over `maxMB` (default 64) are returned unchanged.
+- In the upload widget: `stripMetadata: true`. Every accepted photo is cleaned before it is listed, and the entry says what was removed (`entry.stripped`).
+- On a server (Node) call `stripMetadata` on the uploaded file before you store it: `FileValidator.stripMetadata(new File([buffer], name, { type }))`.
 
 ## Common recipes
 

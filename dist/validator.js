@@ -1,12 +1,14 @@
-/*! FormValidator 2.8.0 + FileValidator 2.8.0 + upload widget 1.3.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.8.0 + FileValidator 2.9.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 (function (root) {
     'use strict';
     var mods = {}, cache = {};
     mods["fileValidator"] = function (module, exports, require, define) {
 /*!
- * FileValidator v2.8.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.9.0 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.9.0  readMetadata() and stripMetadata(): see what a JPEG, PNG or WebP gives away (EXIF, GPS position, XMP, IPTC, comments) and remove it without
+ *          re-encoding the picture; the EXIF orientation is kept so phone photos stay upright. Pure byte work: browser and Node.
  *   2.7.1  Fix: a fractional byte range (a small `maxScanMB` such as 0.0001) made Node 20 abort the whole process inside Blob.slice();
  *          ranges are whole numbers now.
  *   2.7.0  Translatable: the English fragments that end up inside messages ("macros", "the ZIP directory ... is missing") go through
@@ -489,6 +491,218 @@
             return new Promise((res, rej) => { const r = new root.FileReader(); r.onload = () => res(new Uint8Array(r.result)); r.onerror = () => rej(r.error); r.readAsArrayBuffer(blob); });
         }
         return new Uint8Array(0);
+    }
+
+    // ---------------------------------------------------------------- metadata: what a photo gives away, and removing it
+    // JPEG, PNG and WebP. Pure byte work (no canvas), so the picture is not re-encoded and the same code runs in the browser and in Node.
+    // The EXIF Orientation tag is the one piece worth keeping: phones store photos sideways and rely on it, so it is rewritten into a
+    // minimal EXIF block that holds nothing else (keepOrientation: false drops it too).
+    const CRC_TABLE = (() => {
+        const t = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; }
+        return t;
+    })();
+    function crc32(b, from, to) { let c = 0xffffffff; for (let i = from; i < to; i++) c = CRC_TABLE[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+    const be16 = (b, o) => (b[o] << 8) | b[o + 1];
+    const be32 = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
+    const putBe32 = n => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+    const putLe32 = n => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+    const concatBytes = parts => {
+        const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
+        let at = 0; parts.forEach(p => { out.set(p, at); at += p.length; });
+        return out;
+    };
+
+    /** The TIFF block inside EXIF -> { orientation: 1-8 | null, hasGps } (GPS counts when a latitude or longitude is really there), or null. */
+    function parseTiff(b, o, end) {
+        if (end - o < 8) return null;
+        const little = b[o] === 0x49 && b[o + 1] === 0x49;
+        if (!little && !(b[o] === 0x4d && b[o + 1] === 0x4d)) return null;
+        const r16 = p => little ? (b[p] | (b[p + 1] << 8)) : ((b[p] << 8) | b[p + 1]);
+        const r32 = p => little ? ((b[p] | (b[p + 1] << 8) | (b[p + 2] << 16) | (b[p + 3] << 24)) >>> 0) : (((b[p] << 24) | (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3]) >>> 0);
+        if (r16(o + 2) !== 42) return null;
+        const ifd = o + r32(o + 4);
+        if (ifd + 2 > end) return null;
+        const out = { orientation: null, hasGps: false };
+        const n = r16(ifd);
+        for (let i = 0; i < n; i++) {
+            const e = ifd + 2 + i * 12;
+            if (e + 12 > end) break;
+            const tag = r16(e);
+            if (tag === 0x0112 && r16(e + 2) === 3) { const v = r16(e + 8); if (v >= 1 && v <= 8) out.orientation = v; }
+            else if (tag === 0x8825) {
+                const gps = o + r32(e + 8);
+                if (gps + 2 <= end) {
+                    const gn = r16(gps);
+                    for (let j = 0; j < gn; j++) {
+                        const ge = gps + 2 + j * 12;
+                        if (ge + 12 > end) break;
+                        const gt = r16(ge);
+                        if (gt === 2 || gt === 4) out.hasGps = true;   // GPSLatitude / GPSLongitude
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /** A TIFF block with nothing but the Orientation tag (26 bytes). */
+    const orientationTiff = v => Uint8Array.from([0x49, 0x49, 0x2a, 0, 8, 0, 0, 0, 1, 0, 0x12, 0x01, 3, 0, 1, 0, 0, 0, v, 0, 0, 0, 0, 0, 0, 0]);
+
+    const metaOf = () => ({ exif: false, gps: false, xmp: false, iptc: false, comments: false, orientation: null, other: false });
+    const kindsOf = m => [m.exif && 'EXIF', m.gps && 'GPS location', m.xmp && 'XMP', m.iptc && 'IPTC / Photoshop', m.comments && 'comments', m.other && 'other'].filter(Boolean);
+
+    function readExifInto(meta, tiff) {
+        meta.exif = true;
+        if (tiff) { if (tiff.orientation) meta.orientation = tiff.orientation; if (tiff.hasGps) meta.gps = true; }
+    }
+
+    /** -> { format, meta, parts, removed } where parts are the bytes to keep, or null when the file is not a readable JPEG. */
+    function scanJpeg(b, keepOrientation, keepColorProfile) {
+        if (b.length < 4 || b[0] !== 0xff || b[1] !== 0xd8) return null;
+        const meta = metaOf(), kept = [], removed = [];
+        let pos = 2, tail = null;
+        while (pos + 2 <= b.length) {
+            if (b[pos] !== 0xff) return null;
+            const marker = b[pos + 1];
+            if (marker === 0xff) { pos++; continue; }
+            if (marker === 0xda || marker === 0xd9) { tail = b.subarray(pos); break; }
+            if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) { kept.push({ bytes: b.subarray(pos, pos + 2) }); pos += 2; continue; }
+            if (pos + 4 > b.length) return null;
+            const len = be16(b, pos + 2);
+            if (len < 2 || pos + 2 + len > b.length) return null;
+            const seg = b.subarray(pos, pos + 2 + len), at = pos + 4, end = pos + 2 + len;
+            let drop = false;
+            if (marker === 0xe1) {
+                drop = true;
+                if (ascii(b, at, 'Exif\0\0')) readExifInto(meta, parseTiff(b, at + 6, end));
+                else if (ascii(b, at, 'http://ns.adobe.com/')) meta.xmp = true;
+                else meta.other = true;
+            } else if (marker === 0xe2) {
+                if (!ascii(b, at, 'ICC_PROFILE\0') || !keepColorProfile) { drop = true; if (!ascii(b, at, 'ICC_PROFILE\0')) meta.other = true; }
+            } else if (marker === 0xed) { drop = true; meta.iptc = true; }
+            else if (marker === 0xfe) { drop = true; meta.comments = true; }
+            else if ((marker >= 0xe3 && marker <= 0xec) || marker === 0xef) { drop = true; meta.other = true; }
+            if (drop) removed.push(marker); else kept.push({ bytes: seg, app0: marker === 0xe0 });
+            pos = end;
+        }
+        if (!tail) return null;
+        const parts = [b.subarray(0, 2)];
+        let inserted = false;
+        const exifSeg = keepOrientation && meta.orientation && meta.orientation > 1
+            ? concatBytes([Uint8Array.from([0xff, 0xe1, 0, 34]), Uint8Array.from(ascii0('Exif\0\0')), orientationTiff(meta.orientation)]) : null;
+        kept.forEach(k => {
+            if (exifSeg && !inserted && !k.app0) { parts.push(exifSeg); inserted = true; }
+            parts.push(k.bytes);
+        });
+        if (exifSeg && !inserted) parts.push(exifSeg);
+        parts.push(tail);
+        return { format: 'jpeg', meta, parts, removed: removed.length };
+    }
+    const ascii0 = s => Array.from(s).map(c => c.charCodeAt(0));
+
+    function scanPng(b, keepOrientation) {
+        if (b.length < 33 || !bytes(b, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return null;
+        const meta = metaOf(), kept = [], removed = [];
+        let pos = 8, sawEnd = false;
+        while (pos + 12 <= b.length) {
+            const size = be32(b, pos);
+            if (pos + 12 + size > b.length) return null;
+            const type = String.fromCharCode(b[pos + 4], b[pos + 5], b[pos + 6], b[pos + 7]);
+            let drop = false;
+            if (type === 'eXIf') { drop = true; readExifInto(meta, parseTiff(b, pos + 8, pos + 8 + size)); }
+            else if (type === 'iTXt') { drop = true; if (ascii(b, pos + 8, 'XML:com.adobe.xmp')) meta.xmp = true; else meta.comments = true; }
+            else if (type === 'tEXt' || type === 'zTXt') { drop = true; meta.comments = true; }
+            else if (type === 'tIME') { drop = true; meta.other = true; }
+            if (drop) removed.push(type); else kept.push({ type, bytes: b.subarray(pos, pos + 12 + size) });
+            pos += 12 + size;
+            if (type === 'IEND') { sawEnd = true; break; }
+        }
+        if (!sawEnd) return null;
+        const parts = [b.subarray(0, 8)];
+        let inserted = false;
+        let exifChunk = null;
+        if (keepOrientation && meta.orientation && meta.orientation > 1) {
+            const body = concatBytes([Uint8Array.from(ascii0('eXIf')), orientationTiff(meta.orientation)]);
+            exifChunk = concatBytes([Uint8Array.from(putBe32(26)), body, Uint8Array.from(putBe32(crc32(body, 0, body.length)))]);
+        }
+        kept.forEach(k => {
+            if (exifChunk && !inserted && k.type === 'IDAT') { parts.push(exifChunk); inserted = true; }
+            parts.push(k.bytes);
+        });
+        return { format: 'png', meta, parts, removed: removed.length };
+    }
+
+    function scanWebp(b, keepOrientation) {
+        if (b.length < 16 || !ascii(b, 0, 'RIFF') || !ascii(b, 8, 'WEBP')) return null;
+        const meta = metaOf(), kept = [], removed = [];
+        let pos = 12, hasVp8x = false;
+        while (pos + 8 <= b.length) {
+            const id = String.fromCharCode(b[pos], b[pos + 1], b[pos + 2], b[pos + 3]);
+            const size = u32(b, pos + 4), padded = size + (size & 1);
+            if (pos + 8 + size > b.length) return null;
+            let drop = false;
+            if (id === 'EXIF') { drop = true; const off = ascii(b, pos + 8, 'Exif\0\0') ? 6 : 0; readExifInto(meta, parseTiff(b, pos + 8 + off, pos + 8 + size)); }
+            else if (id === 'XMP ') { drop = true; meta.xmp = true; }
+            if (id === 'VP8X') hasVp8x = true;
+            if (drop) removed.push(id); else kept.push({ id, bytes: b.slice(pos, Math.min(b.length, pos + 8 + padded)) });
+            pos += 8 + padded;
+        }
+        const exif = keepOrientation && meta.orientation && meta.orientation > 1 && hasVp8x;
+        const parts = [];
+        kept.forEach(k => {
+            if (k.id === 'VP8X') {
+                const flags = k.bytes[8];
+                k.bytes[8] = (flags & ~0x0c) | (exif ? 0x08 : 0);   // clear the EXIF (0x08) and XMP (0x04) flags
+                parts.push(k.bytes);
+                if (exif) parts.push(concatBytes([Uint8Array.from(ascii0('EXIF')), Uint8Array.from(putLe32(26)), orientationTiff(meta.orientation)]));
+            } else parts.push(k.bytes);
+        });
+        const body = concatBytes(parts);
+        const out = concatBytes([Uint8Array.from(ascii0('RIFF')), Uint8Array.from(putLe32(body.length + 4)), Uint8Array.from(ascii0('WEBP')), body]);
+        return { format: 'webp', meta, parts: [out], removed: removed.length };
+    }
+
+    function scanImage(b, o) {
+        const ori = !o || o.keepOrientation !== false, icc = !o || o.keepColorProfile !== false;
+        return scanJpeg(b, ori, icc) || scanPng(b, ori) || scanWebp(b, ori);
+    }
+
+    const METADATA_MAX_MB = 64;
+    async function readWhole(file, maxMB) {
+        if (!file || typeof file.slice !== 'function' || !(file.size > 0) || file.size > (maxMB || METADATA_MAX_MB) * 1048576) return null;
+        try { return await readRange(file, 0, file.size); } catch (e) { return null; }
+    }
+
+    /**
+     * What is hidden in a photo: `{ format, exif, gps, xmp, iptc, comments, orientation, kinds: ['EXIF', 'GPS location', ...] }`, or null for a file that
+     * is not a readable JPEG, PNG or WebP. `gps` is true only when a latitude or longitude is really stored.
+     */
+    async function readMetadata(file, options) {
+        const b = await readWhole(file, options && options.maxMB);
+        const r = b && scanImage(b, options);
+        if (!r) return null;
+        const m = r.meta;
+        return { format: r.format, exif: m.exif, gps: m.gps, xmp: m.xmp, iptc: m.iptc, comments: m.comments, orientation: m.orientation, kinds: kindsOf(m) };
+    }
+
+    /**
+     * Removes EXIF (camera, date, GPS location), XMP, IPTC / Photoshop data and comments from a JPEG, PNG or WebP without re-encoding the picture.
+     * Returns a new File (`file.fvStripped = { removed: ['EXIF', ...], from, to }`), or the same file when there is nothing to remove or the file is
+     * not a readable JPEG, PNG or WebP. Options: `keepOrientation` (default true: phone photos stay upright), `keepColorProfile` (default true), `maxMB` (64).
+     */
+    async function stripMetadata(file, options) {
+        const b = await readWhole(file, options && options.maxMB);
+        const r = b && scanImage(b, options);
+        if (!r || r.removed === 0) return file;
+        const out = concatBytes(r.parts);
+        if (out.length === b.length && r.meta.orientation == null && !kindsOf(r.meta).length) return file;
+        const Ctor = root.File || (typeof File === 'function' ? File : null);
+        const blobOpts = { type: file.type || '', lastModified: file.lastModified };
+        const result = Ctor ? new Ctor([out], file.name, blobOpts) : new Blob([out], blobOpts);
+        try { Object.defineProperty(result, 'fvStripped', { value: { removed: kindsOf(r.meta), from: file.size, to: out.length }, enumerable: false }); } catch (e) { /* frozen */ }
+        if (file.fvPath) result.fvPath = file.fvPath;
+        return result;
     }
 
     // ---------------------------------------------------------------- deeper checks: ZIP / Office, PDF, legacy Office macros
@@ -1241,7 +1455,7 @@
     }
 
     return {
-        version: '2.8.0',
+        version: '2.9.0',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         isValid,         // async (files | <input> | selector, config) -> true / false
         guard,           // (input, config, { onSubmit, messageElement }) : check the file input when its form is submitted, direct or AJAX
@@ -1252,6 +1466,8 @@
         setDefaults: obj => Object.assign(globalDefaults, obj),
         defaults: globalDefaults,
         remoteDefaults,
+        readMetadata,    // async (File) -> { format, exif, gps, xmp, iptc, comments, orientation, kinds } | null  (JPEG, PNG, WebP)
+        stripMetadata,   // async (File, { keepOrientation, keepColorProfile }) -> File without EXIF / GPS / XMP / IPTC / comments (same File when nothing to remove)
         hashFile,        // async (File, maxMB) -> SHA-256 hex, or null when over maxMB (files above 32 MB are hashed as a stream)
         _sha256Stream: sha256Stream,
         formatDuration,
@@ -1351,7 +1567,7 @@
 
     mods["fileValidator.widget"] = function (module, exports, require, define) {
 /*!
- * FileValidator upload widget v1.3.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
+ * FileValidator upload widget v1.4.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
  *
  * Load order:  fileValidator.js (2.5+)  →  fileValidator.widget.js.  No other dependencies.
  *
@@ -1361,6 +1577,7 @@
  *       statusElement: '#file-status', // polite live region: "2 files added. 3 selected." (for screen reader users)
  *       preview: true,                 // thumbnails for images
  *       resize: true,                  // shrink big images to the maxImageWidth/Height/maxFileSizeMB limits instead of rejecting them
+ *       stripMetadata: true,           // remove EXIF / GPS / XMP / IPTC / comments from JPEG, PNG and WebP photos (orientation is kept)
  *       paste: true,                   // Ctrl+V of a screenshot
  *       folder: true,                  // accept dropped or picked folders, ignore .DS_Store / Thumbs.db
  *       onChange: (files, entries) => {}, onReject: rejected => {}
@@ -1375,6 +1592,7 @@
  * Helpers: FileValidator.filesFromDrop(dataTransfer), filesFromClipboard(clipboardData), resizeImage(file, options), createPreview(file, options).
  *
  * Changelog
+ *   1.4.0  `stripMetadata` option: photos are listed without EXIF, GPS, XMP, IPTC and comments (entries get `stripped`).
  *   1.3.0  Every sentence the widget writes (status line, "...and N more", remove button labels) goes through FileValidator.phrase(),
  *          so a language pack can translate it; plural forms follow the language.
  *   1.2.0  File names, messages and status text get dir="auto" (right-to-left languages); `moreText(n)` option for the "...and N more" line.
@@ -1706,6 +1924,13 @@
                         if (out !== file) { file = out; resized = out.fvResized || null; }
                     } catch (e) { /* keep the original */ }
                 }
+                let stripped = null;
+                if (opt.stripMetadata && isFn(FV.stripMetadata)) {
+                    try {
+                        const out = await FV.stripMetadata(file, opt.stripMetadata === true ? {} : opt.stripMetadata);
+                        if (out !== file) { file = out; stripped = out.fvStripped || null; }
+                    } catch (e) { /* keep the original */ }
+                }
                 if (running.length >= maxFiles) { rejected.push(mkReject(file, 'TOO_MANY_FILES', { max: maxFiles })); continue; }
                 if (dupNames && running.some(f => idOf(f) === idOf(file))) { rejected.push(mkReject(file, 'DUPLICATE_FILENAMES')); continue; }
                 if (cfg.duplicateContent) {
@@ -1722,7 +1947,7 @@
                 const res = await FV.validateFile(file, config, { files: running.concat(file), index: running.length });
                 if (!res.isValid) { rejected.push({ file, path: FV.getPath(file), errors: res.errors, details: res.details, messages: res.details.map(d => d.message) }); continue; }
                 running.push(file); total += file.size;
-                accepted.push({ id: ++seq, file, path: FV.getPath(file), resized, preview: null });
+                accepted.push({ id: ++seq, file, path: FV.getPath(file), resized, stripped, preview: null });
             }
 
             entries.push(...accepted);
@@ -5221,7 +5446,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.8.0","fileValidator.widget":"1.3.0","formValidator":"2.8.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.9.0","fileValidator.widget":"1.4.0","formValidator":"2.8.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (typeof define === 'function' && define.amd) define(function () { return api; });
     else if (typeof module === 'object' && module.exports) module.exports = api;

@@ -14,7 +14,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <PackageId>FormAndFileValidator</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>abu_kalam</Authors>
     <Description>The server side of form-and-file-validator: the same form rules, with the same answers as the JavaScript package, verified against shared conformance vectors. For ASP.NET MVC 5, ASP.NET Core and any .NET.</Description>
     <PackageTags>validation;form;validator;aspnetcore;aspnetmvc;mvc5;dataannotations</PackageTags>

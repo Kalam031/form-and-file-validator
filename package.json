@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
@@ -65,6 +65,7 @@
     "docs/*.md",
     "spec/form-rules.vectors.json",
     "spec/file-rules.vectors.json",
+    "spec/metadata-vectors.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

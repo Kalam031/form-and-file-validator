@@ -1,5 +1,5 @@
 /*!
- * FileValidator upload widget v1.3.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
+ * FileValidator upload widget v1.4.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
  *
  * Load order:  fileValidator.js (2.5+)  →  fileValidator.widget.js.  No other dependencies.
  *
@@ -9,6 +9,7 @@
  *       statusElement: '#file-status', // polite live region: "2 files added. 3 selected." (for screen reader users)
  *       preview: true,                 // thumbnails for images
  *       resize: true,                  // shrink big images to the maxImageWidth/Height/maxFileSizeMB limits instead of rejecting them
+ *       stripMetadata: true,           // remove EXIF / GPS / XMP / IPTC / comments from JPEG, PNG and WebP photos (orientation is kept)
  *       paste: true,                   // Ctrl+V of a screenshot
  *       folder: true,                  // accept dropped or picked folders, ignore .DS_Store / Thumbs.db
  *       onChange: (files, entries) => {}, onReject: rejected => {}
@@ -23,6 +24,7 @@
  * Helpers: FileValidator.filesFromDrop(dataTransfer), filesFromClipboard(clipboardData), resizeImage(file, options), createPreview(file, options).
  *
  * Changelog
+ *   1.4.0  `stripMetadata` option: photos are listed without EXIF, GPS, XMP, IPTC and comments (entries get `stripped`).
  *   1.3.0  Every sentence the widget writes (status line, "...and N more", remove button labels) goes through FileValidator.phrase(),
  *          so a language pack can translate it; plural forms follow the language.
  *   1.2.0  File names, messages and status text get dir="auto" (right-to-left languages); `moreText(n)` option for the "...and N more" line.
@@ -354,6 +356,13 @@
                         if (out !== file) { file = out; resized = out.fvResized || null; }
                     } catch (e) { /* keep the original */ }
                 }
+                let stripped = null;
+                if (opt.stripMetadata && isFn(FV.stripMetadata)) {
+                    try {
+                        const out = await FV.stripMetadata(file, opt.stripMetadata === true ? {} : opt.stripMetadata);
+                        if (out !== file) { file = out; stripped = out.fvStripped || null; }
+                    } catch (e) { /* keep the original */ }
+                }
                 if (running.length >= maxFiles) { rejected.push(mkReject(file, 'TOO_MANY_FILES', { max: maxFiles })); continue; }
                 if (dupNames && running.some(f => idOf(f) === idOf(file))) { rejected.push(mkReject(file, 'DUPLICATE_FILENAMES')); continue; }
                 if (cfg.duplicateContent) {
@@ -370,7 +379,7 @@
                 const res = await FV.validateFile(file, config, { files: running.concat(file), index: running.length });
                 if (!res.isValid) { rejected.push({ file, path: FV.getPath(file), errors: res.errors, details: res.details, messages: res.details.map(d => d.message) }); continue; }
                 running.push(file); total += file.size;
-                accepted.push({ id: ++seq, file, path: FV.getPath(file), resized, preview: null });
+                accepted.push({ id: ++seq, file, path: FV.getPath(file), resized, stripped, preview: null });
             }
 
             entries.push(...accepted);

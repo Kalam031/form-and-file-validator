@@ -241,3 +241,7 @@ if (!result.IsValid) return BadRequest(result.Summary());
 ```
 
 Or put `[FileRules(Extensions = "png,jpg", MaxSizeMB = 5, Required = true)]` on the model property and `ModelState.IsValid` covers it; `ModelFileRules.ToJson<T>()` (MVC 5: `Html.FileRulesJson()`) gives the matching browser configuration. Details in `dotnet/FormAndFileValidator/README.md`.
+
+### Photos: strip EXIF and GPS on the server
+
+Browsers can clean photos before upload (`stripMetadata` in the upload widget), but a server must not rely on that. In Node call `FileValidator.stripMetadata(file)` on the upload before you store it; in .NET use `PhotoPrivacy.Strip(UploadedFile.From(file))`. Both remove EXIF, GPS, XMP, IPTC and comments from JPEG, PNG and WebP without re-encoding the picture, keep the orientation, and give the same bytes (`spec/metadata-vectors.json`).

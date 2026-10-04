@@ -62,3 +62,14 @@ public class ProfileModel
 ```
 
 `UploadedFile.From(object)` recognises the file objects of ASP.NET Core and MVC 5 by their members, so the library references neither framework. A malware scanner is one line: `Scan = f => MyScanner.IsInfected(f.Open()) ? ScanResult.Infected("Trojan") : ScanResult.Clean`.
+
+### Photos: remove EXIF and GPS before you store them
+
+A phone photo carries the camera, the time and often the GPS position. `PhotoPrivacy` removes it from JPEG, PNG and WebP **byte for byte like the JavaScript `FileValidator.stripMetadata`** (shared vectors, `spec/metadata-vectors.json`): the picture is not re-encoded, so there is no quality loss, and the EXIF orientation is kept so photos stay upright.
+
+```csharp
+var meta = PhotoPrivacy.Read(upload);            // Format, Exif, Gps, Xmp, Iptc, Comments, Orientation, Kinds; null for other files
+var clean = PhotoPrivacy.Strip(upload);          // a new UploadedFile (same name, type, path) or the same one when there is nothing to remove
+using var stream = clean.Open();                 // store this, not the original
+// bytes instead of files: PhotoPrivacy.Strip(byte[]) -> StripResult { Data, Changed, Removed }
+```

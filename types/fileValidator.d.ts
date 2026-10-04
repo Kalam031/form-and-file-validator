@@ -215,6 +215,13 @@ export interface FileValidatorStatic {
     readonly defaults: FileValidatorConfig;
     readonly remoteDefaults: { method: 'GET' | 'POST' };
     hashFile(file: File, maxMB?: number): Promise<string | null>;
+    /** What a JPEG, PNG or WebP gives away (EXIF, GPS position, XMP, IPTC, comments), or null for any other file. */
+    readMetadata(file: File, options?: MetadataOptions): Promise<ImageMetadata | null>;
+    /**
+     * Removes EXIF, GPS, XMP, IPTC and comments from a JPEG, PNG or WebP without re-encoding it. Returns a new File (with `fvStripped`), or the same
+     * file when there is nothing to remove or it is not a readable JPEG, PNG or WebP. The orientation of phone photos is kept.
+     */
+    stripMetadata(file: File, options?: MetadataOptions): Promise<File>;
     formatBytes(bytes: number): string;
     formatDuration(seconds: number): string;
     getCategory(file: { name: string; type?: string }, sniffedMime?: string): FileCategory;
@@ -271,6 +278,31 @@ export interface WidgetEntry {
     path: string;
     preview: Preview | null;
     resized: { from: { width: number; height: number; size: number }; to: { width: number; height: number; size: number } } | null;
+    /** Set when `stripMetadata` removed something: what was removed and the size before and after. */
+    stripped: { removed: string[]; from: number; to: number } | null;
+}
+
+export interface MetadataOptions {
+    /** Keep the EXIF Orientation tag (as a minimal EXIF block) so phone photos stay upright. Default true. */
+    keepOrientation?: boolean;
+    /** Keep the embedded colour profile. Default true. */
+    keepColorProfile?: boolean;
+    /** Largest file to read, in MB. Default 64. */
+    maxMB?: number;
+}
+
+export interface ImageMetadata {
+    format: 'jpeg' | 'png' | 'webp';
+    exif: boolean;
+    /** True only when a latitude or longitude is really stored. */
+    gps: boolean;
+    xmp: boolean;
+    iptc: boolean;
+    comments: boolean;
+    /** EXIF orientation 1-8, or null. */
+    orientation: number | null;
+    /** Readable names of what was found: 'EXIF', 'GPS location', 'XMP', 'IPTC / Photoshop', 'comments', 'other'. */
+    kinds: string[];
 }
 
 export interface RejectedFile {
@@ -306,6 +338,8 @@ export interface WidgetOptions {
     renderItem?: (entry: WidgetEntry, helpers: { remove(): void; formatBytes(bytes: number): string }) => HTMLElement;
     preview?: boolean | PreviewOptions;
     resize?: boolean | ResizeOptions;
+    /** Remove EXIF / GPS / XMP / IPTC / comments from JPEG, PNG and WebP photos before they are listed. `true` or MetadataOptions. */
+    stripMetadata?: boolean | MetadataOptions;
     maxShownMessages?: number;
     maxDropped?: number;
     maxDepth?: number;

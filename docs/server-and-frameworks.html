@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.5.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.6.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -217,6 +217,8 @@ fvMessage = fvMessage;
 if (!result.IsValid) return BadRequest(result.Summary());
 </code></pre>
 <p>Or put <code>[FileRules(Extensions = &quot;png,jpg&quot;, MaxSizeMB = 5, Required = true)]</code> on the model property and <code>ModelState.IsValid</code> covers it; <code>ModelFileRules.ToJson&lt;T&gt;()</code> (MVC 5: <code>Html.FileRulesJson()</code>) gives the matching browser configuration. Details in <code>dotnet/FormAndFileValidator/README.md</code>.</p>
+<h3 id="photos-strip-exif-and-gps-on-the-server">Photos: strip EXIF and GPS on the server</h3>
+<p>Browsers can clean photos before upload (<code>stripMetadata</code> in the upload widget), but a server must not rely on that. In Node call <code>FileValidator.stripMetadata(file)</code> on the upload before you store it; in .NET use <code>PhotoPrivacy.Strip(UploadedFile.From(file))</code>. Both remove EXIF, GPS, XMP, IPTC and comments from JPEG, PNG and WebP without re-encoding the picture, keep the orientation, and give the same bytes (<code>spec/metadata-vectors.json</code>).</p>
 
   </main>
 </div>

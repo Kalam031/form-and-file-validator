@@ -532,3 +532,24 @@ test('filesFromDrop: with a folder in the drop, files whose entry does not answe
         assert.deepEqual(got.map(f => FV.getPath(f) || f.name).sort(), ['docs/inner.txt', 'top.txt']);
     } finally { global.setTimeout = realTimeout; }
 });
+
+// ================================================================ metadata
+test('widget with stripMetadata: a photo is listed without its EXIF and GPS data, and says what was removed', async () => {
+    const img = require('./helpers/images.js');
+    mount();
+    const z = FV.widget('#zone', { accept: '.jpg', imageDecode: false }, { list: '#list', messageElement: '#msg', stripMetadata: true });
+    const photo = new File([img.jpeg({ exif: true, orientation: 6, gps: true, comment: true })], 'trip.jpg', { type: 'image/jpeg' });
+    const r = await z.add([photo]);
+    assert.equal(r.accepted.length, 1, JSON.stringify(r.rejected.map(x => x.messages)));
+    assert.deepEqual(r.accepted[0].stripped.removed, ['EXIF', 'GPS location', 'comments']);
+    assert.ok(z.files[0].size < photo.size);
+    const meta = await FV.readMetadata(z.files[0]);
+    assert.deepEqual([meta.gps, meta.comments, meta.orientation], [false, false, 6], 'the orientation stays so the photo is not shown sideways');
+    z.destroy();
+    mount();
+    const plain = FV.widget('#zone', { accept: '.jpg', imageDecode: false }, { list: '#list' });
+    const r2 = await plain.add([photo]);
+    assert.equal(r2.accepted[0].stripped, null);
+    assert.equal(r2.accepted[0].file, photo, 'without the option the file is untouched');
+    plain.destroy();
+});

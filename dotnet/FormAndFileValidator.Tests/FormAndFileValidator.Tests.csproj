@@ -33,6 +33,7 @@
     <!-- the vectors shared with the JavaScript package, Angular and every other port -->
     <Content Include="..\..\spec\form-rules.vectors.json" Link="form-rules.vectors.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\spec\file-rules.vectors.json" Link="file-rules.vectors.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\spec\metadata-vectors.json" Link="metadata-vectors.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
