@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.6.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.7.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v280-documentation">FormValidator v2.8.0 — Documentation</h1>
+<h1 id="formvalidator-v290-documentation">FormValidator v2.9.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -428,6 +428,40 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 // { valid, errors: { pw2: &#39;Values do not match.&#39; }, details: { pw2: { rule: &#39;equalTo&#39;, message: &#39;...&#39; } } }
 </code></pre>
 <p>No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: <code>trim</code>, <code>values</code> (the other fields), <code>messages</code> (per rule type).</p>
+<h3 id="schema-one-definition-for-any-library-standard-schema">Schema: one definition for any library (Standard Schema)</h3>
+<p><code>FormValidator.schema(rules)</code> turns the rules of an object into <strong>one schema</strong> that follows the <a href="https://standardschema.dev">Standard Schema</a> specification, the interface that React Hook Form, TanStack Form, Hono, tRPC and others read. You write the rules once; no resolver package of ours, no adapter of yours.</p>
+<pre tabindex="0"><code class="language-js">const signup = FormValidator.schema({
+  email:    [&#39;required&#39;, &#39;email&#39;],
+  password: { required: true, pwcheck: { minLength: 8, requireDigit: true } },
+  confirm:  { equalTo: &#39;password&#39; },
+  nick:     { minlength: 3 }
+});
+
+signup.parse(req.body);          // { email, password, confirm, nick } as trimmed text, or throws ValidationError
+const r = signup.safeParse(req.body);
+r.success;                       // false
+r.errors;                        // { confirm: &#39;Values do not match.&#39; }
+r.issues;                        // [{ message, path: [&#39;confirm&#39;], rule: &#39;equalTo&#39; }]
+signup[&#39;~standard&#39;].validate(x); // what other libraries call: { value } or { issues }
+</code></pre>
+<ul>
+<li><strong>Same engine as <code>checkValues()</code></strong>: the same rules, messages, language packs and answers (also in the .NET package). File, checkbox-count and <code>remote</code> rules need a form or a server and throw, like in <code>checkValues()</code>.</li>
+<li><strong>Values</strong> are text, trimmed (passwords exactly as typed; <code>trim: false</code> keeps spaces). Numbers, booleans and <code>null</code> are read like a form reads them (<code>21</code> is <code>&#39;21&#39;</code>, <code>null</code> is blank). A field that is missing counts as blank; fields that are not in the rules are dropped.</li>
+<li><strong>Options</strong> (second argument): <code>messages</code>, <code>trim</code>, <code>passwordStrength</code>, <code>context</code>, as in <code>checkValues()</code>.</li>
+<li><strong><code>parse()</code></strong> throws a <code>ValidationError</code> with <code>issues</code> (Standard Schema issues plus the failed <code>rule</code>) and <code>errors</code> (<code>{ field: message }</code>). <strong><code>safeParse()</code></strong> never throws for invalid data.</li>
+</ul>
+<p>React Hook Form (tested with its official <code>standardSchemaResolver</code>):</p>
+<pre tabindex="0"><code class="language-js">import { useForm } from &#39;react-hook-form&#39;;
+import { standardSchemaResolver } from &#39;@hookform/resolvers/standard-schema&#39;;
+const { register, handleSubmit, formState: { errors } } = useForm({ resolver: standardSchemaResolver(signup) });
+</code></pre>
+<p><strong>Typed in TypeScript.</strong> The rules give the types, nothing is written twice: fields with a <code>required</code> rule are required keys, the others optional, and error keys are the field names.</p>
+<pre tabindex="0"><code class="language-ts">import type { InferInput, InferOutput, InferErrors } from &#39;form-and-file-validator&#39;;
+type SignupIn = InferInput&lt;typeof signup&gt;;     // { email: string; password: string } &amp; { confirm?: string; nick?: string }
+type SignupErrors = InferErrors&lt;typeof signup&gt;; // { email?: string; password?: string; confirm?: string; nick?: string }
+const result = signup.safeParse(body);
+if (!result.success) result.errors.email;       // string | undefined, a misspelt field name does not compile
+</code></pre>
 <h3 id="one-answer-on-every-platform">One answer on every platform</h3>
 <p><code>spec/form-rules.vectors.json</code> lists hundreds of values with the expected result for every rule (letters of every script, JavaScript&#39;s whitespace, URL edge cases, leap years, passwords). The JavaScript engine, the Angular package and the <a href="server-and-frameworks.html#net-aspnet-core">.NET package</a> all run that same file in their tests.</p>
 <p>Passwords are never trimmed. All other values are trimmed before checking unless you set <code>config.trim</code> to <code>false</code>.</p>
@@ -1198,6 +1232,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.9.0</strong>: <code>FormValidator.schema(rules)</code>: the rules as a Standard Schema with <code>parse</code>, <code>safeParse</code> and typed values and errors.</li>
 <li><strong>2.8.0</strong>: 19 new rules (<code>integer</code>, <code>uuid</code>, <code>hexColor</code>, <code>slug</code>, <code>ipv4</code>, <code>ipv6</code>, <code>iban</code>, <code>time</code>, <code>domain</code>, <code>base64</code>, <code>mac</code>, <code>latitude</code>, <code>longitude</code>, <code>startsWith</code>, <code>endsWith</code>, <code>contains</code>, <code>notOneOf</code>, <code>minWords</code>, <code>maxWords</code>), also in the .NET package and all language packs.</li>
 <li><strong>2.7.0</strong>: named date formats (<code>format</code>, <code>strict</code>), <code>checkValue()</code> / <code>checkValues()</code> without a DOM, a <code>url</code> rule that is the same in every browser, Unicode-aware <code>pwcheck</code>, plain-decimal <code>min</code> / <code>max</code> / <code>range</code> / <code>step</code>.</li>
 <li><strong>2.6.0</strong>: error messages carry <code>dir=&quot;auto&quot;</code>; language packs.</li>

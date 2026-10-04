@@ -1,4 +1,4 @@
-/*! FormValidator 2.8.0 + FileValidator 2.9.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.9.0 + FileValidator 2.9.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 (function (root) {
     'use strict';
     var mods = {}, cache = {};
@@ -2072,9 +2072,10 @@
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.8.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.9.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.9.0  FormValidator.schema(rules): the rules of an object as a Standard Schema (parse, safeParse, ~standard.validate, typed values and errors in TypeScript).
  *   2.8.0  19 new rules: integer, uuid, hexColor, slug, ipv4, ipv6, iban, time, domain, base64, mac, latitude, longitude, startsWith, endsWith, contains, notOneOf, minWords, maxWords
  *          (ASCII-exact, the same answers in .NET; messages in every language pack).
  *   2.7.0  Dates with a named format (date / minDate / maxDate: `format`, `strict`); checkValue() / checkValues() without a DOM; url rule independent of the browser's URL parser;
@@ -3375,8 +3376,71 @@
         return { valid: Object.keys(errors).length === 0, errors, details };
     }
 
+    // ------------------------------------------------------------------ schema: the rules as a Standard Schema (https://standardschema.dev)
+    /** What parse() throws: `error.issues` is the Standard Schema issue list, `error.errors` is { field: message }. */
+    class ValidationError extends Error {
+        constructor(issues) {
+            super(issues.length ? issues[0].message : 'Validation failed');
+            this.name = 'ValidationError';
+            this.issues = issues;
+            this.errors = {};
+            issues.forEach(i => { const k = i.path && i.path[0]; if (k !== undefined && !(k in this.errors)) this.errors[k] = i.message; });
+        }
+    }
+
+    /**
+     * The rules of an object as ONE schema that every Standard Schema consumer understands (React Hook Form, TanStack Form, Hono, tRPC, ...):
+     *   const signup = FormValidator.schema({ email: ['required', 'email'], password: { required: true, pwcheck: { minLength: 8 } }, confirm: { equalTo: 'password' } });
+     *   signup.parse(req.body)       -> { email, password, confirm } (trimmed text) or throws ValidationError
+     *   signup.safeParse(req.body)   -> { success: true, data } | { success: false, error, errors: { confirm: 'Values do not match.' }, issues }
+     *   signup['~standard'].validate(value)    -> { value } | { issues: [{ message, path: ['confirm'], rule: 'equalTo' }] }
+     * Same engine and same messages as checkValues(): no file, checkbox-count or remote rules, synchronous. Fields that are not in the rules are dropped from `data`.
+     * options: the checkValues options (trim, messages, passwordStrength, context).
+     */
+    function schema(rulesMap, options) {
+        const rules = rulesMap && typeof rulesMap === 'object' ? rulesMap : {};
+        const fields = Object.keys(rules);
+        const keepsRaw = Object.create(null);
+        fields.forEach(f => { keepsRaw[f] = normalizeRules(rules[f]).some(r => r.type === 'pwcheck'); });   // passwords are never trimmed
+        const o = options || {};
+
+        function run(input) {
+            if (input === null || typeof input !== 'object' || Array.isArray(input)) return { issues: [{ message: 'Expected an object.', path: [] }] };
+            const data = Object.assign({}, input);
+            fields.forEach(f => { if (data[f] == null) data[f] = ''; });     // a field that is not there is blank (equalTo may point at it)
+            const res = checkValues(data, rules, o);
+            if (!res.valid) {
+                return { issues: fields.filter(f => f in res.errors).map(f => ({ message: res.errors[f], path: [f], rule: res.details[f].rule })) };
+            }
+            const value = {};
+            fields.forEach(f => { const raw = input[f] == null ? '' : String(input[f]); value[f] = keepsRaw[f] || o.trim === false ? raw : raw.trim(); });
+            return { value };
+        }
+
+        const api = {
+            '~standard': { version: 1, vendor: 'form-and-file-validator', validate: run },
+            rules,
+            fields,
+            safeParse(data) {
+                const r = run(data);
+                if (!r.issues) return { success: true, data: r.value, errors: {}, issues: [] };
+                const error = new ValidationError(r.issues);
+                return { success: false, error, errors: error.errors, issues: r.issues };
+            },
+            parse(data) {
+                const r = run(data);
+                if (r.issues) throw new ValidationError(r.issues);
+                return r.value;
+            },
+            check: data => checkValues(data, rules, o)
+        };
+        return api;
+    }
+
     return {
         init,
+        schema,        // (rules, options?) -> Standard Schema with parse / safeParse / check
+        ValidationError,
         validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
         isValid,       // sync (form, rules?) -> true / false, like jQuery's valid()
         checkValue,
@@ -3391,7 +3455,7 @@
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.8.0'
+        version: '2.9.0'
     };
 });
 
@@ -5446,7 +5510,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.9.0","fileValidator.widget":"1.4.0","formValidator":"2.8.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.9.0","fileValidator.widget":"1.4.0","formValidator":"2.9.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (typeof define === 'function' && define.amd) define(function () { return api; });
     else if (typeof module === 'object' && module.exports) module.exports = api;

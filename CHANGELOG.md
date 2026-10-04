@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.7.0
+- **Standard Schema** (FormValidator 2.9.0): `FormValidator.schema(rules)` turns the rules of an object into one schema that React Hook Form, TanStack Form, Hono, tRPC and every other Standard Schema consumer accepts, with no resolver or adapter of ours. `parse()`, `safeParse()`, `check()` and `['~standard'].validate()` use the same engine, messages and language packs as `checkValues()`.
+- **Typed rules**: TypeScript infers the values and the errors from the rules: `InferInput`, `InferOutput`, `InferErrors`. Fields with a `required` rule are required keys, the others optional, and a misspelt field name in `result.errors` does not compile. Checked against the official `@standard-schema/spec` types.
+- Tested with React Hook Form's official `standardSchemaResolver` (a dev dependency).
+- Types: `versions` lists `formValidator.additional`.
+
 ## 3.6.0
 - **.NET: server-side file validation.** `FileValidator.Validate` / `ValidateRaw` check `IFormFile`, `HttpPostedFileBase`, streams and bytes with the same checks, error codes and messages as the JavaScript `FileValidator` (dangerous and disguised names, program content under a harmless name, ~45 magic-byte signatures, macros / scripts / bombs in PDF, Office and ZIP, scripts in SVG, image size from the header, limits, allow lists, `Scan` and `Custom` hooks). `[FileRules]` puts the rules on a model property (`ModelState`), `ModelFileRules.ToJson` / `Html.FileRulesJson()` give the matching browser config. Tested against `spec/file-rules.vectors.json` (167 files) on .NET 8, 10, netstandard2.0 and .NET Framework 4.8.
 - **19 new form rules** (FormValidator 2.8.0): `integer`, `uuid`, `hexColor`, `slug`, `ipv4`, `ipv6`, `iban`, `time`, `domain`, `base64`, `mac`, `latitude`, `longitude`, `startsWith`, `endsWith`, `contains`, `notOneOf`, `minWords`, `maxWords`. The same answers in JavaScript, Angular and .NET (230 new shared vectors), messages in all 13 language packs.

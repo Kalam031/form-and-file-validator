@@ -20,6 +20,7 @@ export declare const versions: {
     fileValidator: string;
     'fileValidator.widget': string;
     'formValidator.jquery': string;
+    'formValidator.additional': string;
     locale: string;
 };
 

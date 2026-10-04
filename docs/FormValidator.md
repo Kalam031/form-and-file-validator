@@ -1,4 +1,4 @@
-# FormValidator v2.8.0 — Documentation
+# FormValidator v2.9.0 — Documentation
 
 ## Overview
 
@@ -185,6 +185,49 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 ```
 
 No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: `trim`, `values` (the other fields), `messages` (per rule type).
+
+### Schema: one definition for any library (Standard Schema)
+
+`FormValidator.schema(rules)` turns the rules of an object into **one schema** that follows the [Standard Schema](https://standardschema.dev) specification, the interface that React Hook Form, TanStack Form, Hono, tRPC and others read. You write the rules once; no resolver package of ours, no adapter of yours.
+
+```js
+const signup = FormValidator.schema({
+  email:    ['required', 'email'],
+  password: { required: true, pwcheck: { minLength: 8, requireDigit: true } },
+  confirm:  { equalTo: 'password' },
+  nick:     { minlength: 3 }
+});
+
+signup.parse(req.body);          // { email, password, confirm, nick } as trimmed text, or throws ValidationError
+const r = signup.safeParse(req.body);
+r.success;                       // false
+r.errors;                        // { confirm: 'Values do not match.' }
+r.issues;                        // [{ message, path: ['confirm'], rule: 'equalTo' }]
+signup['~standard'].validate(x); // what other libraries call: { value } or { issues }
+```
+
+- **Same engine as `checkValues()`**: the same rules, messages, language packs and answers (also in the .NET package). File, checkbox-count and `remote` rules need a form or a server and throw, like in `checkValues()`.
+- **Values** are text, trimmed (passwords exactly as typed; `trim: false` keeps spaces). Numbers, booleans and `null` are read like a form reads them (`21` is `'21'`, `null` is blank). A field that is missing counts as blank; fields that are not in the rules are dropped.
+- **Options** (second argument): `messages`, `trim`, `passwordStrength`, `context`, as in `checkValues()`.
+- **`parse()`** throws a `ValidationError` with `issues` (Standard Schema issues plus the failed `rule`) and `errors` (`{ field: message }`). **`safeParse()`** never throws for invalid data.
+
+React Hook Form (tested with its official `standardSchemaResolver`):
+
+```js
+import { useForm } from 'react-hook-form';
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+const { register, handleSubmit, formState: { errors } } = useForm({ resolver: standardSchemaResolver(signup) });
+```
+
+**Typed in TypeScript.** The rules give the types, nothing is written twice: fields with a `required` rule are required keys, the others optional, and error keys are the field names.
+
+```ts
+import type { InferInput, InferOutput, InferErrors } from 'form-and-file-validator';
+type SignupIn = InferInput<typeof signup>;     // { email: string; password: string } & { confirm?: string; nick?: string }
+type SignupErrors = InferErrors<typeof signup>; // { email?: string; password?: string; confirm?: string; nick?: string }
+const result = signup.safeParse(body);
+if (!result.success) result.errors.email;       // string | undefined, a misspelt field name does not compile
+```
 
 ### One answer on every platform
 
@@ -645,6 +688,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.9.0**: `FormValidator.schema(rules)`: the rules as a Standard Schema with `parse`, `safeParse` and typed values and errors.
 - **2.8.0**: 19 new rules (`integer`, `uuid`, `hexColor`, `slug`, `ipv4`, `ipv6`, `iban`, `time`, `domain`, `base64`, `mac`, `latitude`, `longitude`, `startsWith`, `endsWith`, `contains`, `notOneOf`, `minWords`, `maxWords`), also in the .NET package and all language packs.
 - **2.7.0**: named date formats (`format`, `strict`), `checkValue()` / `checkValues()` without a DOM, a `url` rule that is the same in every browser, Unicode-aware `pwcheck`, plain-decimal `min` / `max` / `range` / `step`.
 - **2.6.0**: error messages carry `dir="auto"`; language packs.

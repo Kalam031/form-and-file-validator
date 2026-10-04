@@ -217,8 +217,93 @@ export interface ValuesCheckResult {
     details: Record<string, { rule: string | null; message: string }>;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Standard Schema (https://standardschema.dev): the interface below is the one the specification asks libraries to copy.
+export interface StandardSchemaV1<Input = unknown, Output = Input> {
+    readonly '~standard': StandardSchemaV1.Props<Input, Output>;
+}
+
+export declare namespace StandardSchemaV1 {
+    interface Props<Input = unknown, Output = Input> {
+        readonly version: 1;
+        readonly vendor: string;
+        readonly validate: (value: unknown) => Result<Output> | Promise<Result<Output>>;
+        readonly types?: Types<Input, Output> | undefined;
+    }
+    type Result<Output> = SuccessResult<Output> | FailureResult;
+    interface SuccessResult<Output> { readonly value: Output; readonly issues?: undefined }
+    interface FailureResult { readonly issues: ReadonlyArray<Issue> }
+    interface Issue { readonly message: string; readonly path?: ReadonlyArray<PropertyKey | PathSegment> | undefined }
+    interface PathSegment { readonly key: PropertyKey }
+    interface Types<Input = unknown, Output = Input> { readonly input: Input; readonly output: Output }
+    type InferInput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['input'];
+    type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['output'];
+}
+
+/** One problem found by a schema: the Standard Schema issue plus the type of the rule that failed. */
+export interface SchemaIssue extends StandardSchemaV1.Issue {
+    readonly path: ReadonlyArray<string>;
+    /** The rule that failed, for example 'email'. */
+    readonly rule?: string;
+}
+
+/** What `schema.parse()` throws. */
+export interface ValidationError extends Error {
+    readonly name: 'ValidationError';
+    readonly issues: ReadonlyArray<SchemaIssue>;
+    /** { field: first message of that field } */
+    readonly errors: Record<string, string>;
+}
+
+type IsRequired<R> =
+    R extends 'required' ? true
+    : R extends { type: 'required' } ? true
+    : R extends { required: false } ? false
+    : R extends { required: (...args: never[]) => unknown } ? false          // required only when a condition says so
+    : R extends { required: unknown } ? true
+    : R extends readonly (infer E)[] ? (true extends IsRequired<E> ? true : false)
+    : false;
+
+/** The value a form has for each field, as text: fields with a `required` rule must be there, the others may be missing. */
+export type SchemaInput<R extends Record<string, RulesForField>> =
+    { [K in keyof R as IsRequired<R[K]> extends true ? K : never]: string }
+    & { [K in keyof R as IsRequired<R[K]> extends true ? never : K]?: string };
+
+/** What a valid check gives back: every field as trimmed text (passwords exactly as typed). */
+export type SchemaOutput<R extends Record<string, RulesForField>> = { [K in keyof R]: string };
+
+/** { field: message } with the field names of the rules. */
+export type SchemaErrors<R extends Record<string, RulesForField>> = { [K in keyof R]?: string };
+
+export type SafeParseResult<R extends Record<string, RulesForField>> =
+    | { success: true; data: SchemaOutput<R>; errors: {}; issues: [] }
+    | { success: false; data?: undefined; error: ValidationError; errors: SchemaErrors<R>; issues: ReadonlyArray<SchemaIssue> };
+
+/** The rules of an object as one Standard Schema, from `FormValidator.schema(rules)`. */
+export interface FormSchema<R extends Record<string, RulesForField>> extends StandardSchemaV1<SchemaInput<R>, SchemaOutput<R>> {
+    readonly rules: R;
+    readonly fields: ReadonlyArray<keyof R & string>;
+    /** The checked, trimmed values, or throws a ValidationError. */
+    parse(data: unknown): SchemaOutput<R>;
+    /** Never throws for invalid data. */
+    safeParse(data: unknown): SafeParseResult<R>;
+    /** The checkValues() answer: { valid, errors, details }. */
+    check(data: Record<string, unknown>): ValuesCheckResult;
+}
+
+export type InferInput<S extends { readonly rules: Record<string, RulesForField> }> = SchemaInput<S['rules']>;
+export type InferOutput<S extends { readonly rules: Record<string, RulesForField> }> = SchemaOutput<S['rules']>;
+export type InferErrors<S extends { readonly rules: Record<string, RulesForField> }> = SchemaErrors<S['rules']>;
+
 export interface FormValidatorStatic {
     readonly version: string;
+    /**
+     * The rules of an object as one Standard Schema (React Hook Form, TanStack Form, Hono, tRPC ... accept it), with typed values and errors:
+     * `const signup = FormValidator.schema({ email: ['required', 'email'], nick: { minlength: 3 } });`
+     * Same engine and messages as checkValues(): no file, checkbox-count or remote rules.
+     */
+    schema<const R extends Record<string, RulesForField>>(rules: R, options?: ValueCheckOptions): FormSchema<R>;
+    readonly ValidationError: new (issues: ReadonlyArray<SchemaIssue>) => ValidationError;
     /** Set up one form (returns its instance) or several (returns an array). */
     init(options: InitOptions & { formId: Array<string | HTMLFormElement> }): FormInstance[];
     init(options: InitOptions): FormInstance;

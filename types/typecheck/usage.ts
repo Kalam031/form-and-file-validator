@@ -204,3 +204,36 @@ const fileGuard = FileValidator.guard('#cv', { accept: '.pdf' }, { messageElemen
 fileGuard.validate().then(v => { const fine: boolean = v; void fine; });
 fileGuard.unbind();
 void fileOk;
+
+// ---------------------------------------------------------------- schema: Standard Schema, typed values and errors
+import type { StandardSchemaV1 as OfficialStandardSchema } from '@standard-schema/spec';
+import type { InferInput, InferOutput, InferErrors, SafeParseResult, ValidationError } from '../index';
+
+type Mutual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const signupSchema = FormValidator.schema({
+    email: ['required', 'email'],
+    nick: { minlength: 3 },
+    pw: { required: true, pwcheck: { minLength: 8 } },
+    code: [{ type: 'required' }, 'digits'],
+    maybe: { required: false, email: true },
+    conditional: { required: (el: HTMLElement) => !!el },
+});
+type SignupIn = InferInput<typeof signupSchema>;
+const inputShape: Mutual<SignupIn, { email: string; pw: string; code: string } & { nick?: string; maybe?: string; conditional?: string }> = true;
+const outputShape: Mutual<InferOutput<typeof signupSchema>, { email: string; nick: string; pw: string; code: string; maybe: string; conditional: string }> = true;
+const errorShape: Mutual<InferErrors<typeof signupSchema>, { email?: string; nick?: string; pw?: string; code?: string; maybe?: string; conditional?: string }> = true;
+void inputShape; void outputShape; void errorShape;
+
+const parsed = signupSchema.safeParse({ email: 'a@b.co' });
+if (parsed.success) { const e: string = parsed.data.email; void e; } else { const m: string | undefined = parsed.errors.email; const first: string = parsed.issues[0].message; void m; void first; }
+const typedResult: SafeParseResult<typeof signupSchema.rules> = parsed;
+void typedResult;
+try { const values: { email: string } = signupSchema.parse({}); void values; } catch (e) { const ve = e as ValidationError; const all: Record<string, string> = ve.errors; void all; }
+// @ts-expect-error a field that is not in the rules
+const nope = parsed.success ? parsed.data.unknownField : undefined;
+void nope;
+
+// the very interface the specification publishes accepts our schema
+const official: OfficialStandardSchema<SignupIn, InferOutput<typeof signupSchema>> = signupSchema;
+const verdict = official['~standard'].validate({});
+void verdict;
