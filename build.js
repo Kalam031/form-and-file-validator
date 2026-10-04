@@ -21,6 +21,7 @@ const PARTS = [
     { name: 'fileValidator.widget', file: 'fileValidator.widget.js' },
     { name: 'formValidator', file: 'formValidator.js' },
     { name: 'formValidator.jquery', file: 'formValidator.jquery.js' },
+    { name: 'formValidator.additional', file: 'formValidator.additional.js' },
     { name: 'locale', file: 'locale.js' }
 ];
 
@@ -63,7 +64,9 @@ ${wrapped}
     /** Installs the jQuery Validation compatibility layer on the given jQuery ($.fn.validate, $.validator ...). Safe to call twice. */
     function useJQuery($) {
         var m = { exports: {} };
-        mods['formValidator.jquery'].call(root, m, m.exports, function (id) { return norm(id) === 'jquery' ? $ : requireMod(id); }, undefined);
+        var req = function (id) { return norm(id) === 'jquery' ? $ : requireMod(id); };
+        mods['formValidator.jquery'].call(root, m, m.exports, req, undefined);
+        mods['formValidator.additional'].call(root, { exports: {} }, {}, req, undefined);   // country and bank methods of additional-methods.js
         try { locales.reapply(); } catch (e) { /* the current language now also reaches the jQuery messages */ }
         return m.exports;
     }

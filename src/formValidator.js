@@ -706,6 +706,32 @@
             return { badInput, value, empty, count, files, field: first, fields: unit.fields, unit, form, config: cfg, context, inst };
         }
 
+        /**
+         * The values of the form as an object, ready to send (JSON, fetch, axios, $.ajax): text is trimmed like the validation saw it (passwords are not),
+         * a checkbox group and a multiple select give an array, a radio group its chosen value, a file field the File objects. Like a native submit, unchecked
+         * checkboxes and unchosen radios are left out and disabled fields are skipped.
+         */
+        function collectValues() {
+            const out = {}, groups = new Map();
+            Array.from(form.elements).forEach(el => {
+                if (!el.name || el.disabled || el.tagName === 'FIELDSET' || ['submit', 'button', 'reset', 'image'].includes(el.type)) return;
+                if (!groups.has(el.name)) groups.set(el.name, []);
+                groups.get(el.name).push(el);
+            });
+            groups.forEach((els, name) => {
+                const first = els[0], type = first.type;
+                if (type === 'file') out[name] = els.reduce((all, e) => all.concat(Array.from(e.files || [])), []);
+                else if (type === 'checkbox') { const on = els.filter(e => e.checked).map(e => e.value); if (els.length > 1) out[name] = on; else if (on.length) out[name] = on[0]; }
+                else if (type === 'radio') { const on = els.find(e => e.checked); if (on) out[name] = on.value; }
+                else if (first.tagName === 'SELECT' && first.multiple) out[name] = Array.from(first.selectedOptions).map(o => o.value);
+                else {
+                    const vals = els.map(e => { const raw = e.value == null ? '' : e.value; return (e.type === 'password' || cfg.trim === false) ? raw : raw.trim(); });
+                    out[name] = vals.length > 1 ? vals : vals[0];
+                }
+            });
+            return out;
+        }
+
         function isActive(unit) {
             if (unit.fields.every(f => f.disabled)) return false;
             if (cfg.ignore) { try { if (unit.fields[0].matches(cfg.ignore)) return false; } catch (e) { /* invalid selector */ } }
@@ -1003,13 +1029,23 @@
                 validateAll({ submit: true }).then(ok => {
                     inst._busy = false;
                     if (!ok) return;
-                    if (isFn(cfg.submitHandler)) return cfg.submitHandler(form, e);
-                    inst._bypass = true;
-                    try {
-                        if (isFn(form.requestSubmit)) {
-                            try { form.requestSubmit(submitter || undefined); } catch (err) { form.requestSubmit(); }
-                        } else form.submit();
-                    } finally { inst._bypass = false; }
+                    if (isFn(cfg.onSubmit)) {   // AJAX, the short way: your function gets the validated values; it may return { errors: { field: message } } from the server to show them here
+                        inst._busy = true;      // no double submit while the request runs
+                        return Promise.resolve().then(() => cfg.onSubmit(collectValues(), e, inst)).then(out => {
+                            if (out && out.errors && typeof out.errors === 'object') inst.setErrors(out.errors);
+                        }).catch(err => { if (root.console) console.error(err); }).then(() => { inst._busy = false; });
+                    }
+                    if (isFn(cfg.submitHandler)) return cfg.submitHandler(form, e, collectValues());   // the AJAX place: the third argument is the validated data
+                    // Hand the form back to the browser on the next task, not now: when every rule is synchronous this callback runs while the browser
+                    // is still delivering the user's submit event, and a requestSubmit() made at that moment is silently ignored (the form never posts).
+                    setTimeout(() => {
+                        inst._bypass = true;
+                        try {
+                            if (isFn(form.requestSubmit)) {
+                                try { form.requestSubmit(submitter || undefined); } catch (err) { form.requestSubmit(); }
+                            } else form.submit();
+                        } finally { inst._bypass = false; }
+                    }, 0);
                 }).catch(err => { inst._busy = false; if (root.console) console.error(err); });
             }, true);
 
@@ -1018,6 +1054,32 @@
 
         Object.assign(inst, {
             validate: o => validateAll(o),
+            getValues: collectValues,
+            /** validate, then hand back what to send: { valid, values, errors }. Shows the errors like validate() does. */
+            validateAndGetValues: async o => { const valid = await validateAll(o); return { valid, values: collectValues(), errors: inst.getErrors() }; },
+            /**
+             * An event handler for any framework (React onSubmit, Vue @submit, Angular (ngSubmit), addEventListener): it stops the native submit, validates and,
+             * only when the form is valid, calls fn(values, event, inst). If fn returns { errors: { field: message } } (what your server sent back) they are shown
+             * on the fields. Resolves to { valid, values, errors, result }.
+             */
+            handleSubmit: fn => async event => {
+                if (event && isFn(event.preventDefault)) event.preventDefault();
+                const r = await inst.validateAndGetValues({ submit: true });
+                if (!r.valid || !isFn(fn)) return r;
+                const out = await fn(r.values, event, inst);
+                if (out && out.errors && typeof out.errors === 'object') { inst.setErrors(out.errors); return Object.assign({}, r, { valid: false, errors: inst.getErrors(), result: out }); }
+                return Object.assign({}, r, { result: out });
+            },
+            /** Shows messages from the server on the fields: { Email: 'Already registered' } (a list takes the first message). Names are matched exactly, then ignoring case. Returns the names that match no field. */
+            setErrors: map => {
+                const names = Array.from(form.elements).map(el => el.name).filter(Boolean), missed = [];
+                Object.keys(map || {}).forEach(key => {
+                    const msg = [].concat(map[key])[0];
+                    const target = names.includes(key) ? key : names.find(n => n.toLowerCase() === String(key).toLowerCase());
+                    if (!target || msg === undefined || msg === null || !inst.setError(target, String(msg))) missed.push(key);
+                });
+                return missed;
+            },
             validateSync: o => validateAllSync(o),
             validateElementSync: (el, o) => { const u = unitOf(el); return u ? validateUnitSync(u, o) : true; },
             validateElement: (el, o) => { const u = unitOf(el); return u ? validateUnit(u, o) : Promise.resolve(true); },
@@ -1080,6 +1142,24 @@
         return tmp.validate();
     }
 
+    /**
+     * jQuery's  $(form).valid()  without jQuery: true or false, right now, and the errors are shown. Use it for a direct submit or before your own AJAX call:
+     *   form.addEventListener('submit', e => { if (!FormValidator.isValid(form)) e.preventDefault(); });          // direct: only a valid form goes through
+     *   if (FormValidator.isValid(form)) fetch('/api', { method: 'POST', body: JSON.stringify(inst.getValues()) });  // AJAX
+     * Rules that need to wait (remote, file checks) count as valid for now and show their result when it arrives; validate() (async) waits for them.
+     * Needs FormValidator.init(...) first, or pass rules: FormValidator.isValid(form, { email: ['required', 'email'] }).
+     */
+    function isValid(target, rules) {
+        const form = resolveForm(target);
+        if (!form) throw new Error(`Form "${target}" not found`);
+        if (!rules) {
+            if (!form._fvInstance) throw new Error('Form not initialized with validator');
+            return form._fvInstance.validateSync();
+        }
+        const base = form._fvInstance;
+        return createInstance(form, { rules, config: base ? base.config : {}, context: base ? base.context : {} }).validateSync();
+    }
+
     // ------------------------------------------------------------------ values without a form (Node, servers, unit tests)
     const NEEDS_FORM = ['file', 'fileType', 'fileSize', 'minFiles', 'maxFiles', 'minChecked', 'maxChecked'];
     /**
@@ -1138,7 +1218,8 @@
 
     return {
         init,
-        validate,
+        validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
+        isValid,       // sync (form, rules?) -> true / false, like jQuery's valid()
         checkValue,
         checkValues,
         registerRule,

@@ -1,0 +1,36 @@
+@model Mvc5Demo.Models.SignupModel
+@{
+    ViewBag.Title = "Sign up (AJAX)";
+}
+
+<h1>Sign up (AJAX)</h1>
+
+@using (Html.BeginForm("SignupAjax", "Account", FormMethod.Post, new { id = "signup", novalidate = "novalidate" }))
+{
+    <p><label for="FirstName">First name</label>@Html.TextBoxFor(m => m.FirstName)</p>
+    <p><label for="Email">Email</label>@Html.TextBoxFor(m => m.Email)</p>
+    <p><label for="Password">Password</label>@Html.PasswordFor(m => m.Password)</p>
+    <p><label for="ConfirmPassword">Confirm password</label>@Html.PasswordFor(m => m.ConfirmPassword)</p>
+    <p><label for="BirthDate">Birth date (d/M/yyyy)</label>@Html.TextBoxFor(m => m.BirthDate)</p>
+    <p><label for="Website">Website</label>@Html.TextBoxFor(m => m.Website)</p>
+    <button type="submit" id="go">Create account</button>
+}
+<p id="result" role="status"></p>
+
+@section scripts {
+    <script src="@Url.Content("~/Scripts/validator.min.js")"></script>
+    <script>
+        // Called by the validator only when the form is valid, with the validated values. The server runs the same rules again (ModelState).
+        window.sendSignup = async function (values) {
+            const res = await fetch('@Url.Action("SignupAjax", "Account")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(values)
+            });
+            const data = await res.json();
+            if (!res.ok) return data;                                   // { errors: { Email: 'Already registered' } } is shown on the fields
+            document.getElementById('result').textContent = 'Welcome, ' + data.name + '!';
+        };
+    </script>
+    @Html.FormValidatorInit("signup", "{ onSubmit: window.sendSignup }")
+}

@@ -144,3 +144,61 @@ test('the real Alpine runtime runs both directives from HTML attributes', async 
     assert.ok(form.__fvInstance, 'x-validate created the FormValidator');
     assert.equal(await form.__fvInstance.validate(), false);
 });
+
+// ---------------------------------------------------------------- submitting with the validated values: React and Vue
+test('React: handleSubmit gives the validated values only for a valid form, shows server messages, getValues / setErrors', async () => {
+    const React = await import('react');
+    const { createRoot } = await import('react-dom/client');
+    const { act } = React;
+    const { useFormValidator } = await import('../dist/integrations/react.mjs');
+    document.getElementById('root').innerHTML = '';
+    let api;
+    const sent = [];
+    function App() {
+        api = useFormValidator({ rules: { email: ['required', 'email'] } });
+        const onSubmit = api.handleSubmit(async values => { sent.push(values); return values.email === 'taken@example.com' ? { errors: { email: 'Already registered' } } : { id: 1 }; });
+        return React.createElement('form', { ref: api.ref, id: 'rs', onSubmit },
+            React.createElement('input', { name: 'email', type: 'text' }),
+            React.createElement('input', { name: 'tag', type: 'checkbox', value: 'a' }),
+            React.createElement('button', { type: 'submit', id: 'rgo' }, 'Go'));
+    }
+    const root = createRoot(document.getElementById('root'));
+    await act(async () => { root.render(React.createElement(App)); });
+    await act(async () => { $('#rgo').click(); await settle(); });
+    assert.equal(sent.length, 0, 'invalid: your function is not called');
+    assert.equal(api.errors.length, 1);
+    document.querySelector('input[name=email]').value = '  taken@example.com ';
+    await act(async () => { $('#rgo').click(); await settle(); });
+    assert.deepEqual(sent, [{ email: 'taken@example.com' }], 'trimmed values; the unchecked box is left out');
+    assert.equal($('.error[data-error-for=email]').textContent, 'Already registered');
+    assert.deepEqual(api.getValues(), { email: 'taken@example.com' });
+    assert.deepEqual(api.setErrors({ email: 'Nope', zzz: 'x' }), ['zzz']);
+    await act(async () => { root.unmount(); });
+});
+
+test('Vue: handleSubmit gives the validated values only for a valid form and shows server messages', async () => {
+    const Vue = await import('vue');
+    const { useFormValidator } = await import('../dist/integrations/vue.mjs');
+    document.getElementById('root').innerHTML = '<div id="vue2"></div>';
+    let api;
+    const sent = [];
+    const App = Vue.defineComponent({
+        setup() {
+            api = useFormValidator({ rules: { email: ['required', 'email'] } });
+            const submit = api.handleSubmit(async values => { sent.push(values); return values.email === 'taken@example.com' ? { errors: { email: 'Already registered' } } : { ok: true }; });
+            return () => Vue.h('form', { ref: api.formRef, id: 'vs', onSubmit: submit }, [Vue.h('input', { name: 'email' }), Vue.h('button', { type: 'submit', id: 'vgo' }, 'Go')]);
+        }
+    });
+    const app = Vue.createApp(App);
+    app.mount('#vue2');
+    await settle();
+    $('#vgo').click(); await settle();
+    assert.equal(sent.length, 0);
+    assert.equal(api.errors.value.length, 1);
+    document.querySelector('#vs input[name=email]').value = 'taken@example.com';
+    $('#vgo').click(); await settle();
+    assert.deepEqual(sent, [{ email: 'taken@example.com' }]);
+    assert.equal($('.error[data-error-for=email]').textContent, 'Already registered');
+    assert.deepEqual(api.getValues(), { email: 'taken@example.com' });
+    app.unmount();
+});

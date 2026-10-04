@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.4.1</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.5.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -43,7 +43,7 @@
 &lt;script src=&quot;dist/formValidator.jquery.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;localization/messages_de.js&quot;&gt;&lt;/script&gt;   &lt;!-- unchanged: it only fills $.validator.messages --&gt;
 </code></pre>
-<p><code>additional-methods.js</code> is no longer needed. Its common methods are built in (the list is in section 2). If you rely on a method that is not in that list, keep loading the original <code>additional-methods.js</code> after these scripts; it registers itself through <code>$.validator.addMethod</code>. The compatibility layer is tested with jQuery 3.7 and 4.0.</p>
+<p><code>additional-methods.js</code> is no longer needed. Every method of the plugin 1.22 is built into the one-file bundle with the same name, parameters and default message, including the country and bank checks (<code>cpfBR</code>, <code>bic</code>, <code>postcodeUK</code>, <code>zipcodeUS</code>, <code>abaRoutingNumber</code>, <code>vinUS</code>, <code>currency</code>, <code>greaterThan</code>, <code>maxsize</code> and the rest). A test runs both implementations on the same inputs and requires identical answers. If you load the separate files instead of the bundle, add <code>dist/formValidator.additional.js</code> after <code>formValidator.jquery.js</code>. The compatibility layer is tested with jQuery 3.7 and 4.0.</p>
 <p>Your page code does not change:</p>
 <pre tabindex="0"><code class="language-js">$(&#39;#signup&#39;).validate({
   rules: {
@@ -80,7 +80,7 @@ $.validator.addMethod(&#39;even&#39;, function (value, element, param) {
 </tr>
 <tr>
 <td>Methods</td>
-<td><code>required remote minlength maxlength rangelength min max range step email url date dateISO number digits equalTo creditcard accept extension pattern maxWords minWords rangeWords integer lettersonly letterswithbasicpunc alphanumeric nowhitespace ipv4 ipv6 time time12h phoneUS iban notEqualTo require_from_group skip_or_fill_minimum</code></td>
+<td><code>required remote minlength maxlength rangelength min max range step email url date dateISO number digits equalTo creditcard accept extension pattern maxWords minWords rangeWords integer lettersonly letterswithbasicpunc alphanumeric nowhitespace ipv4 ipv6 time time12h phoneUS iban notEqualTo require_from_group skip_or_fill_minimum</code>, plus every method of <code>additional-methods.js</code> (<code>abaRoutingNumber bic cifES cpfBR cnpjBR currency greaterThan lessThan maxsize maxfiles nifES nieES phoneUK postcodeUK postalCodeCA vinUS zipcodeUS</code> and the other country checks)</td>
 </tr>
 <tr>
 <td>Rule sources</td>

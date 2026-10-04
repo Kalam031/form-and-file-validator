@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.4.1</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.5.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -121,9 +121,14 @@ if (!result.Valid) return Results.UnprocessableEntity(new { result.Rule, result.
 <pre tabindex="0"><code class="language-jsx">import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;;
 
 function Signup() {
-  const { ref, validate, errors } = useFormValidator({ rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+  const { ref, handleSubmit, errors } = useFormValidator({ rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+  // AJAX: called only for a valid form, with the validated values. Return { errors: {...} } from your server to show its messages on the fields.
+  const onSubmit = handleSubmit(async values =&gt; {
+    const res = await fetch(&#39;/api/signup&#39;, { method: &#39;POST&#39;, headers: { &#39;Content-Type&#39;: &#39;application/json&#39; }, body: JSON.stringify(values) });
+    if (!res.ok) return await res.json();          // { errors: { email: &#39;Already registered&#39; } }
+  });
   return (
-    &lt;form ref={ref} onSubmit={async e =&gt; { e.preventDefault(); if (await validate()) send(); }}&gt;
+    &lt;form ref={ref} onSubmit={onSubmit}&gt;
       &lt;input name=&quot;email&quot; /&gt;
       &lt;FileDropzone name=&quot;photos&quot; label=&quot;Drop photos here&quot;
         config={{ accept: &#39;image/*&#39;, maxFiles: 3, maxFileSizeMB: 5 }} options={{ preview: true }}
@@ -133,19 +138,25 @@ function Signup() {
   );
 }
 </code></pre>
-<p><code>useFormValidator(options, deps)</code> creates the validator when the form appears and destroys it when it goes away; pass <code>deps</code> if your rules change. <code>errors</code> is refreshed after each <code>validate()</code>. <code>&lt;FileDropzone&gt;</code> gives a ref with <code>files</code>, <code>validate()</code>, <code>clear()</code>, <code>add(files)</code> and <code>appendTo(formData)</code>.</p>
+<p><code>useFormValidator(options, deps)</code> creates the validator when the form appears and destroys it when it goes away; pass <code>deps</code> if your rules change. <code>errors</code> is refreshed after each <code>validate()</code> / <code>handleSubmit</code>. It also returns <code>getValues()</code> and <code>setErrors(map)</code>. <strong>Direct submit</strong> (the browser posts the form): leave out <code>onSubmit</code> and give the form <code>action</code> and <code>method</code>; a valid form posts, an invalid one is blocked. Call <code>handleSubmit(...)</code> while rendering, as above: it switches off the engine&#39;s own submit interception so your handler is the one that runs. <code>&lt;FileDropzone&gt;</code> gives a ref with <code>files</code>, <code>validate()</code>, <code>clear()</code>, <code>add(files)</code> and <code>appendTo(formData)</code>.</p>
 <h2 id="vue-3">Vue 3</h2>
 <pre tabindex="0"><code class="language-vue">&lt;script setup&gt;
 import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/vue&#39;;
-const { formRef, validate, errors } = useFormValidator({ rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+const { formRef, handleSubmit, errors } = useFormValidator({ rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+// AJAX: called only for a valid form, with the validated values; return { errors: {...} } from your server to show them
+const onSubmit = handleSubmit(async values =&gt; {
+  const res = await fetch(&#39;/api/signup&#39;, { method: &#39;POST&#39;, headers: { &#39;Content-Type&#39;: &#39;application/json&#39; }, body: JSON.stringify(values) });
+  if (!res.ok) return await res.json();
+});
 &lt;/script&gt;
 &lt;template&gt;
-  &lt;form ref=&quot;formRef&quot; @submit.prevent=&quot;validate().then(ok =&gt; ok &amp;&amp; send())&quot;&gt;
+  &lt;form ref=&quot;formRef&quot; @submit=&quot;onSubmit&quot;&gt;
     &lt;input name=&quot;email&quot; /&gt;
     &lt;FileDropzone name=&quot;photos&quot; :config=&quot;{ accept: &#39;image/*&#39;, maxFiles: 3 }&quot; :options=&quot;{ preview: true }&quot; @change=&quot;files =&gt; (picked = files)&quot; /&gt;
   &lt;/form&gt;
 &lt;/template&gt;
 </code></pre>
+<p><code>useFormValidator</code> also returns <code>getValues()</code> and <code>setErrors(map)</code>. For a <strong>direct submit</strong> leave out <code>@submit</code>: a valid form is posted by the browser, an invalid one is blocked. Call <code>handleSubmit(...)</code> in <code>setup</code>, as above.</p>
 <p>Also available: the directive <code>v-form-validator=&quot;{ rules: {...} }&quot; </code> (register with <code>app.directive(&#39;form-validator&#39;, vFormValidator)</code> or <code>app.use(FormValidatorPlugin)</code>).</p>
 <h2 id="angular">Angular</h2>
 <p>Validators for Reactive Forms. They are plain functions (no decorators, no build step), so they work with any Angular version from 14, standalone or NgModule, and in unit tests. They give the same answers as the browser engine, Node and the .NET package.</p>
@@ -168,6 +179,7 @@ fvMessage = fvMessage;
 &lt;small *ngIf=&quot;form.get(&#39;email&#39;)?.hasError(&#39;required&#39;)&quot;&gt;Required&lt;/small&gt;      &lt;!-- hasError(&#39;&lt;rule&gt;&#39;) works too --&gt;
 </code></pre>
 <ul>
+<li><strong>Submit</strong> (AJAX or not): <code>await fvSubmit(this.form, async values =&gt; { ... })</code> touches and checks every control, calls you only for a valid form with the trimmed values (<code>fvValues</code>), and shows messages you return as <code>{ errors: { email: &#39;Already registered&#39; } }</code> (<code>fvSetErrors</code>). For a direct submit use the form&#39;s normal <code>action</code> and <code>method</code> with <code>(ngSubmit)</code> left out; <code>form.valid</code> is the true / false.</li>
 <li>A failed control has <code>errors = { &lt;rule&gt;: { message }, fv: { rule, message } }</code>.</li>
 <li><code>null</code> / <code>undefined</code> is blank, numbers and booleans become text, a <code>Date</code> becomes its local <code>yyyy-MM-dd</code> (use a <code>format</code> or <code>strict</code> date rule with it).</li>
 <li><code>fvGroupValidator(schema)</code> on the FormGroup returns every field&#39;s error at once.</li>
@@ -179,7 +191,16 @@ fvMessage = fvMessage;
 &lt;script src=&quot;dist/integrations/alpine.min.js&quot;&gt;&lt;/script&gt;
 &lt;script defer src=&quot;https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js&quot;&gt;&lt;/script&gt;
 
-&lt;form x-data x-validate=&quot;{ rules: { email: [&#39;required&#39;, &#39;email&#39;] } }&quot;&gt;
+&lt;!-- direct submit: a valid form is posted by the browser, an invalid one is blocked --&gt;
+&lt;form x-data x-validate=&quot;{ rules: { email: [&#39;required&#39;, &#39;email&#39;] } }&quot; action=&quot;/signup&quot; method=&quot;post&quot;&gt;
+  &lt;input name=&quot;email&quot;&gt; &lt;button&gt;Send&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;!-- AJAX: onSubmit gets the validated values; return { errors: {...} } from your server to show them --&gt;
+&lt;form x-data x-validate=&quot;{ rules: { email: [&#39;required&#39;, &#39;email&#39;] }, config: { onSubmit: async values =&gt; {
+    const r = await fetch(&#39;/api/signup&#39;, { method: &#39;POST&#39;, body: JSON.stringify(values) });
+    if (!r.ok) return await r.json();
+} } }&quot;&gt;
   &lt;input name=&quot;email&quot;&gt; &lt;button&gt;Send&lt;/button&gt;
 &lt;/form&gt;
 

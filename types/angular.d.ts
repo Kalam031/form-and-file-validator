@@ -26,6 +26,18 @@ export declare function fvValidator(rules: RulesForField, options?: FvOptions): 
 /** `{ field: rules }` -> `{ field: [startValue, validator] }` for `fb.group(...)` (FormBuilder). */
 export declare function fvControls(schema: Record<string, RulesForField>, initial?: Record<string, unknown>, options?: FvOptions): Record<string, [unknown, (control: ControlLike) => FvErrors | null]>;
 
+/** The group values as plain data to send (text trimmed; names that look like a password are never trimmed; options.keep adds more). */
+export declare function fvValues(group: ControlLike, options?: { trim?: boolean; keep?: string[] }): any;
+
+/** Shows messages from the server on the controls. Returns the names that matched no control. */
+export declare function fvSetErrors(group: { get(path: string): any; controls?: any }, errors: Record<string, string | string[]>): string[];
+
+/**
+ * Submit a FormGroup: touches and checks every control, and only for a valid form calls fn(values, group).
+ * fn may return `{ errors: { field: message } }` from your server; they are shown on the controls.
+ */
+export declare function fvSubmit(group: any, fn?: (values: any, group: any) => unknown, options?: { trim?: boolean; keep?: string[] }): Promise<{ valid: boolean; values: any; result?: unknown; serverErrors?: Record<string, string | string[]>; missed?: string[] }>;
+
 /** Re-checks a control when a field that its equalTo / notEqualTo rule looks at changes. `group` is a FormGroup. Returns a function that stops watching. */
 export declare function fvWatch(group: { get(path: string): any }, schema: Record<string, RulesForField>): () => void;
 
@@ -35,5 +47,5 @@ export declare function fvGroupValidator(schema: Record<string, RulesForField>, 
 /** The message of the first failed rule of a control ('' when valid). */
 export declare function fvMessage(control: ControlLike | null | undefined): string;
 
-declare const _default: { fvValidator: typeof fvValidator; fvControls: typeof fvControls; fvGroupValidator: typeof fvGroupValidator; fvMessage: typeof fvMessage; fvText: typeof fvText; fvWatch: typeof fvWatch };
+declare const _default: { fvValidator: typeof fvValidator; fvControls: typeof fvControls; fvGroupValidator: typeof fvGroupValidator; fvMessage: typeof fvMessage; fvText: typeof fvText; fvWatch: typeof fvWatch; fvValues: typeof fvValues; fvSetErrors: typeof fvSetErrors; fvSubmit: typeof fvSubmit };
 export default _default;

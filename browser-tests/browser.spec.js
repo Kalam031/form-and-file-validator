@@ -269,6 +269,100 @@ for (const b of BROWSERS) {
             assert.deepEqual(r.bad, ['b.txt: PATH_TOO_DEEP']);
         });
 
+        // ============================================================ files: true / false, direct submit and AJAX
+        it2('FileValidator.isValid / guard with a real file chooser: a plain true / false, a direct submit, an AJAX upload', async page => {
+            await page.route('**/__posted', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1 id="posted">posted</h1>' }));
+            let uploaded = null;
+            await page.route('**/upload', route => { uploaded = route.request().postData() || ''; return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+            const form = '<form id="f" method="post" action="/__posted" enctype="multipart/form-data"><input type="file" name="cv" id="cv"><input type="hidden" name="user" value="ada"><span id="msg"></span><button type="submit" id="go">Go</button></form><div id="out"></div>';
+            let posts = 0;
+            page.on('request', r => { if (r.method() === 'POST' && r.url().endsWith('/__posted')) posts++; });
+
+            // 1. true / false, no wiring at all
+            await setup(page, form, `window.g = FileValidator.guard('#cv', { accept: '.pdf', maxFileSizeMB: 1 }, { messageElement: '#msg' }); 0`);
+            await page.setInputFiles('#cv', toFile('run.exe', [1, 2, 3, 4]));
+            assert.equal(await page.evaluate(() => FileValidator.isValid('#cv', { accept: '.pdf', maxFileSizeMB: 1 })), false);
+            assert.equal(await page.evaluate(() => window.g.validate()), false);
+            await page.setInputFiles('#cv', toFile('ok.pdf', files.PDF, 'application/pdf'));
+            assert.equal(await page.evaluate(() => FileValidator.isValid(document.getElementById('cv'), { accept: '.pdf', maxFileSizeMB: 1 })), true);
+            assert.equal(await page.evaluate(() => window.g.validate()), true);
+
+            // 2. direct submit: a rejected file is blocked and explained, a good one posts natively
+            await page.setInputFiles('#cv', toFile('run.exe', [1, 2, 3, 4]));
+            await page.click('#go');
+            await page.waitForFunction(() => document.getElementById('msg').textContent.length > 0);
+            await page.waitForTimeout(150);
+            assert.equal(posts, 0, 'the rejected file is not posted');
+            await page.setInputFiles('#cv', toFile('ok.pdf', files.PDF, 'application/pdf'));
+            await Promise.all([page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/__posted')), page.click('#go')]);
+            await page.waitForSelector('#posted');
+            assert.equal(posts, 1);
+
+            // 3. AJAX: onSubmit gets the files and a FormData; the server's message is shown
+            await page.goto(srv.url + '/browser-tests/pages/plain.html');
+            await setup(page, form, `FileValidator.guard('#cv', { accept: '.pdf', maxFileSizeMB: 1 }, { messageElement: '#msg', onSubmit: function (files, formData) {
+                return fetch('/upload', { method: 'POST', body: formData }).then(function (r) { return r.json(); }).then(function (j) { document.getElementById('out').textContent = 'uploaded ' + files.length + ' ' + formData.get('user'); return j.ok ? {} : { errors: 'refused' }; }); } }); 0`);
+            await page.setInputFiles('#cv', toFile('run.exe', [1, 2, 3, 4]));
+            await page.click('#go'); await page.waitForTimeout(200);
+            assert.equal(uploaded, null, 'nothing is uploaded while the file is rejected');
+            await page.setInputFiles('#cv', toFile('ok.pdf', files.PDF, 'application/pdf'));
+            await page.click('#go');
+            await page.waitForFunction(() => document.getElementById('out').textContent === 'uploaded 1 ada');
+            assert.match(uploaded, /filename="ok\.pdf"/);
+            assert.equal(posts, 1, 'AJAX: no native post');
+        });
+
+        // ============================================================ a real submit
+        it2('a valid form really posts when the user clicks the button (every rule synchronous, no submitHandler); an invalid one is blocked', async page => {
+            await page.route('**/__posted', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1 id="posted">posted</h1>' }));
+            await setup(page, '<form id="f" method="post" action="/__posted"><input name="email" id="email"><button type="submit" id="go">Go</button></form>',
+                'FormValidator.init({ formId: "f", rules: { email: ["required", "email"] } }); 0');
+            let posts = 0;
+            page.on('request', r => { if (r.method() === 'POST' && r.url().endsWith('/__posted')) posts++; });
+            await page.fill('#email', 'a@b');
+            await page.click('#go');
+            await page.waitForSelector('.error[data-error-for=email]');
+            await page.waitForTimeout(150);
+            assert.equal(posts, 0, 'an invalid form is not posted');
+            await page.fill('#email', 'a@b.co');
+            await Promise.all([page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/__posted')), page.click('#go')]);
+            await page.waitForSelector('#posted');
+            assert.equal(posts, 1, 'the valid form is posted exactly once');
+        });
+
+        it2('AJAX submit: validated values reach submitHandler and validateAndGetValues, and nothing is sent while the form is invalid', async page => {
+            await page.route('**/api/signup', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+            const html = '<form id="f" action="/never-posted"><input name="email" id="email"><input type="password" name="password" id="password">' +
+                '<input type="checkbox" name="tag" value="a" id="ta"><input type="checkbox" name="tag" value="b"><input type="checkbox" name="tag" value="c" id="tc">' +
+                '<input type="radio" name="plan" value="free"><input type="radio" name="plan" value="pro" id="pro"><input type="checkbox" name="terms" value="yes">' +
+                '<select name="colors" multiple id="colors"><option value="red">r</option><option value="green">g</option><option value="blue">b</option></select>' +
+                '<button type="submit" id="go">Go</button></form><div id="out"></div>';
+            await setup(page, html, `window.fv = FormValidator.init({ formId: 'f', rules: { email: ['required', 'email'] },
+                config: { submitHandler: async (form, e, values) => { window.__values = values;
+                    const r = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
+                    document.getElementById('out').textContent = (await r.json()).ok ? 'sent' : 'failed'; } } }); 0`);
+            let sent = 0;
+            page.on('request', r => { if (r.url().endsWith('/api/signup')) sent++; });
+            await page.fill('#email', 'not an email');
+            await page.click('#go');
+            await page.waitForSelector('.error[data-error-for=email]');
+            await page.waitForTimeout(150);
+            assert.equal(sent, 0, 'nothing is sent while the form is invalid');
+
+            await page.fill('#email', '  a@b.co  '); await page.fill('#password', ' pw ');
+            await page.check('#ta'); await page.check('#tc'); await page.check('#pro'); await page.selectOption('#colors', ['red', 'blue']);
+            await page.click('#go');
+            await page.waitForFunction(() => document.getElementById('out').textContent === 'sent');
+            const expected = { email: 'a@b.co', password: ' pw ', tag: ['a', 'c'], plan: 'pro', colors: ['red', 'blue'] };   // trimmed, password untouched, unchecked terms left out
+            assert.deepEqual(await page.evaluate(() => window.__values), expected);
+            assert.equal(sent, 1);
+            const again = await page.evaluate(async () => { const r = await window.fv.validateAndGetValues(); return { valid: r.valid, values: r.values, errors: r.errors.length }; });
+            assert.deepEqual(again, { valid: true, values: expected, errors: 0 });
+            await page.fill('#email', '');
+            const bad = await page.evaluate(async () => { const r = await window.fv.validateAndGetValues(); return { valid: r.valid, errors: r.errors.map(e => e.name) }; });
+            assert.deepEqual(bad, { valid: false, errors: ['email'] });
+        });
+
         // ============================================================ one answer in every browser engine
         it2('every shared conformance vector gives the same answer in this browser (value-only engine and the real DOM form engine)', async page => {
             const vectors = require('../spec/form-rules.vectors.json').cases;
@@ -409,6 +503,47 @@ for (const b of BROWSERS) {
             assert.equal(r.labels[0][2], 'We need your email');
             assert.equal(r.custom, false); assert.equal(r.customMsg, 'Please use your real email.');
             assert.equal(r.last, true); assert.equal(r.calls, true);
+        }, '/browser-tests/pages/jquery.html');
+        it2('jQuery: the classic submit patterns with real clicks: native submit, submitHandler + $.ajax, onSubmit with server errors', async page => {
+            await page.route('**/__posted', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1 id="posted">posted</h1>' }));
+            await page.route('**/api/save', async route => {
+                const body = JSON.parse(route.request().postData() || '{}');
+                if (body.email === 'taken@example.com') return route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ errors: { email: 'Already registered' } }) });
+                return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+            });
+            // 1. no submitHandler: a valid form posts natively, an invalid one does not
+            await setup(page, '<form id="f" method="post" action="/__posted"><input name="email" id="email"><button type="submit" id="go">Go</button></form>',
+                `$('#f').validate({ rules: { email: { required: true, email: true } } }); 0`);
+            let posts = 0;
+            page.on('request', r => { if (r.method() === 'POST' && r.url().endsWith('/__posted')) posts++; });
+            await page.fill('#email', 'nope'); await page.click('#go');
+            await page.waitForSelector('label.error[for=email]'); await page.waitForTimeout(150);
+            assert.equal(posts, 0);
+            await page.fill('#email', 'a@b.co');
+            await Promise.all([page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/__posted')), page.click('#go')]);
+            await page.waitForSelector('#posted');
+
+            // 2. the classic AJAX pattern: submitHandler(form) + $.ajax; the validated values are a third argument
+            await page.goto(page.url().replace(/\/__posted.*|\/$/, '') + '/browser-tests/pages/jquery.html');
+            await setup(page, '<form id="f" action="/never"><input name="email" id="email"><input name="tags" type="checkbox" value="x" checked><input name="tags" type="checkbox" value="y"><button type="submit" id="go">Go</button></form><div id="out"></div>',
+                `$('#f').validate({ rules: { email: { required: true, email: true } }, submitHandler: function (form, event, values) {
+                    window.__third = values;
+                    $.ajax({ url: '/api/save', method: 'POST', contentType: 'application/json', data: JSON.stringify($(form).serializeArray().reduce(function (o, f) { o[f.name] = f.value; return o; }, {})) })
+                        .done(function () { $('#out').text('saved'); }); } }); 0`);
+            await page.fill('#email', '  ada@example.com '); await page.click('#go');
+            await page.waitForFunction(() => document.getElementById('out').textContent === 'saved');
+            assert.deepEqual(await page.evaluate(() => window.__third), { email: 'ada@example.com', tags: ['x'] });
+
+            // 3. onSubmit: validated values in, server messages out (shown on the field the jQuery way)
+            await page.goto(page.url().replace(/\/$/, '').replace(/\/browser-tests.*/, '') + '/browser-tests/pages/jquery.html');
+            await setup(page, '<form id="f" action="/never"><input name="email" id="email"><button type="submit" id="go">Go</button></form><div id="out"></div>',
+                `$('#f').validate({ rules: { email: { required: true, email: true } }, onSubmit: function (values) {
+                    return fetch('/api/save', { method: 'POST', body: JSON.stringify(values) }).then(function (r) { return r.ok ? {} : r.json(); }).then(function (res) { if (!res.errors) $('#out').text('saved'); return res; }); } }); 0`);
+            await page.fill('#email', 'taken@example.com'); await page.click('#go');
+            await page.waitForSelector('label.error[for=email]');
+            assert.equal(await page.textContent('label.error[for=email]'), 'Already registered');
+            await page.fill('#email', 'free@example.com'); await page.click('#go');
+            await page.waitForFunction(() => document.getElementById('out').textContent === 'saved');
         }, '/browser-tests/pages/jquery.html');
         it2('jQuery: the fileValidator method checks a real file input', async page => {
             await setup(page, `<form id="f"><input type="file" name="doc" id="doc"></form>`, `$('#f').validate({ rules: { doc: { fileValidator: { accept: '.pdf', maxFileSizeMB: 1 } } } }); 0`);

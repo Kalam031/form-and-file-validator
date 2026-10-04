@@ -61,6 +61,49 @@ Give the form an id, then call `FormValidator.init` with the rules for each fiel
 
 Rules can be written as a string (`'required'`), an object (`{ type: 'minlength', min: 3 }`), or a list of either. `formId` can also be an element, a CSS selector, or an array of forms.
 
+## Submitting: direct, AJAX and the validated values
+
+Every form ends in one of two ways: the browser posts it (**direct submit**), or your code sends it (**AJAX**: fetch, axios, `$.ajax`, an HttpClient). Both need the check first, and AJAX needs the validated values. This is all of it:
+
+| You want | Use | Returns |
+| --- | --- | --- |
+| A valid form posts normally, an invalid one is blocked | `FormValidator.init({ formId, rules })` and nothing else | |
+| A true / false right now (like jQuery's `valid()`) | `FormValidator.isValid(form)` | `boolean` (sync) |
+| A true / false that waits for remote and file checks | `await FormValidator.validate(form)` | `boolean` |
+| AJAX in one step | `config.onSubmit(values, event, inst)` | your function may return `{ errors: { field: message } }` |
+| AJAX with your own event wiring (React, Vue, Angular, `addEventListener`) | `inst.handleSubmit(fn)` | an event handler |
+| The values to send | `inst.getValues()` or `await inst.validateAndGetValues()` | `{ field: value }` / `{ valid, values, errors }` |
+| Show messages that your server sent back | `inst.setErrors({ email: 'Already registered' })` | names that matched no field |
+
+```js
+const inst = FormValidator.init({ formId: 'signup', rules: { email: ['required', 'email'] } });
+
+// 1. Direct submit: nothing more to write. A valid form is posted by the browser, an invalid one is blocked and the messages show.
+
+// 2. Check yourself, true / false:
+form.addEventListener('submit', e => { if (!FormValidator.isValid(form)) e.preventDefault(); });   // direct, your own listener
+if (FormValidator.isValid(form)) { /* ... */ }                                                      // before your own AJAX call
+
+// 3. AJAX, the short way: called only for a valid form, with the validated values
+FormValidator.init({ formId: 'signup', rules: { email: ['required', 'email'] }, config: {
+  onSubmit: async (values) => {
+    const res = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
+    if (!res.ok) return await res.json();            // { errors: { email: 'Already registered' } } is shown on the field
+  }
+} });
+
+// 4. AJAX with your own wiring (any framework): handleSubmit stops the native submit, validates, calls you only for a valid form
+form.addEventListener('submit', inst.handleSubmit(async (values, event) => { await api.post('/signup', values); }));
+```
+
+**What `getValues()` returns.** Text is trimmed the way the validation saw it (passwords never are). A checkbox group and a multiple select give an array, a radio group its chosen value, a file field the `File` objects. Like a native submit, unchecked boxes and unchosen radios are left out and disabled fields are skipped. Send it as JSON, or build a `FormData` for files.
+
+**The server's answer.** Return (or pass to `setErrors`) the messages your server produced, keyed by the field `name`; they appear in the same place and style as the browser's own messages. Names are matched exactly, then ignoring case, so an ASP.NET `Email` finds `email`.
+
+**Two things to know.** While an `onSubmit` request runs, a second click is ignored. And in a framework where you attach your own `onSubmit` (React, Vue), call `handleSubmit(...)` while rendering, as the examples do: the wrapper then switches off the engine's own submit interception, otherwise it would swallow the event before your handler sees it.
+
+The jQuery layer has the same abilities in jQuery's own style: `submitHandler(form, event, values)`, `onSubmit`, `validator.getValues()`, `validator.handleSubmit(fn)` and `validator.showErrors({...})`.
+
 ## Rules reference
 
 Blank values skip every rule except `required`, `equalTo`, `custom`, `minFiles` and `minChecked`. That is what lets an optional field stay empty. Put `required` first to make a field mandatory. Rules run in order and the first failure is shown.

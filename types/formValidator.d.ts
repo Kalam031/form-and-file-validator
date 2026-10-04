@@ -104,7 +104,10 @@ export interface FormConfig {
     messages?: Record<string, string | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
     passwordStrength?: Partial<Pick<RuleObject, 'minLength' | 'maxLength' | 'requireUppercase' | 'requireLowercase' | 'requireDigit' | 'requireSpecialChar' | 'noWhitespace' | 'enabled'>>;
     errorPlacement?: ((errorEl: HTMLElement, field: HTMLElement, fields: HTMLElement[]) => void) | null;
-    submitHandler?: ((form: HTMLFormElement, event: Event) => void) | null;
+    /** Called instead of a normal submit when the form is valid (the AJAX place). The third argument is the validated data, see getValues(). */
+    submitHandler?: ((form: HTMLFormElement, event: Event, values: FormValues) => void) | null;
+    /** AJAX in one step: called with the validated values when the form is valid, no native submit. May return a Promise; `{ errors: { field: message } }` (from your server) is shown on the fields. */
+    onSubmit?: ((values: FormValues, event: Event, instance: FormInstance) => unknown) | null;
     onError?: ((errors: Array<{ name: string; field: HTMLElement; message: string }>) => void) | null;
     onSuccess?: (() => void) | null;
     autoRules?: boolean;
@@ -141,6 +144,18 @@ export interface FieldError {
     el: HTMLElement;
 }
 
+/** What getValues() returns: text trimmed like the validation saw it (passwords not), checkbox groups and multiple selects as arrays, File[] for file inputs, unchecked boxes left out. */
+export type FormValues = Record<string, string | string[] | File[]>;
+
+/** What handleSubmit resolves to. */
+export interface SubmitResult {
+    valid: boolean;
+    values: FormValues;
+    errors: FieldError[];
+    /** What your function returned. */
+    result?: unknown;
+}
+
 export interface FormInstance {
     readonly form: HTMLFormElement;
     readonly config: FormConfig;
@@ -152,6 +167,14 @@ export interface FormInstance {
     validateElement(el: HTMLElement): Promise<boolean>;
     validateElementSync(el: HTMLElement): boolean;
     getErrors(): FieldError[];
+    /** The form values as an object, ready for fetch / axios / $.ajax. */
+    getValues(): FormValues;
+    /** Validate (showing the errors), then give back what to send. */
+    validateAndGetValues(options?: { focus?: boolean; submit?: boolean }): Promise<SubmitResult>;
+    /** An event handler for any framework: stops the native submit, validates, and only for a valid form calls fn(values, event, instance). fn may return `{ errors: { field: message } }` from your server. */
+    handleSubmit(fn: (values: FormValues, event: Event | undefined, instance: FormInstance) => unknown): (event?: Event) => Promise<SubmitResult>;
+    /** Shows messages from the server on the fields (names matched exactly, then ignoring case). Returns the names that matched no field. */
+    setErrors(errors: Record<string, string | string[]>): string[];
     setError(name: string, message: string): boolean;
     clearError(name: string): void;
     clearErrors(): void;
@@ -200,6 +223,8 @@ export interface FormValidatorStatic {
     /** Check an initialised form, or any form against ad-hoc rules. */
     validate(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): Promise<boolean>;
     getInstance(form: string | HTMLFormElement): FormInstance | null;
+    /** jQuery valid() without jQuery: true / false right now (shows the errors). Remote and file checks count as valid until they answer; validate() waits for them. */
+    isValid(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): boolean;
     /**
      * Checks one value with the form rules and no DOM: Node, a server, a unit test, Angular validators.
      * Not available: file, checkbox-count and remote rules (they throw). Synchronous: no async custom rules.

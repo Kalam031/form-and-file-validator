@@ -185,3 +185,22 @@ const ngBuilt = new FormBuilder().group(fvControls({ email: ['required', 'email'
 const ngMessage: string = fvMessage(ngControl);
 const ngStop: () => void = fvWatch(ngGroup, { pw2: { equalTo: 'pw' } });
 void ngBuilt; void ngMessage; void ngStop;
+
+// submitting: direct, AJAX, validated values (every framework), and the same for files
+const formEl = document.createElement('form');
+const okNow: boolean = FormValidator.isValid(formEl);
+const submitInst = FormValidator.init({ form: formEl, rules: { email: ['required', 'email'] }, config: {
+    onSubmit: async (values, event, instance) => { const email: string | string[] | File[] = values['email']; void email; void event; void instance; return { errors: { email: 'Already registered' } }; },
+    submitHandler: (form, event, values) => { void form; void event; void values; }
+} });
+const gotValues = submitInst.getValues();
+const handler: (event?: Event) => Promise<{ valid: boolean }> = submitInst.handleSubmit(async values => { void values; });
+const missedNames: string[] = submitInst.setErrors({ email: 'Taken' });
+submitInst.validateAndGetValues().then(r => { const sent: boolean = r.valid; void sent; });
+void okNow; void gotValues; void handler; void missedNames;
+
+const fileOk: Promise<boolean> = FileValidator.isValid('#cv', { accept: '.pdf' });
+const fileGuard = FileValidator.guard('#cv', { accept: '.pdf' }, { messageElement: '#msg', onSubmit: (files, formData, event) => { void files; void formData; void event; return { errors: 'Refused' }; } });
+fileGuard.validate().then(v => { const fine: boolean = v; void fine; });
+fileGuard.unbind();
+void fileOk;

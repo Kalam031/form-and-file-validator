@@ -4,9 +4,11 @@
  *   import { useFormValidator, FileDropzone } from 'form-and-file-validator/react';
  *
  *   function Signup() {
- *     const { ref, validate, errors } = useFormValidator({ rules: { email: ['required', 'email'] } });
- *     return <form ref={ref} onSubmit={async e => { e.preventDefault(); if (await validate()) send(); }}>...</form>;
+ *     const { ref, handleSubmit, errors } = useFormValidator({ rules: { email: ['required', 'email'] } });
+ *     // handleSubmit: validates, then calls you with the validated values only when the form is valid. Return { errors: {...} } from your server to show them.
+ *     return <form ref={ref} onSubmit={handleSubmit(async values => { await api.post('/signup', values); })}>...</form>;
  *   }
+ *   Direct (native) submit: <form ref={ref} action="/signup" method="post"> with no onSubmit: a valid form posts, an invalid one is blocked.
  *   <FileDropzone name="photos" config={{ accept: 'image/*', maxFiles: 3 }} options={{ preview: true }} onChange={files => setFiles(files)} />
  *
  * Changelog
@@ -22,6 +24,7 @@ import { FormValidator, FileValidator } from 'form-and-file-validator';
 export function useFormValidator(options, deps) {
     const ref = useRef(null);
     const instance = useRef(null);
+    const ownSubmit = useRef(false);   // handleSubmit() was used: your onSubmit does the validating, so the engine must not swallow the submit event
     const latest = useRef(options);
     latest.current = options;
     const [errors, setErrors] = useState([]);
@@ -29,7 +32,7 @@ export function useFormValidator(options, deps) {
         const form = ref.current;
         if (!form) return undefined;
         const o = latest.current || {};
-        instance.current = FormValidator.init({ form, rules: o.rules || {}, config: o.config, messages: o.messages, context: o.context });
+        instance.current = FormValidator.init({ form, rules: o.rules || {}, config: ownSubmit.current ? Object.assign({}, o.config, { interceptSubmit: false }) : o.config, messages: o.messages, context: o.context });
         return () => { if (instance.current) instance.current.destroy(); instance.current = null; };
     }, deps || []);   // eslint-disable-line react-hooks/exhaustive-deps
     const validate = useCallback(async (opts) => {
@@ -39,7 +42,19 @@ export function useFormValidator(options, deps) {
         return ok;
     }, []);
     const reset = useCallback(() => { if (instance.current) { instance.current.resetForm(); setErrors([]); } }, []);
-    return { ref, validate, reset, errors, instance: () => instance.current };
+    /** onSubmit handler: validates, then calls fn(values, event) only when the form is valid. fn may return { errors: { field: message } } from your server to show them. */
+    const handleSubmit = useCallback(fn => {
+        ownSubmit.current = true;   // call handleSubmit() while rendering (as in the example), before the validator is created
+        return async event => {
+        if (!instance.current) { if (event && event.preventDefault) event.preventDefault(); return { valid: false, values: {}, errors: [] }; }
+        const r = await instance.current.handleSubmit(fn)(event);
+        setErrors(instance.current ? instance.current.getErrors() : []);
+        return r;
+        };
+    }, []);
+    const getValues = useCallback(() => (instance.current ? instance.current.getValues() : {}), []);
+    const setServerErrors = useCallback(map => { if (!instance.current) return Object.keys(map || {}); const missed = instance.current.setErrors(map); setErrors(instance.current.getErrors()); return missed; }, []);
+    return { ref, validate, reset, errors, handleSubmit, getValues, setErrors: setServerErrors, instance: () => instance.current };
 }
 
 /**

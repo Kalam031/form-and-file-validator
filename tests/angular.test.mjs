@@ -93,3 +93,29 @@ test('a blank control skips every rule except required, like the browser form', 
     assert.equal(fvValidator(['email'])(control), null);
     assert.equal(fvValidator(['required'])(control).required.message, 'This field is required.');
 });
+
+test('fvSubmit: touches and checks everything, calls you only for a valid form with trimmed values, shows the server messages', { skip }, async () => {
+    const { FormBuilder } = forms;
+    const { fvSubmit, fvValues, fvSetErrors } = await import('../dist/integrations/angular.mjs');
+    const schema = { email: ['required', 'email'], password: { required: true }, born: [{ type: 'date', format: 'd/M/y' }] };
+    const g = new FormBuilder().group(fvControls(schema, { email: '', password: ' pw ', born: '' }));
+    const sent = [];
+    let r = await fvSubmit(g, async values => { sent.push(values); });
+    assert.equal(r.valid, false);
+    assert.equal(sent.length, 0, 'invalid: not called');
+    assert.equal(g.get('email').touched, true, 'every control is touched so its message shows');
+    assert.equal(fvMessage(g.get('email')), 'This field is required.');
+
+    g.patchValue({ email: '  taken@example.com ', born: '29/2/2000' });
+    r = await fvSubmit(g, async values => { sent.push(values); return values.email === 'taken@example.com' ? { errors: { Email: 'Already registered' } } : { ok: 1 }; });
+    assert.deepEqual(sent, [{ email: 'taken@example.com', password: ' pw ', born: '29/2/2000' }], 'trimmed, the password is not');
+    assert.equal(r.valid, false, 'the server said no');
+    assert.equal(fvMessage(g.get('email')), 'Already registered');
+
+    g.get('email').setValue('free@example.com');
+    r = await fvSubmit(g, async () => ({ ok: 1 }));
+    assert.equal(r.valid, true);
+    assert.deepEqual(r.result, { ok: 1 });
+    assert.deepEqual(fvValues(g), { email: 'free@example.com', password: ' pw ', born: '29/2/2000' });
+    assert.deepEqual(fvSetErrors(g, { password: 'Too weak', nothere: 'x' }), ['nothere']);
+});

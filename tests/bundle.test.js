@@ -28,14 +28,14 @@ test('dist/ is up to date with the sources (run "npm run build" after changing t
     const onDisk = p => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null);
     assert.equal(onDisk(path.join(__dirname, '..', 'dist', 'validator.js')), code, 'dist/validator.js is stale: run npm run build');
     assert.equal(onDisk(path.join(__dirname, '..', 'dist', 'validator.min.js')), minCode, 'dist/validator.min.js is stale: run npm run build');
-    for (const f of ['fileValidator', 'fileValidator.widget', 'formValidator', 'formValidator.jquery']) assert.ok(fs.existsSync(path.join(__dirname, '..', 'dist', f + '.min.js')), f + '.min.js');
+    for (const f of ['fileValidator', 'fileValidator.widget', 'formValidator', 'formValidator.jquery', 'formValidator.additional']) assert.ok(fs.existsSync(path.join(__dirname, '..', 'dist', f + '.min.js')), f + '.min.js');
 });
 
 test('the bundle is much smaller minified, keeps the version banner, and has no source maps or leftovers', async () => {
     const { code, minCode, versions } = await getBuilt();
     assert.ok(minCode.length < code.length * 0.65);
     assert.match(minCode, /^\/\*! FormValidator \d+\.\d+\.\d+ \+ FileValidator \d+\.\d+\.\d+/);
-    assert.equal(Object.keys(versions).length, 5);
+    assert.equal(Object.keys(versions).length, 6);
     for (const v of Object.values(versions)) assert.match(v, /^\d+\.\d+\.\d+$/);
 });
 

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewBag.Title - MVC 5 demo</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+        label { display: block; font-weight: 600; margin-bottom: .2rem; }
+        input { width: 100%; padding: .45rem; box-sizing: border-box; }
+        .error, .server-error, .validation-summary-errors { color: #a40000; font-size: .9rem; }
+        .validation-summary-valid { display: none; }
+        button { padding: .5rem 1rem; }
+    </style>
+</head>
+<body>
+    @RenderBody()
+    @RenderSection("scripts", required: false)
+</body>
+</html>

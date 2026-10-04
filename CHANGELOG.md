@@ -2,6 +2,13 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.5.0
+- **Complete jQuery Validation successor**: every method of the plugin's `additional-methods.js` is now built in (44 country and bank checks that were missing: `cpfBR`, `cnpjBR`, `bic`, `nifES`, `nieES`, `cifES`, `phoneUK`, `postcodeUK`, `postalCodeCA`, `zipcodeUS`, `vinUS`, `abaRoutingNumber`, `currency`, `greaterThan`, `lessThan`, `maxsize`, `maxfiles`, ...) with the same names, parameters and messages. `dist/formValidator.additional.js` (export `./jquery-additional`) is the same set for people who load the separate files. A new test runs the real plugin and this package on the same inputs and requires identical answers.
+- jQuery layer: the `onfocusin` and `ariaDescribedByCleanup` settings, `$.validator.normalizeAttributeRule`, and the validator helpers `errorsFor`, `idOrName`, `escapeCssMeta`, `objectLength`, `findLastActive`.
+- **Submitting, direct or AJAX**: `FormValidator.isValid(form)`, `config.onSubmit(values, event, inst)`, `inst.handleSubmit(fn)`, `inst.getValues()`, `inst.validateAndGetValues()` and `inst.setErrors()` for server messages, in the core, the jQuery layer, React, Vue and Angular. See "Submitting" in docs/FormValidator.md.
+- .NET and MVC 5: `Html.FormValidatorInit("signup", "{ onSubmit: ... }")` takes a config script, and `ModelState.ToErrorMap()` answers AJAX requests in the shape the browser shows; a runnable MVC 5 sample (Mono in Docker, browser-vs-server e2e) is in `examples/mvc5`.
+- Fix: the MVC 5 helper XML documentation was incomplete, which failed the build with CS1573.
+
 ## 3.4.1
 - Docs: an Install section in the README (npm, bundlers, Node, Angular, React / Vue / Alpine, .NET).
 - Releases are now published from GitHub Actions with npm trusted publishing (signed provenance, no tokens).

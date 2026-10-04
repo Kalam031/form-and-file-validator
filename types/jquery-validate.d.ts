@@ -35,7 +35,9 @@ export namespace JQueryValidate {
         highlight?: (this: Validator, element: HTMLElement, errorClass: string, validClass: string) => void;
         unhighlight?: (this: Validator, element: HTMLElement, errorClass: string, validClass: string) => void;
         invalidHandler?: (event: Event, validator: Validator) => void;
-        submitHandler?: (this: Validator, form: HTMLFormElement, event: Event) => void | boolean;
+        submitHandler?: (this: Validator, form: HTMLFormElement, event: Event, values: Record<string, string | string[] | File[]>) => void | boolean;
+        /** AJAX in one step: called with the validated values when the form is valid. May return a Promise; `{ errors: { field: message } }` from your server is shown on the fields. */
+        onSubmit?: (this: Validator, values: Record<string, string | string[] | File[]>, event: Event, validator: Validator) => unknown;
         /** Render the errors yourself; call this.defaultShowErrors() to place them normally. */
         showErrors?: (this: Validator, errorMap: Record<string, string>, errorList: ErrorItem[]) => void;
     }
@@ -52,6 +54,11 @@ export namespace JQueryValidate {
         numberOfInvalids(): number;
         resetForm(): void;
         showErrors(errors?: Record<string, string>): void;
+        /** The validated values as an object, ready for $.ajax / fetch. */
+        getValues(): Record<string, string | string[] | File[]>;
+        validateAndGetValues(options?: { focus?: boolean; submit?: boolean }): Promise<{ valid: boolean; values: Record<string, string | string[] | File[]>; errors: unknown[] }>;
+        /** An event handler: validates, then calls fn(values, event, validator) only when the form is valid. */
+        handleSubmit(fn: (values: Record<string, string | string[] | File[]>, event: Event | undefined, validator: Validator) => unknown): (event?: Event) => Promise<unknown>;
         defaultShowErrors(): void;
         hideErrors(): void;
         focusInvalid(): void;

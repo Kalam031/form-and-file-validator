@@ -7,6 +7,8 @@
  *   const { formRef, validate, errors } = useFormValidator({ rules: { email: ['required', 'email'] } });
  *   </script>
  *   <form ref="formRef" @submit.prevent="validate().then(ok => ok && send())">...</form>
+ *   or, with the validated values:  const { formRef, handleSubmit } = useFormValidator(...);   <form ref="formRef" @submit="handleSubmit(async values => { await api.post(values) })">
+ *   (a handler that returns { errors: { field: message } } shows the server's messages on the fields)
  *   <FileDropzone name="photos" :config="{ accept: 'image/*', maxFiles: 3 }" :options="{ preview: true }" @change="files => ..." />
  *   <form v-form-validator="{ rules: { email: ['required', 'email'] } }">...</form>       <!-- directive form, no script needed -->
  *
@@ -23,9 +25,12 @@ export function useFormValidator(options) {
     const formRef = ref(null);
     const instance = shallowRef(null);
     const errors = ref([]);
+    let ownSubmit = false;   // handleSubmit() was used: your @submit does the validating, so the engine must not swallow the submit event
     const create = () => {
         if (instance.value) instance.value.destroy();
-        instance.value = formRef.value ? FormValidator.init(initOptions(formRef.value, typeof options === 'function' ? options() : (options && options.value !== undefined ? options.value : options))) : null;
+        const o = initOptions(formRef.value, typeof options === 'function' ? options() : (options && options.value !== undefined ? options.value : options));
+        if (ownSubmit) o.config = Object.assign({}, o.config, { interceptSubmit: false });
+        instance.value = formRef.value ? FormValidator.init(o) : null;
     };
     onMounted(create);
     onBeforeUnmount(() => { if (instance.value) instance.value.destroy(); instance.value = null; });
@@ -37,7 +42,19 @@ export function useFormValidator(options) {
         return ok;
     };
     const reset = () => { if (instance.value) { instance.value.resetForm(); errors.value = []; } };
-    return { formRef, validate, reset, errors, instance };
+    /** Event handler: validates, then calls fn(values, event) only when the form is valid. fn may return { errors: { field: message } } from your server to show them. */
+    const handleSubmit = fn => {
+        ownSubmit = true;   // call handleSubmit() in setup (as in the example), before the validator is created
+        return async event => {
+            if (!instance.value) { if (event && event.preventDefault) event.preventDefault(); return { valid: false, values: {}, errors: [] }; }
+            const r = await instance.value.handleSubmit(fn)(event);
+            errors.value = instance.value ? instance.value.getErrors() : [];
+            return r;
+        };
+    };
+    const getValues = () => (instance.value ? instance.value.getValues() : {});
+    const setServerErrors = map => { if (!instance.value) return Object.keys(map || {}); const missed = instance.value.setErrors(map); errors.value = instance.value.getErrors(); return missed; };
+    return { formRef, validate, reset, errors, handleSubmit, getValues, setErrors: setServerErrors, instance };
 }
 
 /** Directive: v-form-validator="{ rules, config, messages }" on a <form>. The instance is reachable as form.__fvInstance. */

@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.4.1</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.5.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -79,9 +79,78 @@
 <li>After that, each error updates as the user edits the field.</li>
 </ol>
 <p>Rules can be written as a string (<code>&#39;required&#39;</code>), an object (<code>{ type: &#39;minlength&#39;, min: 3 }</code>), or a list of either. <code>formId</code> can also be an element, a CSS selector, or an array of forms.</p>
+<h2 id="submitting-direct-ajax-and-the-validated-values">Submitting: direct, AJAX and the validated values</h2>
+<p>Every form ends in one of two ways: the browser posts it (<strong>direct submit</strong>), or your code sends it (<strong>AJAX</strong>: fetch, axios, <code>$.ajax</code>, an HttpClient). Both need the check first, and AJAX needs the validated values. This is all of it:</p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>You want</th>
+<th>Use</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A valid form posts normally, an invalid one is blocked</td>
+<td><code>FormValidator.init({ formId, rules })</code> and nothing else</td>
+<td></td>
+</tr>
+<tr>
+<td>A true / false right now (like jQuery&#39;s <code>valid()</code>)</td>
+<td><code>FormValidator.isValid(form)</code></td>
+<td><code>boolean</code> (sync)</td>
+</tr>
+<tr>
+<td>A true / false that waits for remote and file checks</td>
+<td><code>await FormValidator.validate(form)</code></td>
+<td><code>boolean</code></td>
+</tr>
+<tr>
+<td>AJAX in one step</td>
+<td><code>config.onSubmit(values, event, inst)</code></td>
+<td>your function may return <code>{ errors: { field: message } }</code></td>
+</tr>
+<tr>
+<td>AJAX with your own event wiring (React, Vue, Angular, <code>addEventListener</code>)</td>
+<td><code>inst.handleSubmit(fn)</code></td>
+<td>an event handler</td>
+</tr>
+<tr>
+<td>The values to send</td>
+<td><code>inst.getValues()</code> or <code>await inst.validateAndGetValues()</code></td>
+<td><code>{ field: value }</code> / <code>{ valid, values, errors }</code></td>
+</tr>
+<tr>
+<td>Show messages that your server sent back</td>
+<td><code>inst.setErrors({ email: &#39;Already registered&#39; })</code></td>
+<td>names that matched no field</td>
+</tr>
+</tbody></table></div>
+<pre tabindex="0"><code class="language-js">const inst = FormValidator.init({ formId: &#39;signup&#39;, rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+
+// 1. Direct submit: nothing more to write. A valid form is posted by the browser, an invalid one is blocked and the messages show.
+
+// 2. Check yourself, true / false:
+form.addEventListener(&#39;submit&#39;, e =&gt; { if (!FormValidator.isValid(form)) e.preventDefault(); });   // direct, your own listener
+if (FormValidator.isValid(form)) { /* ... */ }                                                      // before your own AJAX call
+
+// 3. AJAX, the short way: called only for a valid form, with the validated values
+FormValidator.init({ formId: &#39;signup&#39;, rules: { email: [&#39;required&#39;, &#39;email&#39;] }, config: {
+  onSubmit: async (values) =&gt; {
+    const res = await fetch(&#39;/api/signup&#39;, { method: &#39;POST&#39;, headers: { &#39;Content-Type&#39;: &#39;application/json&#39; }, body: JSON.stringify(values) });
+    if (!res.ok) return await res.json();            // { errors: { email: &#39;Already registered&#39; } } is shown on the field
+  }
+} });
+
+// 4. AJAX with your own wiring (any framework): handleSubmit stops the native submit, validates, calls you only for a valid form
+form.addEventListener(&#39;submit&#39;, inst.handleSubmit(async (values, event) =&gt; { await api.post(&#39;/signup&#39;, values); }));
+</code></pre>
+<p><strong>What <code>getValues()</code> returns.</strong> Text is trimmed the way the validation saw it (passwords never are). A checkbox group and a multiple select give an array, a radio group its chosen value, a file field the <code>File</code> objects. Like a native submit, unchecked boxes and unchosen radios are left out and disabled fields are skipped. Send it as JSON, or build a <code>FormData</code> for files.</p>
+<p><strong>The server&#39;s answer.</strong> Return (or pass to <code>setErrors</code>) the messages your server produced, keyed by the field <code>name</code>; they appear in the same place and style as the browser&#39;s own messages. Names are matched exactly, then ignoring case, so an ASP.NET <code>Email</code> finds <code>email</code>.</p>
+<p><strong>Two things to know.</strong> While an <code>onSubmit</code> request runs, a second click is ignored. And in a framework where you attach your own <code>onSubmit</code> (React, Vue), call <code>handleSubmit(...)</code> while rendering, as the examples do: the wrapper then switches off the engine&#39;s own submit interception, otherwise it would swallow the event before your handler sees it.</p>
+<p>The jQuery layer has the same abilities in jQuery&#39;s own style: <code>submitHandler(form, event, values)</code>, <code>onSubmit</code>, <code>validator.getValues()</code>, <code>validator.handleSubmit(fn)</code> and <code>validator.showErrors({...})</code>.</p>
 <h2 id="rules-reference">Rules reference</h2>
 <p>Blank values skip every rule except <code>required</code>, <code>equalTo</code>, <code>custom</code>, <code>minFiles</code> and <code>minChecked</code>. That is what lets an optional field stay empty. Put <code>required</code> first to make a field mandatory. Rules run in order and the first failure is shown.</p>
-<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
 <thead>
 <tr>
 <th>Rule</th>
@@ -244,7 +313,7 @@
   iso:   { date: { strict: true } }                                       // only yyyy-MM-dd or yyyy-MM-ddTHH:mm[:ss]
 }
 </code></pre>
-<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
 <thead>
 <tr>
 <th>Token</th>
@@ -286,7 +355,7 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 <p>Passwords are never trimmed. All other values are trimmed before checking unless you set <code>config.trim</code> to <code>false</code>.</p>
 <h2 id="configuration-options">Configuration options</h2>
 <p><code>FormValidator.init</code> takes these top-level keys:</p>
-<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
 <thead>
 <tr>
 <th>Key</th>
@@ -315,7 +384,7 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 </tr>
 </tbody></table></div>
 <p>Options inside <code>config</code>:</p>
-<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -504,7 +573,7 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 <p>The message keys are the rule names: <code>required</code>, <code>email</code>, <code>url</code>, <code>number</code>, <code>digits</code>, <code>alpha</code>, <code>alphanumeric</code>, <code>phone</code>, <code>date</code>, <code>minDate</code>, <code>maxDate</code>, <code>creditcard</code>, <code>pattern</code>, <code>maxlength</code>, <code>minlength</code>, <code>rangelength</code>, <code>range</code>, <code>max</code>, <code>min</code>, <code>step</code>, <code>oneOf</code>, <code>notEqualTo</code>, <code>equalTo</code>, <code>pwcheck</code>, <code>minChecked</code>, <code>maxChecked</code>, <code>minFiles</code>, <code>maxFiles</code>, <code>fileType</code>, <code>fileSize</code>, <code>file</code>, <code>remote</code>, <code>custom</code>, plus <code>badInput</code> for an unparseable number field.</p>
 <h2 id="error-display-and-accessibility">Error display and accessibility</h2>
 <p><strong>Where the message appears</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
 <thead>
 <tr>
 <th>Field type</th>
@@ -558,7 +627,7 @@ form.removeRules(&#39;coupon&#39;);
 </code></pre>
 <p><strong>Buttons that skip validation.</strong> A submit button with the <code>formnovalidate</code> attribute, such as &quot;Save draft&quot;, submits without validating.</p>
 <p><strong>Rules from HTML attributes.</strong> With <code>autoRules: true</code> the library also reads the markup:</p>
-<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
 <thead>
 <tr>
 <th>Attribute</th>
@@ -601,7 +670,7 @@ form.removeRules(&#39;coupon&#39;);
 }
 </code></pre>
 <p>What the function may return:</p>
-<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
 <thead>
 <tr>
 <th>Return value</th>
@@ -645,7 +714,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 }
 </code></pre>
 <p>By default it sends a <code>GET</code> request with the value in the query string (<code>/api/username-free?username=bob</code>), like jQuery Validation. For a <code>POST</code>, set <code>method: &#39;POST&#39;</code> on the rule: the body is JSON <code>{ &quot;username&quot;: &quot;bob&quot; }</code>, or a classic form body with <code>encoding: &#39;form&#39;</code>. To make <code>POST</code> the default for every remote rule, set <code>FormValidator.remoteDefaults.method = &#39;POST&#39;</code> (and <code>.encoding = &#39;form&#39;</code> if you want form bodies). The server answers with JSON:</p>
-<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
 <thead>
 <tr>
 <th>Response</th>
@@ -670,7 +739,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 </tr>
 </tbody></table></div>
 <p>Options:</p>
-<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -739,7 +808,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 <p>The first FileValidator message is shown under the field (with several files it starts with the file name, like <code>bad.exe: ...</code>), and the check also runs as soon as the user picks files. In the jQuery compatibility layer the same checks are available as the <code>fileValidator</code> method. The full FileValidator options are described in its own document (<a href="file.html">FileValidator.md</a>).</p>
 <h2 id="instance-api-callbacks-and-events">Instance API, callbacks and events</h2>
 <p><code>FormValidator.init(...)</code> returns an instance for one form, or an array when <code>formId</code> is an array.</p>
-<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
 <thead>
 <tr>
 <th>Method</th>
@@ -788,7 +857,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 </tr>
 </tbody></table></div>
 <p>Static functions on <code>FormValidator</code>:</p>
-<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
 <thead>
 <tr>
 <th>Function</th>
@@ -922,7 +991,7 @@ $.validator.addMethod(&#39;even&#39;, function (value, element) { return this.op
 <p>It supports <code>$.fn.validate</code>, <code>valid</code> and <code>rules</code>, <code>$.validator.addMethod</code>, <code>addClassRules</code>, <code>setDefaults</code>, <code>format</code>, <code>messages</code> and <code>methods</code>, all built-in and additional methods, per-field messages, <code>data-rule-*</code>, <code>data-msg-*</code>, class and attribute rules, <code>depends</code>, <code>normalizer</code>, <code>remote</code>, and the options <code>errorPlacement</code>, <code>highlight</code>, <code>unhighlight</code>, <code>success</code>, <code>invalidHandler</code>, <code>submitHandler</code>, <code>onfocusout</code>, <code>onkeyup</code>, <code>onclick</code>, <code>ignore</code>, <code>focusCleanup</code>, <code>debug</code>, <code>errorContainer</code>, <code>errorLabelContainer</code> and <code>wrapper</code>. The <code>groups</code> and <code>showErrors</code> options are supported too. The full list, the differences, and a step-by-step migration are in <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
 <h2 id="migrating-from-v1">Migrating from v1</h2>
 <p>Existing pages keep working: <code>FormValidator.init({ formId, rules, config, context })</code>, <code>FormValidator.validate(id, rules)</code> and <code>form._manualValidate()</code> are unchanged. These behaviours are different, on purpose:</p>
-<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
 <thead>
 <tr>
 <th>Version 1</th>
@@ -988,7 +1057,7 @@ $.validator.addMethod(&#39;even&#39;, function (value, element) { return this.op
 </tbody></table></div>
 <p>A rule without a message now shows a default English sentence (version 1 showed nothing useful). A message you write always wins.</p>
 <h2 id="troubleshooting-and-limits">Troubleshooting and limits</h2>
-<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
 <thead>
 <tr>
 <th>Symptom</th>

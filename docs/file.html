@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.4.1</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.5.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -77,6 +77,54 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 <pre tabindex="0"><code class="language-js">FileValidator.bind(&#39;#upload&#39;, { accept: &#39;.jpg,.png&#39;, maxFileSizeMB: 5 },
   { messageElement: &#39;#upload-msg&#39;, clearOnInvalid: true });
 </code></pre>
+<h2 id="submitting-files-true-false-direct-and-ajax">Submitting files: true / false, direct and AJAX</h2>
+<p>The file counterpart of <code>FormValidator</code>: ask for a plain <strong>true / false</strong>, or let <code>guard</code> check a file input when its form is submitted, <strong>direct</strong> (the browser posts) or <strong>AJAX</strong> (you upload).</p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>You want</th>
+<th>Use</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A true / false for some files</td>
+<td><code>await FileValidator.isValid(files, config)</code> (a <code>FileList</code>, <code>File[]</code>, a <code>File</code>, an <code>&lt;input&gt;</code> or a selector)</td>
+<td><code>boolean</code></td>
+</tr>
+<tr>
+<td>The details (which file, which problem)</td>
+<td><code>await FileValidator.validateFiles(files, config)</code></td>
+<td><code>{ isValid, errors, details, files }</code></td>
+</tr>
+<tr>
+<td>A valid choice posts normally, a rejected one is blocked and explained</td>
+<td><code>FileValidator.guard(&#39;#cv&#39;, config, { messageElement })</code></td>
+<td><code>{ validate(), check(), unbind() }</code></td>
+</tr>
+<tr>
+<td>AJAX upload, called only with valid files</td>
+<td><code>FileValidator.guard(&#39;#cv&#39;, config, { onSubmit(files, formData) })</code></td>
+<td>your function may return <code>{ errors: &#39;message&#39; }</code></td>
+</tr>
+</tbody></table></div>
+<pre tabindex="0"><code class="language-js">// Direct: the browser posts the form, but only when the file passes. The message appears in #cv-msg.
+const g = FileValidator.guard(&#39;#cv&#39;, { accept: &#39;.pdf&#39;, maxFileSizeMB: 5 }, { messageElement: &#39;#cv-msg&#39; });
+
+// AJAX: formData already holds the whole form (the file and your other fields)
+FileValidator.guard(&#39;#cv&#39;, { accept: &#39;.pdf&#39;, maxFileSizeMB: 5 }, {
+  messageElement: &#39;#cv-msg&#39;,
+  onSubmit: async (files, formData) =&gt; {
+    const res = await fetch(&#39;/upload&#39;, { method: &#39;POST&#39;, body: formData });
+    if (!res.ok) return { errors: &#39;The server refused this file.&#39; };     // shown in #cv-msg
+  }
+});
+
+// Just ask:
+if (await FileValidator.isValid(&#39;#cv&#39;, { accept: &#39;.pdf&#39; })) { /* ... */ }
+if (await g.validate()) { /* ... */ }
+</code></pre>
+<p><code>guard</code> also re-checks whenever the user picks other files, so an old message goes away at once, and it sets <code>setCustomValidity()</code> so the browser&#39;s own form validation agrees. By default an empty input is fine unless it has the <code>required</code> attribute (or you pass <code>required: true</code>). For a drag-and-drop zone use the upload widget: it has <code>validate()</code> and <code>appendTo(formData)</code>.</p>
 <h2 id="what-it-checks">What it checks</h2>
 <p>A check is on when you give it a value. To switch one off, set <code>validate: { &lt;name&gt;: false }</code> in the config. Every failing file is reported, not only the first one.</p>
 <p><strong>Names</strong></p>
@@ -113,7 +161,7 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 <h2 id="options-reference">Options reference</h2>
 <p>All options are optional. Numbers may be given as numeric strings (<code>&#39;5&#39;</code>), and lists as comma-separated strings (<code>&#39;jpg, png&#39;</code>). Unknown option names log one console warning, which catches typos.</p>
 <p><strong>Type and name</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -173,7 +221,7 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 </tr>
 </tbody></table></div>
 <p><strong>Size and count</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -218,7 +266,7 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 </tr>
 </tbody></table></div>
 <p><strong>Images</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -268,7 +316,7 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 </tr>
 </tbody></table></div>
 <p><strong>Folders and documents</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -363,7 +411,7 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 </tr>
 </tbody></table></div>
 <p><strong>Custom checks, server checks and media</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -418,7 +466,7 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 </tr>
 </tbody></table></div>
 <p><strong>Other</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -463,7 +511,7 @@ input.addEventListener(&#39;change&#39;, async () =&gt; {
 </code></pre>
 <p>Problems about the whole selection, such as too many files, have <code>fileName: null</code>.</p>
 <p><strong>Error codes</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
 <thead>
 <tr>
 <th>Code</th>
@@ -709,7 +757,7 @@ $(&#39;#avatar&#39;).rules(&#39;add&#39;, { fileValidator: { accept: &#39;image/
 <p><strong>How it works.</strong> Files are accepted one at a time with the same checks as <code>validateFiles</code>, including the running limits (<code>maxFiles</code>, <code>maxTotalSizeMB</code>, <code>duplicateNames</code>, <code>duplicateContent</code>) counted against what is already selected. A mixed drop is not thrown away as a whole: each rejected file is reported with its reasons and the rest is kept. <code>await zone.validate()</code> runs the full-selection check at the end (<code>minFiles</code>, scopes, <code>customAll</code>).</p>
 <p><strong>The <code>&lt;input&gt;</code> stays in sync.</strong> Accepted files are put back into the file input (through <code>DataTransfer</code>, which every current browser supports), and a <code>change</code> event is fired, so a normal form submit and FormValidator&#39;s <code>file</code> rule see the accepted files. Where <code>DataTransfer</code> is missing, use <code>zone.files</code> or <code>zone.appendTo(formData, &#39;files&#39;)</code>.</p>
 <p><strong>Options</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -804,7 +852,7 @@ $(&#39;#avatar&#39;).rules(&#39;add&#39;, { fileValidator: { accept: &#39;image/
 </tr>
 </tbody></table></div>
 <p><strong>The controller</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
 <thead>
 <tr>
 <th>Member</th>
@@ -884,7 +932,7 @@ const result = await FileValidator.validateFiles([new File([buffer], &#39;a.png&
 </ul>
 <p>To allow one on purpose, list it: <code>allowedExtensions: [&#39;.jar&#39;]</code> or <code>allowedMimeTypes: [&#39;application/java-archive&#39;]</code>. To change the lists use <code>dangerousExtensions</code> and <code>dangerousMimeTypes</code>, or switch the whole check off with <code>validate: { dangerousExt: false }</code>.</p>
 <p><strong>How the type of a file is decided</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
 <thead>
 <tr>
 <th>You give</th>
@@ -935,7 +983,7 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
 <pre tabindex="0"><code class="language-js">{ remote: &#39;/api/files/check&#39; }
 { remote: { url: &#39;/api/files/check&#39;, send: &#39;hash&#39;, headers: { &#39;X-CSRF&#39;: token } } }
 </code></pre>
-<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
 <thead>
 <tr>
 <th><code>send</code></th>
@@ -997,7 +1045,7 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
   scanTimeout: 20000
 }
 </code></pre>
-<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
 <thead>
 <tr>
 <th>The function returns</th>
@@ -1037,7 +1085,7 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
 </code></pre>
 <p><strong><code>validateTarget</code>.</strong> <code>{ images: true }</code> accepts only images, <code>{ files: true }</code> accepts only non-images, and <code>{ allowMixed: true }</code> accepts anything. Video and audio count as <code>files</code> unless you set <code>videos</code> or <code>audios</code>.</p>
 <p><strong><code>validateScope</code></strong></p>
-<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
 <thead>
 <tr>
 <th>Value</th>
@@ -1103,7 +1151,7 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
 <li>Messages are friendlier and carry numbers. <code>FileValidator.errorMessages</code> keeps the old text for anyone who used it directly.</li>
 </ul>
 <p><strong>Troubleshooting</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 15" tabindex="0"><table>
 <thead>
 <tr>
 <th>Symptom</th>

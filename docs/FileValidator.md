@@ -63,6 +63,37 @@ FileValidator.bind('#upload', { accept: '.jpg,.png', maxFileSizeMB: 5 },
   { messageElement: '#upload-msg', clearOnInvalid: true });
 ```
 
+## Submitting files: true / false, direct and AJAX
+
+The file counterpart of `FormValidator`: ask for a plain **true / false**, or let `guard` check a file input when its form is submitted, **direct** (the browser posts) or **AJAX** (you upload).
+
+| You want | Use | Returns |
+| --- | --- | --- |
+| A true / false for some files | `await FileValidator.isValid(files, config)` (a `FileList`, `File[]`, a `File`, an `<input>` or a selector) | `boolean` |
+| The details (which file, which problem) | `await FileValidator.validateFiles(files, config)` | `{ isValid, errors, details, files }` |
+| A valid choice posts normally, a rejected one is blocked and explained | `FileValidator.guard('#cv', config, { messageElement })` | `{ validate(), check(), unbind() }` |
+| AJAX upload, called only with valid files | `FileValidator.guard('#cv', config, { onSubmit(files, formData) })` | your function may return `{ errors: 'message' }` |
+
+```js
+// Direct: the browser posts the form, but only when the file passes. The message appears in #cv-msg.
+const g = FileValidator.guard('#cv', { accept: '.pdf', maxFileSizeMB: 5 }, { messageElement: '#cv-msg' });
+
+// AJAX: formData already holds the whole form (the file and your other fields)
+FileValidator.guard('#cv', { accept: '.pdf', maxFileSizeMB: 5 }, {
+  messageElement: '#cv-msg',
+  onSubmit: async (files, formData) => {
+    const res = await fetch('/upload', { method: 'POST', body: formData });
+    if (!res.ok) return { errors: 'The server refused this file.' };     // shown in #cv-msg
+  }
+});
+
+// Just ask:
+if (await FileValidator.isValid('#cv', { accept: '.pdf' })) { /* ... */ }
+if (await g.validate()) { /* ... */ }
+```
+
+`guard` also re-checks whenever the user picks other files, so an old message goes away at once, and it sets `setCustomValidity()` so the browser's own form validation agrees. By default an empty input is fine unless it has the `required` attribute (or you pass `required: true`). For a drag-and-drop zone use the upload widget: it has `validate()` and `appendTo(formData)`.
+
 ## What it checks
 
 A check is on when you give it a value. To switch one off, set `validate: { <name>: false }` in the config. Every failing file is reported, not only the first one.

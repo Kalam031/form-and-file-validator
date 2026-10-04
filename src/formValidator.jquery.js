@@ -85,6 +85,8 @@
         errorContainer: $([]), errorLabelContainer: $([]),
         onsubmit: true, ignore: ':hidden', ignoreTitle: false,
         onfocusout: true, onkeyup: true, onclick: true,
+        onfocusin: function (element) { this.lastActive = element; },   // called on every focusin; with focusCleanup the error is cleared as well
+        ariaDescribedByCleanup: false,                                  // accepted for compatibility: aria-describedby is always kept in step with the errors
         highlight: function (element, errorClass, validClass) {
             if (element.type === 'radio') this.findByName(element.name).addClass(errorClass).removeClass(validClass);
             else $(element).addClass(errorClass).removeClass(validClass);
@@ -326,6 +328,8 @@
         else if (type === method && type !== 'range') rules[type === 'date' ? 'dateISO' : type] = true;
     }
 
+    Validator.normalizeAttributeRule = normalizeAttributeRule;
+
     Validator.classRules = function (element) {
         const rules = {}, classes = $(element).attr('class');
         if (classes) $.each(classes.split(' '), function () { if (this in Validator.classRuleSettings) $.extend(rules, Validator.classRuleSettings[this]); });
@@ -450,14 +454,14 @@
             $.data(form, 'validator', this);
             this.fv = FV.init({ form, rules: {}, config: this._buildConfig() });
             if (s.invalidHandler) $(form).on('invalid-form.validate', s.invalidHandler);
-            if (s.focusCleanup) {
-                const onFocusIn = function (e) { // native listener: works in every browser and jQuery version
-                    const u = self.fv.unitOf(e.target);
-                    if (u && self.fv._errors.has(u.key)) self.fv.clearError(u.fields[0].name);
-                };
-                form.addEventListener('focusin', onFocusIn);
-                this.fv._listeners.push(() => form.removeEventListener('focusin', onFocusIn));
-            }
+            const onFocusIn = function (e) { // native listener: works in every browser and jQuery version
+                if (isFn(s.onfocusin)) s.onfocusin.call(self, e.target, e);
+                if (!s.focusCleanup) return;
+                const u = self.fv.unitOf(e.target);
+                if (u && self.fv._errors.has(u.key)) self.fv.clearError(u.fields[0].name);
+            };
+            form.addEventListener('focusin', onFocusIn);
+            this.fv._listeners.push(() => form.removeEventListener('focusin', onFocusIn));
             this._syncContainers();
         },
 
@@ -503,12 +507,14 @@
                 unhighlight: (field, unit) => { if (field === unit.fields[0]) { self._removeSuccess(field); self.settings.unhighlight.call(self, field, s.errorClass, s.validClass); self._syncContainers(); self._afterErrorChange(); } },
                 onFieldValid: field => self._success(field),
                 onError: () => { $(self.currentForm).triggerHandler('invalid-form', [self]); },
-                submitHandler: s.debug || isFn(s.submitHandler) ? function (form, event) {
+                // AJAX in one step: onSubmit(values, event, validator) gets the validated values; returning { errors: { field: message } } shows the server's messages
+                onSubmit: isFn(s.onSubmit) ? function (values, event) { return s.onSubmit.call(self, values, event, self); } : undefined,
+                submitHandler: s.debug || isFn(s.submitHandler) ? function (form, event, values) {
                     if (s.debug) { if (root.console) console.log('Submit handler called. The form is not submitted because "debug" is on.'); return false; }
                     let hidden = null;
                     const sub = event && event.submitter;
                     if (sub && sub.name) hidden = $('<input type="hidden"/>').attr('name', sub.name).val($(sub).val()).appendTo(form);
-                    const r = s.submitHandler.call(self, form, event);
+                    const r = s.submitHandler.call(self, form, event, values);   // jQuery Validation passes (form, event); the validated values are a third argument
                     if (hidden) hidden.remove();
                     return r;
                 } : null
@@ -612,6 +618,12 @@
         showErrors(errors) {
             if (errors) { Object.keys(errors).forEach(name => this.fv.setError(name, errors[name])); this._syncContainers(); }
         },
+        /** The validated values as an object, ready for $.ajax / fetch: text trimmed, checkbox groups and multiple selects as arrays (passwords never trimmed). */
+        getValues() { return this.fv.getValues(); },
+        /** Resolves to { valid, values, errors }; shows the errors like form() does. */
+        validateAndGetValues(options) { const self = this; return this.fv.validateAndGetValues(options).then(r => { self._syncContainers(); return r; }); },
+        /** An event handler: validates, then calls fn(values, event, validator) only when the form is valid. fn may return { errors: { field: message } } from the server. */
+        handleSubmit(fn) { const self = this; return event => this.fv.handleSubmit(fn)(event).then(r => { self._syncContainers(); return r; }); },
         hideErrors() { this.fv.clearErrors(); this._syncContainers(); },
         focusInvalid() {
             const e = this.fv.getErrors()[0];
@@ -626,6 +638,18 @@
         validationTargetFor(element) {
             if (this.checkable(element)) element = this.findByName(element.name)[0] || element;
             return element;
+        },
+        findLastActive() {
+            const last = this.lastActive;
+            return last && $.grep(this.fv.getErrors(), n => n.field === last).length === 1 && last;
+        },
+        idOrName(element) { return element.id || element.name || ''; },
+        escapeCssMeta(string) { return string.replace(/([\\!"#$%&'()*+,./:;<=>?@\[\]^`{|}~])/g, '\\$1'); },
+        objectLength(obj) { return Object.keys(obj).length; },
+        /** The error labels that belong to a field (matched by their `for` attribute). */
+        errorsFor(element) {
+            const id = this.idOrName(this.clean(element)), s = this.settings;
+            return $(this.currentForm).find(s.errorElement + '.' + String(s.errorClass).split(' ').join('.')).filter(function () { return $(this).attr('for') === id; });
         },
         checkable(element) { return /radio|checkbox/i.test(element.type); },
         findByName(name) { return $(this.currentForm).find('[name="' + escName(name) + '"]'); },

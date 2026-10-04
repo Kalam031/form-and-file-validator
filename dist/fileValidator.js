@@ -1,5 +1,5 @@
 /*!
- * FileValidator v2.7.1 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.8.0 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
  *   2.7.1  Fix: a fractional byte range (a small `maxScanMB` such as 0.0001) made Node 20 abort the whole process inside Blob.slice();
@@ -1166,9 +1166,80 @@
         return () => { input.removeEventListener('change', handler); if (input.setCustomValidity) input.setCustomValidity(''); };
     }
 
+    /** true or false: are these files fine? Accepts a FileList, File[], a File, an <input type="file"> or a selector. (The detailed answer is validateFiles().) */
+    async function isValid(files, config) {
+        if (typeof files === 'string') files = root.document.querySelector(files);
+        return (await validateFiles(files, config)).isValid;
+    }
+
+    /**
+     * Check a file input when its form is submitted, for a direct submit and for AJAX alike (the file counterpart of FormValidator.init):
+     *   const g = FileValidator.guard('#cv', { accept: '.pdf', maxFileSizeMB: 5 }, { messageElement: '#cv-msg' });                 // direct: a valid form posts, an invalid one is blocked
+     *   FileValidator.guard('#cv', cfg, { onSubmit: (files, formData) => fetch('/upload', { method: 'POST', body: formData }) });   // AJAX: called only with valid files
+     *   if (await g.validate()) { ... }                                                                                           // or ask yourself: true / false
+     * opts: messageElement (el | selector, gets the first message), required (default: the input's required attribute), onSubmit(files, formData, event) (may return a Promise;
+     * { errors: 'message' } or { message } from your server is shown), onResult(result, input).
+     * Returns { validate(): Promise<boolean>, check(): Promise<result>, unbind() }. Also sets setCustomValidity() like bind().
+     */
+    function guard(input, config, opts) {
+        opts = opts || {};
+        if (typeof input === 'string') input = root.document.querySelector(input);
+        if (!input) throw new Error('FileValidator.guard: input not found');
+        const form = input.form;
+        if (!form) throw new Error('FileValidator.guard: the input is not inside a <form>');
+        let bypass = false, busy = false;
+        const show = msg => {
+            if (input.setCustomValidity) input.setCustomValidity(msg);
+            const el = typeof opts.messageElement === 'string' ? root.document.querySelector(opts.messageElement) : opts.messageElement;
+            if (el) el.textContent = msg;
+        };
+        const check = async () => {
+            const files = Array.from(input.files || []);
+            const needed = opts.required !== undefined ? !!opts.required : !!input.required;
+            const result = files.length || needed ? await validateFiles(files, config) : { isValid: true, errors: [], details: [], files: [] };
+            show(result.isValid ? '' : summary(result)[0]);
+            if (typeof opts.onResult === 'function') opts.onResult(result, input);
+            return result;
+        };
+        const handler = e => {
+            if (bypass) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (busy) return;
+            busy = true;
+            check().then(result => {
+                if (!result.isValid) { busy = false; return; }
+                if (typeof opts.onSubmit === 'function') {   // AJAX: the files are fine, hand over
+                    return Promise.resolve().then(() => opts.onSubmit(Array.from(input.files || []), new root.FormData(form), e)).then(out => {
+                        const m = out && (out.message || (typeof out.errors === 'string' ? out.errors : null));
+                        if (m) show(String(m));
+                    }).catch(err => { if (root.console) console.error(err); }).then(() => { busy = false; });
+                }
+                busy = false;
+                // direct submit: hand the form back on the next task (a requestSubmit() made while the browser is still delivering the submit event is ignored)
+                setTimeout(() => {
+                    bypass = true;
+                    try { if (typeof form.requestSubmit === 'function') { try { form.requestSubmit(e.submitter || undefined); } catch (err) { form.requestSubmit(); } } else form.submit(); }
+                    finally { bypass = false; }
+                }, 0);
+            }).catch(err => { busy = false; if (root.console) console.error(err); });
+        };
+        // a new selection is checked at once: this also clears a stale error, which would otherwise make the browser itself block the next submit
+        const onChange = () => { check().catch(err => { if (root.console) console.error(err); }); };
+        form.addEventListener('submit', handler, true);
+        input.addEventListener('change', onChange);
+        return {
+            validate: async () => (await check()).isValid,
+            check,
+            unbind: () => { form.removeEventListener('submit', handler, true); input.removeEventListener('change', onChange); if (input.setCustomValidity) input.setCustomValidity(''); }
+        };
+    }
+
     return {
-        version: '2.7.1',
+        version: '2.8.0',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
+        isValid,         // async (files | <input> | selector, config) -> true / false
+        guard,           // (input, config, { onSubmit, messageElement }) : check the file input when its form is submitted, direct or AJAX
         validateFile,    // async (File, config)
         addExtension,    // ('.xyz', 'application/x-xyz' | [..]) : teach the built-in registry an extension
         getMimeTypes: (ext, cfg) => mimesForExt(normExt(ext), cfg).slice(),

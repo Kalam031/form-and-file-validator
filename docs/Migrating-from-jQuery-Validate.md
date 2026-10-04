@@ -22,7 +22,7 @@ After:
 <script src="localization/messages_de.js"></script>   <!-- unchanged: it only fills $.validator.messages -->
 ```
 
-`additional-methods.js` is no longer needed. Its common methods are built in (the list is in section 2). If you rely on a method that is not in that list, keep loading the original `additional-methods.js` after these scripts; it registers itself through `$.validator.addMethod`. The compatibility layer is tested with jQuery 3.7 and 4.0.
+`additional-methods.js` is no longer needed. Every method of the plugin 1.22 is built into the one-file bundle with the same name, parameters and default message, including the country and bank checks (`cpfBR`, `bic`, `postcodeUK`, `zipcodeUS`, `abaRoutingNumber`, `vinUS`, `currency`, `greaterThan`, `maxsize` and the rest). A test runs both implementations on the same inputs and requires identical answers. If you load the separate files instead of the bundle, add `dist/formValidator.additional.js` after `formValidator.jquery.js`. The compatibility layer is tested with jQuery 3.7 and 4.0.
 
 Your page code does not change:
 
@@ -51,7 +51,7 @@ $.validator.addMethod('even', function (value, element, param) {
 | --- | --- |
 | Plugin functions | `$.fn.validate`, `$.fn.valid`, `$.fn.rules('add' / 'remove')` |
 | `$.validator` | `addMethod`, `addClassRules`, `setDefaults`, `format`, `messages`, `methods`, `defaults`, `classRuleSettings`, `normalizeRule`, `normalizeRules`, `staticRules`, `classRules`, `attributeRules`, `dataRules`, `autoCreateRanges` |
-| Methods | `required remote minlength maxlength rangelength min max range step email url date dateISO number digits equalTo creditcard accept extension pattern maxWords minWords rangeWords integer lettersonly letterswithbasicpunc alphanumeric nowhitespace ipv4 ipv6 time time12h phoneUS iban notEqualTo require_from_group skip_or_fill_minimum` |
+| Methods | `required remote minlength maxlength rangelength min max range step email url date dateISO number digits equalTo creditcard accept extension pattern maxWords minWords rangeWords integer lettersonly letterswithbasicpunc alphanumeric nowhitespace ipv4 ipv6 time time12h phoneUS iban notEqualTo require_from_group skip_or_fill_minimum`, plus every method of `additional-methods.js` (`abaRoutingNumber bic cifES cpfBR cnpjBR currency greaterThan lessThan maxsize maxfiles nifES nieES phoneUK postcodeUK postalCodeCA vinUS zipcodeUS` and the other country checks) |
 | Rule sources | `rules` option, `class="required email"`, HTML attributes (`required`, `type`, `minlength`, `pattern`, ...), `data-rule-*` |
 | Rule parameters | `depends` (function or selector), `required` as selector or function, parameters as functions, `normalizer`, range strings like `"[1,5]"` |
 | Messages | `messages` option (string, per method, function), `data-msg-*`, `data-msg`, the `title` attribute, `ignoreTitle`, `$.validator.messages`, `$.validator.format` |

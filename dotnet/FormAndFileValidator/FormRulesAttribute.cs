@@ -104,10 +104,18 @@ public static class ModelRules
     /// The JavaScript that sets the browser up with the same rules: <c>FormValidator.init({ formId: "signup", rules: {...} });</c>
     /// Safe to put inside a script element (angle brackets and ampersands are escaped).
     /// </summary>
-    public static string InitScript(Type model, string formId)
+    /// <param name="model">The model class with [FormRules] properties.</param>
+    /// <param name="formId">The id of the form element.</param>
+    /// <param name="configScript">
+    /// Optional JavaScript object for the validator <c>config</c>, written by you (trusted code, it is not escaped), for example
+    /// <c>"{ onSubmit: window.sendSignup }"</c> for an AJAX submit. Leave it out for a normal (direct) submit.
+    /// </param>
+    public static string InitScript(Type model, string formId, string configScript = null)
     {
-        string script = "FormValidator.init({ formId: " + JsonSerializer.Serialize(formId) + ", rules: " + ToJson(model) + " });";
         char bs = (char)92;
-        return script.Replace("<", bs + "u003c").Replace(">", bs + "u003e").Replace("&", bs + "u0026");
+        // escape only what we generate from data (the form id and the rule JSON); the config is your own JavaScript
+        string head = ("FormValidator.init({ formId: " + JsonSerializer.Serialize(formId) + ", rules: " + ToJson(model))
+            .Replace("<", bs + "u003c").Replace(">", bs + "u003e").Replace("&", bs + "u0026");
+        return head + (string.IsNullOrWhiteSpace(configScript) ? "" : ", config: " + configScript) + " });";
     }
 }

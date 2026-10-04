@@ -171,12 +171,36 @@ export interface BindOptions {
     clearOnInvalid?: boolean;
 }
 
+export interface GuardOptions {
+    /** Gets the first message (or an empty string when the files are fine). */
+    messageElement?: string | HTMLElement | null;
+    /** Default: the required attribute of the input. */
+    required?: boolean;
+    /** AJAX: called only with valid files, instead of a native submit. May return a Promise; { errors: 'message' } or { message } is shown. */
+    onSubmit?: (files: File[], formData: FormData, event: Event) => unknown;
+    onResult?: (result: ValidationResult, input: HTMLInputElement) => void;
+}
+
+export interface GuardHandle {
+    /** true / false for the current selection (shows the message). */
+    validate(): Promise<boolean>;
+    check(): Promise<ValidationResult>;
+    unbind(): void;
+}
+
 export interface FileValidatorStatic {
     readonly version: string;
     validateFiles(files: FilesInput, config?: FileValidatorConfig): Promise<ValidationResult>;
     validateFile(file: File, config?: FileValidatorConfig): Promise<SingleResult>;
     /** Lines like "photo.png: This file is 6 MB but the maximum is 5 MB." */
     summary(result: ValidationResult, options?: { fileNames?: boolean }): string[];
+    /** true / false: are these files fine? (validateFiles() gives the detail.) */
+    isValid(files: FilesInput | string, config?: FileValidatorConfig): Promise<boolean>;
+    /**
+     * Check a file input when its form is submitted, direct or AJAX. Without onSubmit a valid form posts normally and an invalid one is blocked;
+     * with onSubmit it is called (only with valid files) instead of a native submit and may return { errors: 'message' } or { message } to show a server message.
+     */
+    guard(input: string | HTMLInputElement, config?: FileValidatorConfig, options?: GuardOptions): GuardHandle;
     /** Connect a file input to validation. Returns a function that removes it again. */
     bind(input: string | HTMLInputElement, config?: FileValidatorConfig, options?: BindOptions): () => void;
     getMessage(code: string, params?: Record<string, unknown>, config?: FileValidatorConfig): string;
