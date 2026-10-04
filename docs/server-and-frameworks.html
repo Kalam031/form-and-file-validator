@@ -211,6 +211,12 @@ fvMessage = fvMessage;
 &lt;/div&gt;
 </code></pre>
 <p>With a bundler: <code>import Alpine from &#39;alpinejs&#39;; window.FVAlpine(Alpine); Alpine.start();</code> (after loading the validator bundle).</p>
+<h3 id="net-uploaded-files">.NET: uploaded files</h3>
+<p>The same package validates uploads on the server (<code>IFormFile</code> in ASP.NET Core, <code>HttpPostedFileBase</code> in MVC 5) with the same checks, error codes and messages as <code>FileValidator</code> in the browser and in Node. Both are tested against <code>spec/file-rules.vectors.json</code>.</p>
+<pre tabindex="0"><code class="language-csharp">var result = FileValidator.ValidateRaw(files, new FileValidatorOptions { AllowedExtensions = { &quot;jpg&quot;, &quot;png&quot; }, MaxFileSizeMB = 5 });
+if (!result.IsValid) return BadRequest(result.Summary());
+</code></pre>
+<p>Or put <code>[FileRules(Extensions = &quot;png,jpg&quot;, MaxSizeMB = 5, Required = true)]</code> on the model property and <code>ModelState.IsValid</code> covers it; <code>ModelFileRules.ToJson&lt;T&gt;()</code> (MVC 5: <code>Html.FileRulesJson()</code>) gives the matching browser configuration. Details in <code>dotnet/FormAndFileValidator/README.md</code>.</p>
 
   </main>
 </div>

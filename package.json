@@ -64,6 +64,7 @@
     "!types/typecheck",
     "docs/*.md",
     "spec/form-rules.vectors.json",
+    "spec/file-rules.vectors.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

@@ -66,7 +66,7 @@
 </tr>
 <tr>
 <td>.NET (ASP.NET MVC 5, ASP.NET Core)</td>
-<td>the <code>FormAndFileValidator</code> package in <code>dotnet/</code> (same rules, same answers)</td>
+<td>the <code>FormAndFileValidator</code> package in <code>dotnet/</code> (same form rules and file checks, same answers)</td>
 </tr>
 </tbody></table></div>
 <p>TypeScript types are included.</p>
@@ -409,7 +409,7 @@ The packs are machine-quality translations: please have a native speaker check t
 <h2 id="server-react-vue-alpine">Server, React, Vue, Alpine</h2>
 <ul>
 <li><strong>Server (Node):</strong> <code>require(&#39;form-and-file-validator/server&#39;)</code>: <code>middleware(rules)</code> for Express (multer, formidable, express-fileupload) runs the same file rules on the uploaded files and answers 422 with JSON.</li>
-<li><strong>.NET (ASP.NET Core):</strong> the NuGet package in <code>dotnet/</code> runs the same form rules with the same answers as the browser; both are tested against one file of shared vectors (<code>spec/form-rules.vectors.json</code>).</li>
+<li><strong>.NET (ASP.NET Core):</strong> the NuGet package in <code>dotnet/</code> runs the same form rules with the same answers as the browser; both are tested against shared vectors (<code>spec/form-rules.vectors.json</code>), and the package validates uploaded files too (<code>FileValidator</code>, <code>[FileRules]</code>; <code>spec/file-rules.vectors.json</code>).</li>
 <li><strong>Angular:</strong> <code>import { fvValidator, fvControls, fvWatch, fvMessage } from &#39;form-and-file-validator/angular&#39;</code>: validators for Reactive Forms, tested on real <code>@angular/forms</code>.</li>
 <li><strong>React:</strong> <code>import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;</code></li>
 <li><strong>Vue 3:</strong> <code>import { useFormValidator, FileDropzone, vFormValidator } from &#39;form-and-file-validator/vue&#39;</code></li>

@@ -230,3 +230,14 @@ fvMessage = fvMessage;
 ```
 
 With a bundler: `import Alpine from 'alpinejs'; window.FVAlpine(Alpine); Alpine.start();` (after loading the validator bundle).
+
+### .NET: uploaded files
+
+The same package validates uploads on the server (`IFormFile` in ASP.NET Core, `HttpPostedFileBase` in MVC 5) with the same checks, error codes and messages as `FileValidator` in the browser and in Node. Both are tested against `spec/file-rules.vectors.json`.
+
+```csharp
+var result = FileValidator.ValidateRaw(files, new FileValidatorOptions { AllowedExtensions = { "jpg", "png" }, MaxFileSizeMB = 5 });
+if (!result.IsValid) return BadRequest(result.Summary());
+```
+
+Or put `[FileRules(Extensions = "png,jpg", MaxSizeMB = 5, Required = true)]` on the model property and `ModelState.IsValid` covers it; `ModelFileRules.ToJson<T>()` (MVC 5: `Html.FileRulesJson()`) gives the matching browser configuration. Details in `dotnet/FormAndFileValidator/README.md`.

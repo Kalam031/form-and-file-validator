@@ -13,6 +13,20 @@ namespace FormAndFileValidator.Mvc5.Tests
 
         [FormRules("[\"required\", {\"type\":\"date\",\"format\":\"d/M/y\"}]")]
         public string BirthDate { get; set; }
+
+        [FileRules(Extensions = "png,jpg", MaxSizeMB = 1, Required = true)]
+        public System.Web.HttpPostedFileBase Avatar { get; set; }
+    }
+
+    /// <summary>A real HttpPostedFileBase (the abstract class MVC 5 hands to actions).</summary>
+    public class PostedFile : System.Web.HttpPostedFileBase
+    {
+        readonly byte[] _data; readonly string _name, _type;
+        public PostedFile(string name, string type, byte[] data) { _name = name; _type = type; _data = data; }
+        public override string FileName { get { return _name; } }
+        public override string ContentType { get { return _type; } }
+        public override int ContentLength { get { return _data.Length; } }
+        public override System.IO.Stream InputStream { get { return new System.IO.MemoryStream(_data, false); } }
     }
 
     /// <summary>The Razor helpers and ModelState, on a real HtmlHelper of ASP.NET MVC 5.</summary>
@@ -41,6 +55,27 @@ namespace FormAndFileValidator.Mvc5.Tests
             string json = Helper(new SignupModel()).FormRulesJson().ToString();
             Assert.StartsWith("{\"Email\":", json);
             Assert.Contains("\"BirthDate\":", json);
+        }
+
+        [Fact]
+        public void FileRulesJson_gives_the_browser_config_of_the_file_rules()
+        {
+            Assert.Equal("{\"Avatar\":{\"allowedExtensions\":[\"png\",\"jpg\"],\"maxFileSizeMB\":1}}", Helper(new SignupModel()).FileRulesJson().ToString());
+        }
+
+        [Fact]
+        public void A_real_HttpPostedFileBase_is_validated_by_the_FileRules_attribute_and_FileValidator()
+        {
+            byte[] exe = new byte[128]; exe[0] = (byte)'M'; exe[1] = (byte)'Z'; exe[60] = 0x80;
+            var results = new System.Collections.Generic.List<ValidationResult>();
+            var model = new SignupModel { Avatar = new PostedFile("me.png", "image/png", exe) };
+            Validator.TryValidateObject(model, new ValidationContext(model), results, true);
+            Assert.Contains(results, r => r.MemberNames.Contains("Avatar") && r.ErrorMessage.Contains("This file contains exe"));
+
+            var ok = FileValidator.ValidateRaw(new PostedFile("notes.txt", "text/plain", System.Text.Encoding.UTF8.GetBytes("hello")));
+            Assert.True(ok.IsValid);
+            var many = FileValidator.ValidateRaw(new[] { new PostedFile("a.txt", "text/plain", new byte[] { 65 }), new PostedFile("b.exe", "", new byte[] { 65 }) });
+            Assert.Equal(new[] { "DANGEROUS_FILE_TYPE" }, many.Errors);
         }
 
         [Fact]

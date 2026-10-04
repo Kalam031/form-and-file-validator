@@ -33,6 +33,15 @@ namespace FormAndFileValidator.Mvc
             char bs = (char)92;
             return new HtmlString(ModelRules.ToJson<TModel>().Replace("<", bs + "u003c").Replace(">", bs + "u003e").Replace("&", bs + "u0026"));
         }
+
+        /// <summary>
+        /// The browser configs of the model's [FileRules] properties, keyed by field name: <c>{"Avatar":{"allowedExtensions":["png"],"maxFileSizeMB":5}}</c>.
+        /// Use it with <c>FileValidator.guard(input, config)</c> or <c>FileValidator.widget(...)</c>. Escaped for use inside a script element.
+        /// </summary>
+        public static IHtmlString FileRulesJson<TModel>(this HtmlHelper<TModel> html)
+        {
+            return new HtmlString(ModelFileRules.ToJson<TModel>());
+        }
     }
 
     /// <summary>For AJAX actions: answer with the same error shape the browser understands.</summary>
