@@ -2,6 +2,7 @@
 // The shared FileValidator vectors (spec/file-rules.vectors.json) and the generated .NET tables must be current with the JavaScript FileValidator.
 // The .NET port runs the very same vectors, so a change in the JavaScript behaviour that is not regenerated fails here, and one that is regenerated
 // but not ported fails in the .NET tests.
+require('./helpers/shim.js');   // File on Node 18
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
