@@ -16,7 +16,7 @@
     <PackageId>FormAndFileValidator</PackageId>
     <Version>0.2.0</Version>
     <Authors>abu_kalam</Authors>
-    <Description>The server side of form-and-file-validator: the same form rules, with the same answers as the JavaScript package, verified against shared conformance vectors. For ASP.NET MVC 5, ASP.NET Core and any .NET.</Description>
+    <Description>The server side of form-and-file-validator: the same form rules, upload checks (FileValidator, [FileRules]) and photo privacy (EXIF/GPS removal) as the JavaScript package, verified against shared conformance vectors. For ASP.NET MVC 5, ASP.NET Core and any .NET.</Description>
     <PackageTags>validation;form;validator;aspnetcore;aspnetmvc;mvc5;dataannotations</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/Kalam031/form-and-file-validator</RepositoryUrl>
