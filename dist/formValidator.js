@@ -1,7 +1,9 @@
 /*!
- * FormValidator v2.7.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.8.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.8.0  19 new rules: integer, uuid, hexColor, slug, ipv4, ipv6, iban, time, domain, base64, mac, latitude, longitude, startsWith, endsWith, contains, notOneOf, minWords, maxWords
+ *          (ASCII-exact, the same answers in .NET; messages in every language pack).
  *   2.7.0  Dates with a named format (date / minDate / maxDate: `format`, `strict`); checkValue() / checkValues() without a DOM; url rule independent of the browser's URL parser;
  *          pwcheck counts capital letters, small letters, digits and symbols of every script; min / max / range / step take plain decimals only.
  *   2.6.0  Error messages get dir="auto", so right-to-left text (Arabic, Hebrew) reads correctly inside a left-to-right page and the other way round.
@@ -78,6 +80,25 @@
         min: 'Please enter a value no less than {min}.',
         step: 'Please enter a multiple of {step}.',
         oneOf: 'Please choose a valid option.',
+        notOneOf: 'This value is not allowed.',
+        integer: 'Please enter a whole number.',
+        uuid: 'Please enter a valid UUID.',
+        hexColor: 'Please enter a valid hex color, like #1a2b3c.',
+        slug: 'Use lowercase letters, numbers and single hyphens only.',
+        ipv4: 'Please enter a valid IPv4 address.',
+        ipv6: 'Please enter a valid IPv6 address.',
+        iban: 'Please enter a valid IBAN.',
+        time: 'Please enter a valid time (HH:mm).',
+        domain: 'Please enter a valid domain name.',
+        base64: 'Please enter valid Base64 text.',
+        mac: 'Please enter a valid MAC address.',
+        latitude: 'Please enter a latitude between -90 and 90.',
+        longitude: 'Please enter a longitude between -180 and 180.',
+        startsWith: 'Must start with {value}.',
+        endsWith: 'Must end with {value}.',
+        contains: 'Must contain {value}.',
+        minWords: 'Please enter at least {min} words.',
+        maxWords: 'Please enter no more than {max} words.',
         notEqualTo: 'This value is not allowed.',
         equalTo: 'Values do not match.',
         pwcheck: 'Password does not meet the requirements.',
@@ -309,6 +330,50 @@
         return sum % 10 === 0;
     }
 
+    // ---- identifiers and formats. Everything below is ASCII-only on purpose (no /i flag, no toUpperCase) so every platform answers the same.
+    const IPV4_BYTE = '(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])';
+    const IPV4_RE = new RegExp('^(?:' + IPV4_BYTE + '\\.){3}' + IPV4_BYTE + '$');
+    const HEX4_RE = /^[0-9a-fA-F]{1,4}$/;
+
+    /** IPv6 in any of its writings: full, with :: once, with an IPv4 tail (::ffff:1.2.3.4). */
+    function isIPv6(v) {
+        if (!/^[0-9a-fA-F:.]+$/.test(v) || v.split('::').length > 2) return false;
+        let s = v;
+        const lastColon = s.lastIndexOf(':');
+        if (s.indexOf('.') > -1) {
+            const tail = s.slice(lastColon + 1);
+            if (!IPV4_RE.test(tail)) return false;
+            s = s.slice(0, lastColon + 1) + '0:0';
+        }
+        const groups = s.split('::');
+        const parse = part => part === '' ? [] : part.split(':');
+        const left = parse(groups[0]), right = groups.length === 2 ? parse(groups[1]) : [];
+        if (left.concat(right).some(g => !HEX4_RE.test(g))) return false;
+        return groups.length === 2 ? left.length + right.length < 8 : left.length === 8;
+    }
+
+    /** IBAN: shape, then the mod-97 check of ISO 13616 (spaces are allowed, case does not matter). */
+    function ibanOk(v) {
+        const s = v.replace(/\s+/g, '').replace(/[a-z]/g, c => c.toUpperCase());
+        if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(s)) return false;
+        const moved = s.slice(4) + s.slice(0, 4);
+        let rem = 0;
+        for (let i = 0; i < moved.length; i++) {
+            const c = moved.charCodeAt(i);
+            const digits = c >= 65 ? String(c - 55) : moved[i];
+            for (let j = 0; j < digits.length; j++) rem = (rem * 10 + (digits.charCodeAt(j) - 48)) % 97;
+        }
+        return rem === 1;
+    }
+
+    /** A host name: letters, digits and hyphens in labels of 1-63 characters, a top level of letters (or xn-- for internationalised ones), 253 in all. */
+    const DOMAIN_RE = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,63}|xn--[a-zA-Z0-9-]{1,59})$/;
+
+    /** Words: pieces between whitespace that hold at least one letter or digit (of any script). */
+    function wordCount(v) {
+        return v.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+    }
+
     /** data-msg-<rule> (or data-msg when `generic`), for example data-msg-required, data-msg-min-date or data-msg-mindate. */
     function dataMessage(field, type, generic) {
         if (!field || !field.getAttribute) return '';
@@ -352,6 +417,25 @@
     R('min', (v, r) => num(v) >= r.min);
     R('step', (v, r) => { const n = num(v), base = r.base || 0; if (isNaN(n)) return false; const q = (n - base) / r.step; return Math.abs(q - Math.round(q)) < 1e-9; });
     R('oneOf', (v, r) => (r.values || []).map(String).includes(v));
+    R('notOneOf', (v, r) => !(r.values || []).map(String).includes(v));
+    R('integer', v => /^[+-]?[0-9]+$/.test(v));
+    R('uuid', v => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(v));
+    R('hexColor', v => /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v));
+    R('slug', v => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v));
+    R('ipv4', v => IPV4_RE.test(v));
+    R('ipv6', v => isIPv6(v));
+    R('iban', v => ibanOk(v));
+    R('time', v => /^(?:[01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/.test(v));
+    R('domain', v => v.length <= 253 && DOMAIN_RE.test(v));
+    R('base64', v => /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(v));
+    R('mac', v => /^[0-9a-fA-F]{2}([:-])[0-9a-fA-F]{2}(?:\1[0-9a-fA-F]{2}){4}$/.test(v));
+    R('latitude', v => /^[+-]?(?:90(?:\.0+)?|[0-8]?[0-9](?:\.[0-9]+)?)$/.test(v));
+    R('longitude', v => /^[+-]?(?:180(?:\.0+)?|1[0-7][0-9](?:\.[0-9]+)?|[1-9]?[0-9](?:\.[0-9]+)?)$/.test(v));
+    R('startsWith', (v, r) => v.startsWith(String(r.value == null ? '' : r.value)));
+    R('endsWith', (v, r) => v.endsWith(String(r.value == null ? '' : r.value)));
+    R('contains', (v, r) => v.includes(String(r.value == null ? '' : r.value)));
+    R('minWords', (v, r) => wordCount(v) >= r.min);
+    R('maxWords', (v, r) => wordCount(v) <= r.max);
     const targetOf = (r, env) => r.selector ? safeQuery(env.form, r.selector) : safeQuery(env.form, `[name="${esc(r.target)}"]`);
     R('notEqualTo', (v, r, env) => { const t = targetOf(r, env); return !t || v !== t.value.trim(); });
     R('equalTo', (v, r, env) => {
@@ -479,7 +563,9 @@
         minlength: p => ({ min: +p }), maxlength: p => ({ max: +p }), rangelength: toRange, range: toRange,
         min: p => ({ min: numOr(p) }), max: p => ({ max: numOr(p) }), step: p => ({ step: +p }),
         minDate: p => ({ min: p }), maxDate: p => ({ max: p }),
-        pattern: p => ({ pattern: p }), oneOf: p => ({ values: [].concat(p) }),
+        pattern: p => ({ pattern: p }), oneOf: p => ({ values: [].concat(p) }), notOneOf: p => ({ values: [].concat(p) }),
+        startsWith: p => ({ value: p }), endsWith: p => ({ value: p }), contains: p => ({ value: p }),
+        minWords: p => ({ min: +p }), maxWords: p => ({ max: +p }),
         equalTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
         notEqualTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
         minChecked: p => ({ min: +p }), maxChecked: p => ({ max: +p }), minFiles: p => ({ min: +p }), maxFiles: p => ({ max: +p }),
@@ -1232,6 +1318,6 @@
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.7.0'
+        version: '2.8.0'
     };
 });

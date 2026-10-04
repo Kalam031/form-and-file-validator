@@ -80,6 +80,27 @@ public sealed class Rule
     public static Rule Range(double min, double max) => Make("range", ("min", min), ("max", max));
     public static Rule Step(double step, double baseValue = 0) => Make("step", ("step", step), ("base", baseValue));
     public static Rule OneOf(params string[] values) => Make("oneOf", ("values", values.Cast<object?>().ToList()));
+    public static Rule NotOneOf(params string[] values) => Make("notOneOf", ("values", values.Cast<object?>().ToList()));
+    public static Rule Integer() => Make("integer");
+    public static Rule Uuid() => Make("uuid");
+    public static Rule HexColor() => Make("hexColor");
+    public static Rule Slug() => Make("slug");
+    public static Rule Ipv4() => Make("ipv4");
+    public static Rule Ipv6() => Make("ipv6");
+    public static Rule Iban() => Make("iban");
+
+    /// <summary>24-hour time, <c>HH:mm</c> or <c>HH:mm:ss</c>.</summary>
+    public static Rule Time() => Make("time");
+    public static Rule Domain() => Make("domain");
+    public static Rule Base64() => Make("base64");
+    public static Rule Mac() => Make("mac");
+    public static Rule Latitude() => Make("latitude");
+    public static Rule Longitude() => Make("longitude");
+    public static Rule StartsWith(string value) => Make("startsWith", ("value", value));
+    public static Rule EndsWith(string value) => Make("endsWith", ("value", value));
+    public static Rule Contains(string value) => Make("contains", ("value", value));
+    public static Rule MinWords(int min) => Make("minWords", ("min", (double)min));
+    public static Rule MaxWords(int max) => Make("maxWords", ("max", (double)max));
     public static Rule EqualTo(string field) => Make("equalTo", ("target", field));
     public static Rule NotEqualTo(string field) => Make("notEqualTo", ("target", field));
 
@@ -132,8 +153,10 @@ public sealed class Rule
         object? val = Convert(v);
         switch (name)
         {
-            case "minlength": case "min": case "minDate": opts["min"] = val; break;
-            case "maxlength": case "max": case "maxDate": opts["max"] = val; break;
+            case "minlength": case "min": case "minDate": case "minWords": opts["min"] = val; break;
+            case "maxlength": case "max": case "maxDate": case "maxWords": opts["max"] = val; break;
+            case "startsWith": case "endsWith": case "contains": opts["value"] = val; break;
+            case "notOneOf": opts["values"] = val; break;
             case "rangelength": case "range": { var l = (List<object?>)val!; opts["min"] = l[0]; opts["max"] = l[1]; break; }
             case "step": opts["step"] = val; break;
             case "equalTo": case "notEqualTo": opts["target"] = val is string s ? s.TrimStart('#') : val; break;

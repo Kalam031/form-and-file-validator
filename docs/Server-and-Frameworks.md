@@ -117,7 +117,7 @@ public class SignupModel
 
 Outside MVC, `ModelRules.For<SignupModel>()` gives the rules and `ModelRules.ToJson<SignupModel>()` the JSON. Field names are the property names, which is what MVC puts in the `name` attribute. The libraries are tested on the real .NET Framework 4.8 (Windows), .NET 8 and .NET 10; `FormAndFileValidator` targets netstandard2.0 (.NET Framework 4.6.1 and up), the helpers package `FormAndFileValidator.Mvc5` targets .NET Framework 4.8.
 
-Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Keep `pattern` rules portable (write `[0-9]`, not `\d`) because regular expression engines differ slightly.
+Supported: all text, number, date, password, pattern, format (uuid, ipv4, ipv6, iban, domain, mac, hexColor, slug, time, base64, latitude, longitude, integer, startsWith, endsWith, contains, minWords, maxWords, notOneOf) and choice rules (not file, checkbox-count or remote rules). Keep `pattern` rules portable (write `[0-9]`, not `\d`) because regular expression engines differ slightly.
 
 ## React
 

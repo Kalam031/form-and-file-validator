@@ -334,7 +334,7 @@ $(&#39;#email&#39;).valid();   // true or false, right away, like the original
 </code></pre>
 <ul>
 <li>Blank optional fields are fine. Only <code>required</code> (and <code>equalTo</code>, <code>custom</code>, <code>minFiles</code>, <code>minChecked</code>) look at empty values.</li>
-<li>Rules: <code>required email url number digits alpha alphanumeric phone date minDate maxDate creditcard pattern minlength maxlength rangelength range min max step oneOf equalTo notEqualTo pwcheck minChecked maxChecked minFiles maxFiles fileType fileSize file remote custom</code>.</li>
+<li>Rules: <code>required email url number digits alpha alphanumeric phone date minDate maxDate creditcard pattern minlength maxlength rangelength range min max step oneOf notOneOf integer uuid hexColor slug ipv4 ipv6 iban time domain base64 mac latitude longitude startsWith endsWith contains minWords maxWords equalTo notEqualTo pwcheck minChecked maxChecked minFiles maxFiles fileType fileSize file remote custom</code>.</li>
 <li>Add your own with <code>FormValidator.registerRule(...)</code>, or the jQuery way: <code>FormValidator.addMethod(name, fn(value, element, param), message)</code>.</li>
 <li>jQuery-style rules natively: <code>{ minlength: 3, equalTo: &#39;#pw&#39;, remote: &#39;/check&#39; }</code>, <code>depends</code>, <code>normalizer</code>, class rules, <code>data-rule-*</code>, per-field <code>messages</code>.</li>
 <li>Messages can live in the HTML: <code>&lt;input name=&quot;n&quot; required data-msg-required=&quot;Please tell us your name&quot;&gt;</code>.</li>
@@ -398,9 +398,9 @@ The packs are machine-quality translations: please have a native speaker check t
 <h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
 <p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.5.0/dist/validator.min.js&quot;
-        integrity=&quot;sha384-FXAqBrwzTsTnohplJi7hKPBFXaW4qZcJgCQeNaVwNkrfvXB+8YpfqIgP1wIJ6QKM&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+        integrity=&quot;sha384-f+slbQ7zhZEN1tOmlHXYaIGigQu5RuWn+C5PjadFRkZCjEaPRblzRRfEdhkjTg6F&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.5.0/dist/locales/de.min.js&quot;
-        integrity=&quot;sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+        integrity=&quot;sha384-cPX/sZQcZKwPj52I7uN7qpOPpG0bIrEXaz1OuZHXwB9XVlxnBDt4KiDZAPEqTqGT&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;
 </code></pre>
 <p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.5.0; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or <code>locales/all.min.js</code>.</p>

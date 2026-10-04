@@ -98,6 +98,33 @@ C.push({ rule: ['email', { type: 'maxlength', max: 3 }], value: '', valid: true 
 C.push({ rule: [{ type: 'required' }, { type: 'minlength', min: 5 }, { type: 'email' }], value: 'a@b', valid: false, failedRule: 'minlength' });
 C.push({ rule: [{ type: 'required' }, { type: 'minlength', min: 3 }, { type: 'email' }], value: 'a@b', valid: false, failedRule: 'email' });
 C.push({ rule: ['required', 'email'], value: '  a@b.co  ', valid: true });
+// identifiers and formats (ASCII only: the same answer in JavaScript, .NET and every other port)
+const NBSP = String.fromCharCode(0xa0), EMSP = String.fromCharCode(0x2003), ZWSP = String.fromCharCode(0x200b), ARABIC_ONE = String.fromCharCode(0x661), FULLWIDTH_ONE = String.fromCharCode(0xff11);
+add({ type: 'integer' }, ['0', '-5', '+7', '007', '12345678901234567890'], ['1.5', '1e3', '--1', ARABIC_ONE, '5-', '0x10', '1 2', ',5']);
+add({ type: 'uuid' }, ['123e4567-e89b-12d3-a456-426614174000', '123E4567-E89B-42D3-A456-426614174000', '018f3a3c-7b3e-7cc1-8f5a-0c1d2e3f4a5b'],
+  ['123e4567-e89b-02d3-a456-426614174000', '123e4567-e89b-92d3-a456-426614174000', '123e4567-e89b-12d3-c456-426614174000', '123e4567e89b12d3a456426614174000',
+    '123e4567-e89b-12d3-a456-42661417400', 'g23e4567-e89b-12d3-a456-426614174000', '{123e4567-e89b-12d3-a456-426614174000}']);
+add({ type: 'hexColor' }, ['#fff', '#FFFF', '#a1b2c3', '#A1B2C3D4'], ['fff', '#ff', '#fffff', '#ggg', '#12345g', '##fff', '#1234567']);
+add({ type: 'slug' }, ['a', 'hello-world', 'a1-b2-c3', '2024'], ['Hello', '-a', 'a-', 'a--b', 'a_b', 'a b', 'caf' + String.fromCharCode(0xe9), 'a-B']);
+add({ type: 'ipv4' }, ['0.0.0.0', '255.255.255.255', '192.168.1.1', '1.2.3.4'], ['256.1.1.1', '1.2.3', '1.2.3.4.5', '01.2.3.4', '1.2.3.04', 'a.b.c.d', '1.2.3.', '.1.2.3', FULLWIDTH_ONE + '.2.3.4']);
+add({ type: 'ipv6' }, ['::1', '::', '2001:db8::1', '2001:0db8:85a3:0000:0000:8a2e:0370:7334', 'fe80::1', '::ffff:192.168.1.1', '1::', '1:2:3:4:5:6:7:8', '1:2:3:4:5:6:1.2.3.4', 'ABCD:EF01::2'],
+  ['1:2:3:4:5:6:7:8:9', '1::2::3', ':::1', '12345::1', 'g::1', '1:2:3:4:5:6:7', '::ffff:256.1.1.1', '1.2.3.4', '::1.2.3', '1:2:3:4:5:6:7::8', ':1:2:3:4:5:6:7']);
+add({ type: 'iban' }, ['DE89370400440532013000', 'DE89 3704 0044 0532 0130 00', 'gb82west12345698765432', 'GB82 WEST 1234 5698 7654 32', 'FR1420041010050500013M02606', 'NL91ABNA0417164300', 'BE68539007547034', 'CH9300762011623852957'],
+  ['DE89370400440532013001', 'DE8937040044053201300', 'XX00', '1234567890123456', 'DE89-3704-0044-0532-0130-00', 'GB82WEST1234569876543', 'de89370400440532013000x']);
+add({ type: 'time' }, ['00:00', '23:59', '09:05', '12:30:45', '23:59:59'], ['24:00', '9:05', '12:60', '12:30:60', '12:3', '1230', '12:30:', 'noon', '12' + String.fromCharCode(0xff1a) + '30']);
+add({ type: 'domain' }, ['example.com', 'sub.example.co.uk', 'a-b.example.org', 'xn--p1ai.xn--p1ai', 'EXAMPLE.COM', '1.example.com', 'a'.repeat(63) + '.com'],
+  ['example', 'example.c', '-a.com', 'a-.com', 'a..com', 'example.com.', 'exa mple.com', 'ex' + String.fromCharCode(0xe4) + 'mple.com', 'http://example.com', 'example.123', 'a'.repeat(64) + '.com', ('a'.repeat(60) + '.').repeat(5) + 'com']);
+add({ type: 'base64' }, ['aGVsbG8=', 'aGVsbG8gd29ybGQ=', 'YWJj', 'YQ==', 'YWI='], ['aGVsbG8', 'aGVsbG8==', 'a', 'YQ=', 'YQ===', 'a GVs', 'aGVs bG8=', 'YWJj!']);
+add({ type: 'mac' }, ['00:1A:2b:3C:4d:5E', '00-1a-2b-3c-4d-5e', 'FF:FF:FF:FF:FF:FF'], ['00:1A:2b:3C:4d', '00:1A:2b:3C:4d:5E:6F', '00:1A-2b:3C:4d:5E', '001A.2b3C.4d5E', 'GG:1A:2b:3C:4d:5E', '0:1A:2b:3C:4d:5E']);
+add({ type: 'latitude' }, ['0', '45.5', '-90', '90', '90.000', '+12.3456', '-0.5', '89.999999'], ['90.1', '-90.5', '91', 'abc', '45.', '.5', '1e2', '180']);
+add({ type: 'longitude' }, ['0', '-180', '180', '180.0', '179.99', '-122.4194', '+5', '99.5', '100'], ['180.1', '-181', '181', 'abc', '1e2', '200', '.5']);
+add({ type: 'startsWith', value: 'AB' }, ['AB', 'ABC', 'ABAB'], ['aB', 'xAB', 'A']);
+add({ type: 'endsWith', value: '.pdf' }, ['a.pdf', '.pdf'], ['a.PDF', 'pdf', 'a.pdfx']);
+add({ type: 'contains', value: '@' }, ['a@b', '@'], ['ab']);
+add({ type: 'notOneOf', values: ['admin', 'root'] }, ['user', 'Admin', 'administrator'], ['admin', 'root']);
+add({ type: 'minWords', min: 3 }, ['one two three', 'a b c d', 'a' + NBSP + 'b' + EMSP + 'c', "it's a dog", String.fromCharCode(0x41f, 0x440, 0x438, 0x432, 0x435, 0x442) + ' ' + String.fromCharCode(0x43c, 0x438, 0x440) + ' ' + String.fromCharCode(0x434, 0x43e, 0x431, 0x440, 0x44b, 0x439)],
+  ['one two', 'hello', '!!! ... ???', 'a  b', 'a' + ZWSP + 'b c', 'x - y']);
+add({ type: 'maxWords', max: 2 }, ['one', 'one two', 'one  two', '!!! one', 'a' + NBSP + 'b'], ['one two three', 'a b c', 'a' + NBSP + 'b' + EMSP + 'c']);
 // rules that look at another field
 add({ type: 'equalTo', target: 'password' }, ['Secret1!'], ['secret1!', 'Secret1', ''], { values: { password: 'Secret1!' } });
 add({ type: 'notEqualTo', target: 'oldPassword' }, ['new-one'], ['old-one'], { values: { oldPassword: 'old-one' } });

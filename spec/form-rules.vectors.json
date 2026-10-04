@@ -3261,6 +3261,1599 @@
   },
   {
    "rule": {
+    "type": "integer"
+   },
+   "value": "0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "-5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "+7",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "007",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "12345678901234567890",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "1.5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "1e3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "--1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "١",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "5-",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "0x10",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": "1 2",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "integer"
+   },
+   "value": ",5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "123e4567-e89b-12d3-a456-426614174000",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "123E4567-E89B-42D3-A456-426614174000",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "018f3a3c-7b3e-7cc1-8f5a-0c1d2e3f4a5b",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "123e4567-e89b-02d3-a456-426614174000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "123e4567-e89b-92d3-a456-426614174000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "123e4567-e89b-12d3-c456-426614174000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "123e4567e89b12d3a456426614174000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "123e4567-e89b-12d3-a456-42661417400",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "g23e4567-e89b-12d3-a456-426614174000",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "uuid"
+   },
+   "value": "{123e4567-e89b-12d3-a456-426614174000}",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#fff",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#FFFF",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#a1b2c3",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#A1B2C3D4",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "fff",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#ff",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#fffff",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#ggg",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#12345g",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "##fff",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "hexColor"
+   },
+   "value": "#1234567",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "a",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "hello-world",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "a1-b2-c3",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "2024",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "Hello",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "-a",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "a-",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "a--b",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "a_b",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "a b",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "café",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "slug"
+   },
+   "value": "a-B",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "0.0.0.0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "255.255.255.255",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "192.168.1.1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "1.2.3.4",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "256.1.1.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "1.2.3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "1.2.3.4.5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "01.2.3.4",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "1.2.3.04",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "a.b.c.d",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "1.2.3.",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": ".1.2.3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv4"
+   },
+   "value": "１.2.3.4",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "::1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "::",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "2001:db8::1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "fe80::1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "::ffff:192.168.1.1",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1::",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1:2:3:4:5:6:7:8",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1:2:3:4:5:6:1.2.3.4",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "ABCD:EF01::2",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1:2:3:4:5:6:7:8:9",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1::2::3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": ":::1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "12345::1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "g::1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1:2:3:4:5:6:7",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "::ffff:256.1.1.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1.2.3.4",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "::1.2.3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": "1:2:3:4:5:6:7::8",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "ipv6"
+   },
+   "value": ":1:2:3:4:5:6:7",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "DE89370400440532013000",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "DE89 3704 0044 0532 0130 00",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "gb82west12345698765432",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "GB82 WEST 1234 5698 7654 32",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "FR1420041010050500013M02606",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "NL91ABNA0417164300",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "BE68539007547034",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "CH9300762011623852957",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "DE89370400440532013001",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "DE8937040044053201300",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "XX00",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "1234567890123456",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "DE89-3704-0044-0532-0130-00",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "GB82WEST1234569876543",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "iban"
+   },
+   "value": "de89370400440532013000x",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "00:00",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "23:59",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "09:05",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "12:30:45",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "23:59:59",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "24:00",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "9:05",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "12:60",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "12:30:60",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "12:3",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "1230",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "12:30:",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "noon",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "time"
+   },
+   "value": "12：30",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "sub.example.co.uk",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "a-b.example.org",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "xn--p1ai.xn--p1ai",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "EXAMPLE.COM",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "1.example.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "example",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "example.c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "-a.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "a-.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "a..com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "example.com.",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "exa mple.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "exämple.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "http://example.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "example.123",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "domain"
+   },
+   "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "aGVsbG8=",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "aGVsbG8gd29ybGQ=",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "YWJj",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "YQ==",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "YWI=",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "aGVsbG8",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "aGVsbG8==",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "a",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "YQ=",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "YQ===",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "a GVs",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "aGVs bG8=",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "base64"
+   },
+   "value": "YWJj!",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "00:1A:2b:3C:4d:5E",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "00-1a-2b-3c-4d-5e",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "FF:FF:FF:FF:FF:FF",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "00:1A:2b:3C:4d",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "00:1A:2b:3C:4d:5E:6F",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "00:1A-2b:3C:4d:5E",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "001A.2b3C.4d5E",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "GG:1A:2b:3C:4d:5E",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "mac"
+   },
+   "value": "0:1A:2b:3C:4d:5E",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "45.5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "-90",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "90",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "90.000",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "+12.3456",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "-0.5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "89.999999",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "90.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "-90.5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "91",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "abc",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "45.",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": ".5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "1e2",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "latitude"
+   },
+   "value": "180",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "-180",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "180",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "180.0",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "179.99",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "-122.4194",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "+5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "99.5",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "100",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "180.1",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "-181",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "181",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "abc",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "1e2",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": "200",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "longitude"
+   },
+   "value": ".5",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "startsWith",
+    "value": "AB"
+   },
+   "value": "AB",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "startsWith",
+    "value": "AB"
+   },
+   "value": "ABC",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "startsWith",
+    "value": "AB"
+   },
+   "value": "ABAB",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "startsWith",
+    "value": "AB"
+   },
+   "value": "aB",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "startsWith",
+    "value": "AB"
+   },
+   "value": "xAB",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "startsWith",
+    "value": "AB"
+   },
+   "value": "A",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "endsWith",
+    "value": ".pdf"
+   },
+   "value": "a.pdf",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "endsWith",
+    "value": ".pdf"
+   },
+   "value": ".pdf",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "endsWith",
+    "value": ".pdf"
+   },
+   "value": "a.PDF",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "endsWith",
+    "value": ".pdf"
+   },
+   "value": "pdf",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "endsWith",
+    "value": ".pdf"
+   },
+   "value": "a.pdfx",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "contains",
+    "value": "@"
+   },
+   "value": "a@b",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "contains",
+    "value": "@"
+   },
+   "value": "@",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "contains",
+    "value": "@"
+   },
+   "value": "ab",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "notOneOf",
+    "values": [
+     "admin",
+     "root"
+    ]
+   },
+   "value": "user",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "notOneOf",
+    "values": [
+     "admin",
+     "root"
+    ]
+   },
+   "value": "Admin",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "notOneOf",
+    "values": [
+     "admin",
+     "root"
+    ]
+   },
+   "value": "administrator",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "notOneOf",
+    "values": [
+     "admin",
+     "root"
+    ]
+   },
+   "value": "admin",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "notOneOf",
+    "values": [
+     "admin",
+     "root"
+    ]
+   },
+   "value": "root",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "one two three",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "a b c d",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "a b c",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "it's a dog",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "Привет мир добрый",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "one two",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "hello",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "!!! ... ???",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "a  b",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "a​b c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "minWords",
+    "min": 3
+   },
+   "value": "x - y",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "one",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "one two",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "one  two",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "!!! one",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "a b",
+   "valid": true
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "one two three",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "a b c",
+   "valid": false
+  },
+  {
+   "rule": {
+    "type": "maxWords",
+    "max": 2
+   },
+   "value": "a b c",
+   "valid": false
+  },
+  {
+   "rule": {
     "type": "equalTo",
     "target": "password"
    },

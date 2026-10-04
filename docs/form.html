@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v270-documentation">FormValidator v2.7.0 — Documentation</h1>
+<h1 id="formvalidator-v280-documentation">FormValidator v2.8.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -244,10 +244,88 @@ form.addEventListener(&#39;submit&#39;, inst.handleSubmit(async (values, event) 
 <td><code>3</code> with step 5</td>
 </tr>
 <tr>
-<td><code>oneOf</code></td>
+<td><code>oneOf</code>, <code>notOneOf</code></td>
 <td><code>values</code></td>
-<td>one of the listed values</td>
-<td>anything else</td>
+<td>one of the listed values / none of them</td>
+<td>anything else / a listed value</td>
+</tr>
+<tr>
+<td><code>integer</code></td>
+<td></td>
+<td><code>0</code>, <code>-5</code>, <code>+7</code>, <code>007</code></td>
+<td><code>1.5</code>, <code>1e3</code>, <code>0x10</code></td>
+</tr>
+<tr>
+<td><code>uuid</code></td>
+<td></td>
+<td><code>123e4567-e89b-12d3-a456-426614174000</code> (versions 1-8, any letter case)</td>
+<td>missing hyphens, a wrong version or variant</td>
+</tr>
+<tr>
+<td><code>hexColor</code></td>
+<td></td>
+<td><code>#fff</code>, <code>#FFFF</code>, <code>#a1b2c3</code>, <code>#A1B2C3D4</code></td>
+<td><code>fff</code>, <code>#ff</code>, <code>#ggg</code></td>
+</tr>
+<tr>
+<td><code>slug</code></td>
+<td></td>
+<td><code>hello-world</code>, <code>2024</code></td>
+<td><code>Hello</code>, <code>a--b</code>, <code>-a</code>, <code>a_b</code></td>
+</tr>
+<tr>
+<td><code>ipv4</code>, <code>ipv6</code></td>
+<td></td>
+<td><code>192.168.1.1</code>; <code>::1</code>, <code>2001:db8::1</code>, <code>::ffff:1.2.3.4</code></td>
+<td><code>256.1.1.1</code>, <code>01.2.3.4</code>; <code>1::2::3</code></td>
+</tr>
+<tr>
+<td><code>iban</code></td>
+<td></td>
+<td><code>DE89 3704 0044 0532 0130 00</code> (spaces and any letter case; the mod-97 check)</td>
+<td>a wrong check digit or length</td>
+</tr>
+<tr>
+<td><code>time</code></td>
+<td></td>
+<td><code>09:05</code>, <code>23:59:59</code></td>
+<td><code>24:00</code>, <code>9:05</code>, <code>12:60</code></td>
+</tr>
+<tr>
+<td><code>domain</code></td>
+<td></td>
+<td><code>example.com</code>, <code>sub.example.co.uk</code>, <code>xn--p1ai.xn--p1ai</code></td>
+<td><code>example</code>, <code>a..com</code>, <code>-a.com</code>, <code>http://example.com</code></td>
+</tr>
+<tr>
+<td><code>base64</code></td>
+<td></td>
+<td><code>aGVsbG8=</code>, <code>YQ==</code></td>
+<td><code>aGVsbG8</code>, <code>YQ=</code>, <code>a GVs</code></td>
+</tr>
+<tr>
+<td><code>mac</code></td>
+<td></td>
+<td><code>00:1A:2b:3C:4d:5E</code>, <code>00-1a-2b-3c-4d-5e</code></td>
+<td>mixed separators, a wrong length</td>
+</tr>
+<tr>
+<td><code>latitude</code>, <code>longitude</code></td>
+<td></td>
+<td><code>-90</code>, <code>45.5</code>; <code>-180</code>, <code>-122.4194</code></td>
+<td><code>90.1</code>; <code>180.1</code></td>
+</tr>
+<tr>
+<td><code>startsWith</code>, <code>endsWith</code>, <code>contains</code></td>
+<td><code>value</code></td>
+<td>the text starts / ends with / includes it (case matters; use <code>pattern</code> for more)</td>
+<td>otherwise</td>
+</tr>
+<tr>
+<td><code>minWords</code>, <code>maxWords</code></td>
+<td><code>min</code> / <code>max</code></td>
+<td>pieces between whitespace that hold a letter or digit of any script (<code>a b c</code> is 3)</td>
+<td>too few / too many</td>
 </tr>
 <tr>
 <td><code>equalTo</code>, <code>notEqualTo</code></td>
@@ -570,7 +648,7 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
   minlength: &#39;Mindestens {min} Zeichen.&#39;
 });
 </code></pre>
-<p>The message keys are the rule names: <code>required</code>, <code>email</code>, <code>url</code>, <code>number</code>, <code>digits</code>, <code>alpha</code>, <code>alphanumeric</code>, <code>phone</code>, <code>date</code>, <code>minDate</code>, <code>maxDate</code>, <code>creditcard</code>, <code>pattern</code>, <code>maxlength</code>, <code>minlength</code>, <code>rangelength</code>, <code>range</code>, <code>max</code>, <code>min</code>, <code>step</code>, <code>oneOf</code>, <code>notEqualTo</code>, <code>equalTo</code>, <code>pwcheck</code>, <code>minChecked</code>, <code>maxChecked</code>, <code>minFiles</code>, <code>maxFiles</code>, <code>fileType</code>, <code>fileSize</code>, <code>file</code>, <code>remote</code>, <code>custom</code>, plus <code>badInput</code> for an unparseable number field.</p>
+<p>The message keys are the rule names: <code>required</code>, <code>email</code>, <code>url</code>, <code>number</code>, <code>digits</code>, <code>alpha</code>, <code>alphanumeric</code>, <code>phone</code>, <code>date</code>, <code>minDate</code>, <code>maxDate</code>, <code>creditcard</code>, <code>pattern</code>, <code>maxlength</code>, <code>minlength</code>, <code>rangelength</code>, <code>range</code>, <code>max</code>, <code>min</code>, <code>step</code>, <code>oneOf</code>, <code>notOneOf</code>, <code>integer</code>, <code>uuid</code>, <code>hexColor</code>, <code>slug</code>, <code>ipv4</code>, <code>ipv6</code>, <code>iban</code>, <code>time</code>, <code>domain</code>, <code>base64</code>, <code>mac</code>, <code>latitude</code>, <code>longitude</code>, <code>startsWith</code>, <code>endsWith</code>, <code>contains</code>, <code>minWords</code>, <code>maxWords</code>, <code>notEqualTo</code>, <code>equalTo</code>, <code>pwcheck</code>, <code>minChecked</code>, <code>maxChecked</code>, <code>minFiles</code>, <code>maxFiles</code>, <code>fileType</code>, <code>fileSize</code>, <code>file</code>, <code>remote</code>, <code>custom</code>, plus <code>badInput</code> for an unparseable number field.</p>
 <h2 id="error-display-and-accessibility">Error display and accessibility</h2>
 <p><strong>Where the message appears</strong></p>
 <div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
@@ -1120,6 +1198,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.8.0</strong>: 19 new rules (<code>integer</code>, <code>uuid</code>, <code>hexColor</code>, <code>slug</code>, <code>ipv4</code>, <code>ipv6</code>, <code>iban</code>, <code>time</code>, <code>domain</code>, <code>base64</code>, <code>mac</code>, <code>latitude</code>, <code>longitude</code>, <code>startsWith</code>, <code>endsWith</code>, <code>contains</code>, <code>notOneOf</code>, <code>minWords</code>, <code>maxWords</code>), also in the .NET package and all language packs.</li>
 <li><strong>2.7.0</strong>: named date formats (<code>format</code>, <code>strict</code>), <code>checkValue()</code> / <code>checkValues()</code> without a DOM, a <code>url</code> rule that is the same in every browser, Unicode-aware <code>pwcheck</code>, plain-decimal <code>min</code> / <code>max</code> / <code>range</code> / <code>step</code>.</li>
 <li><strong>2.6.0</strong>: error messages carry <code>dir=&quot;auto&quot;</code>; language packs.</li>
 <li><strong>2.5.2</strong>: hardening: a bad CSS selector, an option of the wrong type or a user callback that throws no longer breaks the form.</li>

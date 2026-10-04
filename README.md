@@ -222,7 +222,7 @@ FormValidator.init({
 ```
 
 - Blank optional fields are fine. Only `required` (and `equalTo`, `custom`, `minFiles`, `minChecked`) look at empty values.
-- Rules: `required email url number digits alpha alphanumeric phone date minDate maxDate creditcard pattern minlength maxlength rangelength range min max step oneOf equalTo notEqualTo pwcheck minChecked maxChecked minFiles maxFiles fileType fileSize file remote custom`.
+- Rules: `required email url number digits alpha alphanumeric phone date minDate maxDate creditcard pattern minlength maxlength rangelength range min max step oneOf notOneOf integer uuid hexColor slug ipv4 ipv6 iban time domain base64 mac latitude longitude startsWith endsWith contains minWords maxWords equalTo notEqualTo pwcheck minChecked maxChecked minFiles maxFiles fileType fileSize file remote custom`.
 - Add your own with `FormValidator.registerRule(...)`, or the jQuery way: `FormValidator.addMethod(name, fn(value, element, param), message)`.
 - jQuery-style rules natively: `{ minlength: 3, equalTo: '#pw', remote: '/check' }`, `depends`, `normalizer`, class rules, `data-rule-*`, per-field `messages`.
 - Messages can live in the HTML: `<input name="n" required data-msg-required="Please tell us your name">`.
@@ -304,9 +304,9 @@ Always pin the exact version and keep the `integrity` attribute, so the file you
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.5.0/dist/validator.min.js"
-        integrity="sha384-FXAqBrwzTsTnohplJi7hKPBFXaW4qZcJgCQeNaVwNkrfvXB+8YpfqIgP1wIJ6QKM" crossorigin="anonymous"></script>
+        integrity="sha384-f+slbQ7zhZEN1tOmlHXYaIGigQu5RuWn+C5PjadFRkZCjEaPRblzRRfEdhkjTg6F" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.5.0/dist/locales/de.min.js"
-        integrity="sha384-WZlzRM5oT0KaCoNtwqY2Rc0XPz+573RflEm/7VmVe+lDXGmIMJIwmRSy/2EbJvsz" crossorigin="anonymous"></script>
+        integrity="sha384-cPX/sZQcZKwPj52I7uN7qpOPpG0bIrEXaz1OuZHXwB9XVlxnBDt4KiDZAPEqTqGT" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>
 ```
 

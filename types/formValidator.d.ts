@@ -80,7 +80,9 @@ export interface RuleObject {
 export type RuleName =
     | 'required' | 'email' | 'url' | 'number' | 'digits' | 'alpha' | 'alphanumeric' | 'phone' | 'date' | 'minDate' | 'maxDate' | 'creditcard' | 'pattern'
     | 'minlength' | 'maxlength' | 'rangelength' | 'range' | 'min' | 'max' | 'step' | 'oneOf' | 'equalTo' | 'notEqualTo' | 'pwcheck'
-    | 'minChecked' | 'maxChecked' | 'minFiles' | 'maxFiles' | 'fileType' | 'fileSize' | 'file' | 'remote' | 'custom';
+    | 'minChecked' | 'maxChecked' | 'minFiles' | 'maxFiles' | 'fileType' | 'fileSize' | 'file' | 'remote' | 'custom'
+    | 'notOneOf' | 'integer' | 'uuid' | 'hexColor' | 'slug' | 'ipv4' | 'ipv6' | 'iban' | 'time' | 'domain' | 'base64' | 'mac' | 'latitude' | 'longitude'
+    | 'startsWith' | 'endsWith' | 'contains' | 'minWords' | 'maxWords';
 
 /** jQuery-style rule map: `{ required: true, minlength: 3, range: [1, 5], equalTo: '#pw', remote: '/check' }`. */
 export type RuleMap = { [rule: string]: unknown } & { normalizer?: (value: string, field: HTMLElement) => string; messages?: Record<string, string> };

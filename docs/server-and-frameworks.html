@@ -116,7 +116,7 @@ if (!result.Valid) return Results.UnprocessableEntity(new { result.Rule, result.
 @Html.FormValidatorInit(&quot;signup&quot;)      @* FormValidator.init({ formId: &quot;signup&quot;, rules: { Email: [...], ... } }) *@
 </code></pre>
 <p>Outside MVC, <code>ModelRules.For&lt;SignupModel&gt;()</code> gives the rules and <code>ModelRules.ToJson&lt;SignupModel&gt;()</code> the JSON. Field names are the property names, which is what MVC puts in the <code>name</code> attribute. The libraries are tested on the real .NET Framework 4.8 (Windows), .NET 8 and .NET 10; <code>FormAndFileValidator</code> targets netstandard2.0 (.NET Framework 4.6.1 and up), the helpers package <code>FormAndFileValidator.Mvc5</code> targets .NET Framework 4.8.</p>
-<p>Supported: all text, number, date, password, pattern and choice rules (not file, checkbox-count or remote rules). Keep <code>pattern</code> rules portable (write <code>[0-9]</code>, not <code>\d</code>) because regular expression engines differ slightly.</p>
+<p>Supported: all text, number, date, password, pattern, format (uuid, ipv4, ipv6, iban, domain, mac, hexColor, slug, time, base64, latitude, longitude, integer, startsWith, endsWith, contains, minWords, maxWords, notOneOf) and choice rules (not file, checkbox-count or remote rules). Keep <code>pattern</code> rules portable (write <code>[0-9]</code>, not <code>\d</code>) because regular expression engines differ slightly.</p>
 <h2 id="react">React</h2>
 <pre tabindex="0"><code class="language-jsx">import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/react&#39;;
 

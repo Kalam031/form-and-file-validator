@@ -1,4 +1,4 @@
-# FormValidator v2.7.0 — Documentation
+# FormValidator v2.8.0 — Documentation
 
 ## Overview
 
@@ -124,7 +124,20 @@ Blank values skip every rule except `required`, `equalTo`, `custom`, `minFiles` 
 | `minlength`, `maxlength`, `rangelength` | `min`, `max` | length within the limit | too short or long |
 | `min`, `max`, `range` | `min`, `max` | number within the limit | outside the limit, or not a number |
 | `step` | `step`, `base` | multiples of the step | `3` with step 5 |
-| `oneOf` | `values` | one of the listed values | anything else |
+| `oneOf`, `notOneOf` | `values` | one of the listed values / none of them | anything else / a listed value |
+| `integer` | | `0`, `-5`, `+7`, `007` | `1.5`, `1e3`, `0x10` |
+| `uuid` | | `123e4567-e89b-12d3-a456-426614174000` (versions 1-8, any letter case) | missing hyphens, a wrong version or variant |
+| `hexColor` | | `#fff`, `#FFFF`, `#a1b2c3`, `#A1B2C3D4` | `fff`, `#ff`, `#ggg` |
+| `slug` | | `hello-world`, `2024` | `Hello`, `a--b`, `-a`, `a_b` |
+| `ipv4`, `ipv6` | | `192.168.1.1`; `::1`, `2001:db8::1`, `::ffff:1.2.3.4` | `256.1.1.1`, `01.2.3.4`; `1::2::3` |
+| `iban` | | `DE89 3704 0044 0532 0130 00` (spaces and any letter case; the mod-97 check) | a wrong check digit or length |
+| `time` | | `09:05`, `23:59:59` | `24:00`, `9:05`, `12:60` |
+| `domain` | | `example.com`, `sub.example.co.uk`, `xn--p1ai.xn--p1ai` | `example`, `a..com`, `-a.com`, `http://example.com` |
+| `base64` | | `aGVsbG8=`, `YQ==` | `aGVsbG8`, `YQ=`, `a GVs` |
+| `mac` | | `00:1A:2b:3C:4d:5E`, `00-1a-2b-3c-4d-5e` | mixed separators, a wrong length |
+| `latitude`, `longitude` | | `-90`, `45.5`; `-180`, `-122.4194` | `90.1`; `180.1` |
+| `startsWith`, `endsWith`, `contains` | `value` | the text starts / ends with / includes it (case matters; use `pattern` for more) | otherwise |
+| `minWords`, `maxWords` | `min` / `max` | pieces between whitespace that hold a letter or digit of any script (`a b c` is 3) | too few / too many |
 | `equalTo`, `notEqualTo` | `target` (field name) | same / different from the target field | mismatch; blank confirm when the target is filled |
 | `pwcheck` | `minLength`, `maxLength`, `requireUppercase`, `requireLowercase`, `requireDigit`, `requireSpecialChar`, `noWhitespace` | meets all listed requirements | any requirement missing |
 | `minChecked`, `maxChecked` | `min` / `max` | enough / not too many ticked boxes or selected options | outside the count |
@@ -270,7 +283,7 @@ Object.assign(FormValidator.messages, {
 });
 ```
 
-The message keys are the rule names: `required`, `email`, `url`, `number`, `digits`, `alpha`, `alphanumeric`, `phone`, `date`, `minDate`, `maxDate`, `creditcard`, `pattern`, `maxlength`, `minlength`, `rangelength`, `range`, `max`, `min`, `step`, `oneOf`, `notEqualTo`, `equalTo`, `pwcheck`, `minChecked`, `maxChecked`, `minFiles`, `maxFiles`, `fileType`, `fileSize`, `file`, `remote`, `custom`, plus `badInput` for an unparseable number field.
+The message keys are the rule names: `required`, `email`, `url`, `number`, `digits`, `alpha`, `alphanumeric`, `phone`, `date`, `minDate`, `maxDate`, `creditcard`, `pattern`, `maxlength`, `minlength`, `rangelength`, `range`, `max`, `min`, `step`, `oneOf`, `notOneOf`, `integer`, `uuid`, `hexColor`, `slug`, `ipv4`, `ipv6`, `iban`, `time`, `domain`, `base64`, `mac`, `latitude`, `longitude`, `startsWith`, `endsWith`, `contains`, `minWords`, `maxWords`, `notEqualTo`, `equalTo`, `pwcheck`, `minChecked`, `maxChecked`, `minFiles`, `maxFiles`, `fileType`, `fileSize`, `file`, `remote`, `custom`, plus `badInput` for an unparseable number field.
 
 ## Error display and accessibility
 
@@ -632,6 +645,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.8.0**: 19 new rules (`integer`, `uuid`, `hexColor`, `slug`, `ipv4`, `ipv6`, `iban`, `time`, `domain`, `base64`, `mac`, `latitude`, `longitude`, `startsWith`, `endsWith`, `contains`, `notOneOf`, `minWords`, `maxWords`), also in the .NET package and all language packs.
 - **2.7.0**: named date formats (`format`, `strict`), `checkValue()` / `checkValues()` without a DOM, a `url` rule that is the same in every browser, Unicode-aware `pwcheck`, plain-decimal `min` / `max` / `range` / `step`.
 - **2.6.0**: error messages carry `dir="auto"`; language packs.
 - **2.5.2**: hardening: a bad CSS selector, an option of the wrong type or a user callback that throws no longer breaks the form.
