@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benchmarks · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.15.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="benchmarks.html" aria-current="page">Benchmarks</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="benchmarks">Benchmarks</h1>
+<p>Measured with <code>npm run bench</code> (the script is in <code>bench/run.mjs</code>) on Node v24.18.1, 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz, 8 cores, win32 10.0.26300, on 2026-10-05.
+Absolute numbers depend on the machine: compare the rows with each other, and run <code>npm run bench</code> yourself.</p>
+<h2 id="bundle-size-minified-gzip">Bundle size (minified + gzip)</h2>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Library</th>
+<th>Version</th>
+<th>Size</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>form-and-file-validator core (checkValue, schema, 47 rules)</td>
+<td>3.14.0</td>
+<td>12.5 KB</td>
+<td>no DOM</td>
+</tr>
+<tr>
+<td>form-and-file-validator form engine</td>
+<td>3.14.0</td>
+<td>26.7 KB</td>
+<td>DOM forms, 55 rules, 13 messages sets are separate</td>
+</tr>
+<tr>
+<td>form-and-file-validator everything</td>
+<td>3.14.0</td>
+<td>72.0 KB</td>
+<td>forms + files + widget + jQuery layer</td>
+</tr>
+<tr>
+<td>zod (object with 3 fields)</td>
+<td>4.6.5</td>
+<td>90.5 KB</td>
+<td>tree-shaken</td>
+</tr>
+<tr>
+<td>yup (object with 3 fields)</td>
+<td>1.7.1</td>
+<td>13.1 KB</td>
+<td>tree-shaken</td>
+</tr>
+<tr>
+<td>valibot (object with 3 fields)</td>
+<td>1.5.0</td>
+<td>1.4 KB</td>
+<td>tree-shaken</td>
+</tr>
+<tr>
+<td>ajv (schema compiled in the browser)</td>
+<td>8.20.0</td>
+<td>37.2 KB</td>
+<td>no formats</td>
+</tr>
+<tr>
+<td>jquery.validate + jQuery</td>
+<td>1.22.1 / 4.0.0</td>
+<td>35.0 KB</td>
+<td>both files</td>
+</tr>
+<tr>
+<td>pristinejs</td>
+<td>1.1.0</td>
+<td>2.6 KB</td>
+<td></td>
+</tr>
+</tbody></table></div>
+<h2 id="validating-objects-10000-objects-with-3-fields-checks-per-second-higher-is-better">Validating objects (10000 objects with 3 fields; checks per second, higher is better)</h2>
+<p><strong>all valid</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th>Library</th>
+<th>Objects / second</th>
+<th>ms per 10000</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ajv</td>
+<td>10,753,844</td>
+<td>0.9</td>
+</tr>
+<tr>
+<td>zod</td>
+<td>4,401,796</td>
+<td>2.3</td>
+</tr>
+<tr>
+<td>valibot</td>
+<td>3,905,487</td>
+<td>2.6</td>
+</tr>
+<tr>
+<td>form-and-file-validator</td>
+<td>1,018,807</td>
+<td>9.8</td>
+</tr>
+<tr>
+<td>yup</td>
+<td>190,161</td>
+<td>52.6</td>
+</tr>
+</tbody></table></div>
+<p><strong>20% invalid</strong></p>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<thead>
+<tr>
+<th>Library</th>
+<th>Objects / second</th>
+<th>ms per 10000</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ajv</td>
+<td>5,764,686</td>
+<td>1.7</td>
+</tr>
+<tr>
+<td>zod</td>
+<td>1,916,333</td>
+<td>5.2</td>
+</tr>
+<tr>
+<td>valibot</td>
+<td>1,265,326</td>
+<td>7.9</td>
+</tr>
+<tr>
+<td>form-and-file-validator</td>
+<td>912,101</td>
+<td>11.0</td>
+</tr>
+<tr>
+<td>yup</td>
+<td>39,299</td>
+<td>254.5</td>
+</tr>
+</tbody></table></div>
+<h2 id="validating-a-form-of-300-fields-in-the-dom-jsdom-milliseconds-lower-is-better">Validating a form of 300 fields in the DOM (jsdom, milliseconds, lower is better)</h2>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<thead>
+<tr>
+<th>Library</th>
+<th>First validation</th>
+<th>Validating again</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>form-and-file-validator</td>
+<td>23.5</td>
+<td>24.8</td>
+</tr>
+<tr>
+<td>form-and-file-validator (sync)</td>
+<td>18.7</td>
+<td>19.6</td>
+</tr>
+<tr>
+<td>jQuery Validation</td>
+<td>257.7</td>
+<td>230.3</td>
+</tr>
+<tr>
+<td>Pristine</td>
+<td>64.0</td>
+<td>28.9</td>
+</tr>
+</tbody></table></div>
+<h2 id="what-this-measures-and-what-it-does-not">What this measures, and what it does not</h2>
+<ul>
+<li><strong>Size</strong> is the minified and gzipped code a page has to download for a three-field schema (tree-shaken where the library supports it). The form engine, the file validator, the upload widget and the 13 language packs are separate files; the &quot;core&quot; row is the DOM-free part that servers and Server Actions need.</li>
+<li><strong>Objects</strong>: one schema per library, the same rules (name 2 to 50 characters, a valid email, digits), run on 10000 plain objects. form-and-file-validator reports the first message per field in a language-pack-aware, trimmed form, which is more work than a bare boolean; zod, yup and valibot are asked for their error lists, ajv for its error array. Validation of one object in microseconds is rarely a bottleneck: a form posts once.</li>
+<li><strong>Forms</strong>: 300 fields in jsdom with required / minlength / email / digits rules. jsdom makes DOM work slower than a browser for everybody, so only the ratios mean something. jQuery Validation and Pristine validate in place; form-and-file-validator also keeps focus, ARIA state and message elements up to date.</li>
+<li>Not measured: bundle sizes of libraries that need a UI framework (React Hook Form, VeeValidate, TanStack Form), memory, time to first render, real browsers.</li>
+<li>A faster library is not a better one for your case: ask which rules you need (files, photo privacy, ASP.NET, Angular, server answers), not only how many objects per second.</li>
+</ul>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

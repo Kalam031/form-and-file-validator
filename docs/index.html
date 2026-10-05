@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.14.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.15.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -24,6 +24,7 @@
       <li><a href="languages.html">Languages</a></li>
       <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
       <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="benchmarks.html">Benchmarks</a></li>
       <li><a href="playground.html">Playground</a></li>
     </ul>
   </nav>
@@ -317,7 +318,7 @@ $(&#39;#email&#39;).valid();   // true or false, right away, like the original
 <li><strong>Form with a drop area:</strong> use example 1 for the form and example 3 for the zone. The widget puts the accepted files into the input, so FormValidator&#39;s <code>required</code> and <code>file</code> rules see them.</li>
 </ul>
 <h2 id="documentation">Documentation</h2>
-<p><code>docs/FormValidator.md</code>, <code>docs/FileValidator.md</code> (including the upload widget), <code>docs/Server-and-Frameworks.md</code>, <code>docs/Languages.md</code>, <code>docs/Migrating-from-jQuery-Validate.md</code> and <code>docs/Accessibility.md</code>. The same pages are a static site with a live playground: open <code>docs/index.html</code>, or turn on GitHub Pages for the <code>/docs</code> folder.</p>
+<p><code>docs/FormValidator.md</code>, <code>docs/FileValidator.md</code> (including the upload widget), <code>docs/Server-and-Frameworks.md</code>, <code>docs/Languages.md</code>, <code>docs/Migrating-from-jQuery-Validate.md</code>, <code>docs/Accessibility.md</code> and <code>docs/Benchmarks.md</code> (size and speed against zod, yup, valibot, ajv, jQuery Validation and Pristine, with the script to run it yourself: <code>npm run bench</code>). The same pages are a static site with a live playground: open <code>docs/index.html</code>, or turn on GitHub Pages for the <code>/docs</code> folder.</p>
 <p>Demos to open in a browser: <code>demo.html</code> (a form), <code>demo-upload.html</code> (the upload widget), <code>demo-jquery.html</code> (the jQuery-style API).</p>
 <h2 id="formvalidator">FormValidator</h2>
 <pre tabindex="0"><code class="language-js">FormValidator.init({
@@ -397,13 +398,13 @@ Add your own with <code>FVLocales.register(&#39;sv&#39;, { name: &#39;Svenska&#3
 The packs are machine-quality translations: please have a native speaker check them before shipping to end users.</p>
 <h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
 <p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
-<pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.14.0/dist/validator.min.js&quot;
-        integrity=&quot;sha384-CRJ9YT0LfTtPWTaq+XXomQavZ68qjJTiV26sxWH92GYZSmUZd5HP6UtGrSHHG1hI&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.14.0/dist/locales/de.min.js&quot;
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.15.0/dist/validator.min.js&quot;
+        integrity=&quot;sha384-gpZQUAyqelFG1k2lvjPfCA14M8/vaLmgWkiNG1LI2CGqAmCsRzu+V/PhIM/IEKvQ&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.15.0/dist/locales/de.min.js&quot;
         integrity=&quot;sha384-5kTd4XVvAfzqtfngPwfy6yxyNKanSRVX2T9iX24J/WVKBg+Ag4Z8KpAXLXcWFUWM&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;
 </code></pre>
-<p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.14.0; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or <code>locales/all.min.js</code>.</p>
+<p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.15.0; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or <code>locales/all.min.js</code>.</p>
 <h2 id="contributing">Contributing</h2>
 <p>Anyone can contribute: fork, change <code>src/</code>, open a pull request. See <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>. Only reviewed pull requests reach <code>main</code>.</p>
 <h2 id="server-react-vue-alpine">Server, React, Vue, Alpine</h2>

@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.15.0
+- **Benchmarks** (`npm run bench`, results in docs/Benchmarks.md): bundle size, objects per second and a 300-field form against zod, yup, valibot, ajv, jQuery Validation and Pristine, with what is and is not measured. The numbers are honest: ajv, valibot and zod check plain objects faster; form-and-file-validator is the smaller one next to zod and jQuery Validation, and a large form validates about ten times faster than jQuery Validation.
+- **Faster**: a 300-field form validated in 25 ms instead of 300 ms (one pass over the form instead of one query per field name, wildcard rule keys cached); `schema()` reads its rules once and `safeParse()` is 3 to 4 times faster (it builds the `error` object only when you read it).
+
 ## 3.14.0
 - **Smaller builds**: `form-and-file-validator/core` is the DOM-free FormValidator (about 12 KB gzip, the form engine is 27 KB): `checkValue`, `checkValues`, `schema`, `action`, `serverErrors`, `precognition`, `parseFormData` and every rule that needs no form, with the same answers as the full build (the shared vectors run against both). `tools/build-subset.js` builds your own file with only the rules you use (`--rules=required,email --no-engine --format=esm`, needs `terser` and `acorn` as dev dependencies). The minifier drops the form engine through a build flag, so no source is duplicated.
 - **Size budget in the test suite**: every minified file of `dist/` has a gzip budget, so growth cannot slip in unnoticed.

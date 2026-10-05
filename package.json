@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.14.0",
+  "version": "3.15.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
@@ -105,6 +105,7 @@
     "test": "node --test && npm run test:types",
     "test:types": "tsc -p types/typecheck/tsconfig.json",
     "site": "node build.js && node site-build.js",
+    "bench": "node build.js && node bench/run.mjs",
     "test:jquery3": "node tests/run-jquery3.js",
     "test:browser": "node build.js && node --test --test-concurrency=1 browser-tests/browser.spec.js"
   },
@@ -140,6 +141,7 @@
     "@types/react": "^19.3.0",
     "alpinejs": "^3.17.4",
     "axe-core": "^4.13.0",
+    "esbuild": "^0.28.2",
     "express": "^5.2.1",
     "express-fileupload": "^1.5.2",
     "fastify": "^5.12.5",
@@ -153,12 +155,15 @@
     "marked": "^15.0.12",
     "multer": "^2.4.0",
     "playwright": "^1.63.0",
+    "pristinejs": "^1.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",
     "rxjs": "^7.8.2",
     "terser": "^5.51.2",
     "typescript": "^7.0.2",
-    "vue": "^3.5.43"
+    "valibot": "^1.5.0",
+    "vue": "^3.5.43",
+    "yup": "^1.7.1"
   }
 }

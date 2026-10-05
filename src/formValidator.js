@@ -756,14 +756,15 @@
         Object.keys(opts.rules || {}).forEach(n => { inst.rules[n] = normalizeRules(opts.rules[n]); });
 
         // ---- units: one per radio/checkbox group, one per individual element otherwise
-        function unitsFor(name) {
-            const els = Array.from(form.querySelectorAll(`[name="${esc(name)}"]`));
+        function unitsOf(els) {
             const grouped = els.filter(e => e.type === 'radio' || e.type === 'checkbox');
             const units = els.filter(e => !(e.type === 'radio' || e.type === 'checkbox')).map(e => ({ key: e, fields: [e] }));
             if (grouped.length) units.unshift({ key: grouped[0], fields: grouped });
             return units;
         }
-        const wildKeys = () => Object.keys(inst.rules).filter(k => hasPathChars(k) && (ruleTokens(k) || []).some(isWild));
+        function unitsFor(name) { return unitsOf(Array.from(form.querySelectorAll(`[name="${esc(name)}"]`))); }
+        let wildCache = null;   // the wildcard rule keys; reset whenever rules are added, replaced or removed
+        const wildKeys = () => wildCache || (wildCache = Object.keys(inst.rules).filter(k => hasPathChars(k) && (ruleTokens(k) || []).some(isWild)));
         /** Does the field name 'items[2].qty' (or 'items.2.qty') belong to the wildcard rule key 'items[].qty'? */
         function nameMatchesKey(name, key) {
             const nt = ruleTokens(name), kt = ruleTokens(key);
@@ -797,7 +798,12 @@
             }
             return Array.from(set);
         }
-        const allUnits = () => [].concat(...names().map(unitsFor));
+        function allUnits() {   // one pass over the form instead of one query per field name
+            const nm = names();
+            const groups = new Map();
+            Array.from(form.querySelectorAll('[name]')).forEach(el => { const n = el.getAttribute('name'); const g = groups.get(n); if (g) g.push(el); else groups.set(n, [el]); });
+            return [].concat(...nm.map(n => unitsOf(groups.get(n) || [])));
+        }
 
         const hasClassRules = () => Object.keys(CLASS_RULES).length > 0 || (cfg.classRules && Object.keys(cfg.classRules).length > 0);
 
@@ -1610,9 +1616,9 @@
             isSubmitted: () => inst._submitted,
             validateField: name => Promise.all(unitsFor(name).map(u => validateUnit(u))).then(r => r.every(Boolean)),
             clearErrors: () => { allUnits().forEach(removeError); Array.from(inst._errors.values()).forEach(r => removeError(r.unit)); },
-            setRules: (name, rules) => { inst.rules[name] = normalizeRules(rules); },
-            addRules: (name, rules) => { inst.rules[name] = (inst.rules[name] || []).concat(normalizeRules(rules)); },
-            removeRules: name => { delete inst.rules[name]; unitsFor(name).forEach(removeError); },
+            setRules: (name, rules) => { inst.rules[name] = normalizeRules(rules); wildCache = null; },
+            addRules: (name, rules) => { inst.rules[name] = (inst.rules[name] || []).concat(normalizeRules(rules)); wildCache = null; },
+            removeRules: name => { delete inst.rules[name]; wildCache = null; unitsFor(name).forEach(removeError); },
             destroy: () => {
                 inst._listeners.forEach(off => off());
                 inst._listeners.length = 0;
@@ -1786,18 +1792,22 @@
      * Rules: everything except file, checkbox-count and remote rules (they need a form, files or a server). Synchronous only (no async custom rules).
      * options: trim (default true; pwcheck never trims), values (other fields, for equalTo / notEqualTo), messages ({ rule: text }), passwordStrength, context.
      */
-    function checkValue(value, rules, options) {
-        const o = options || {};
+    function checkValue(value, rules, options) { return checkRules(value, normalizeRules(rules), options || {}); }
+
+    /** checkValue for rules that are already normalised (schema() does that once, not on every call). */
+    function checkRules(value, list, o) {
         const raw = value == null ? '' : String(value);
         const trimmed = o.trim === false ? raw : raw.trim();
-        for (const rule of normalizeRules(rules)) {
+        let env = null;
+        for (const rule of list) {
             const def = validators[rule.type];
             if (!def) throw new Error('checkValue: unknown rule "' + rule.type + '"');
             if (def.remote || NEEDS_FORM.includes(rule.type)) throw new Error('checkValue: the "' + rule.type + '" rule needs a form, files or a server and cannot run on a plain value');
             const v = rule.type === 'pwcheck' ? raw : trimmed;
             const empty = v === '';
-            const env = { value: v, empty, count: empty ? 0 : 1, files: null, field: null, fields: [], form: null, inst: null, badInput: false,
+            if (!env) env = { value: v, empty, count: empty ? 0 : 1, files: null, field: null, fields: [], form: null, inst: null, badInput: false,
                 config: { passwordStrength: o.passwordStrength || {} }, context: o.context || {}, column: o.column, index: o.index, array: o.array };
+            else { env.value = v; env.empty = empty; env.count = empty ? 0 : 1; }
             if (isFn(rule.when) && !guard(rule.when, true, v, env)) continue;
             if (empty && !def.runOnEmpty && rule.type !== 'equalTo') continue;
             let res;
@@ -1861,7 +1871,7 @@
     }
     function targetsIn(rules) {
         const list = [];
-        normalizeRules(rules).forEach(r => { if ((r.type === 'equalTo' || r.type === 'notEqualTo') && r.target) list.push(String(r.target).replace(/^#/, '')); });
+        (Array.isArray(rules) ? rules : normalizeRules(rules)).forEach(r => { if ((r.type === 'equalTo' || r.type === 'notEqualTo') && r.target) list.push(String(r.target).replace(/^#/, '')); });
         return list;
     }
 
@@ -1874,18 +1884,27 @@
      * rules on a wildcard column may use `unique` ({ 'items[].sku': ['required', { type: 'unique', ignoreCase: true }] }).
      * equalTo / notEqualTo targets are looked up in the same row first ('items[].password' + target 'confirm'), then as an absolute path.
      */
-    function checkValues(data, schema, options) {
-        const o = options || {}, errors = {}, details = {};
-        const keys = Object.keys(schema || {});
-        const pathKeys = keys.filter(k => hasPathChars(k) && !(data && Object.prototype.hasOwnProperty.call(data, k)));
+    function checkValues(data, schema, options) { return runValues(data, schema, options || {}, false); }
+
+    /** The work of checkValues. `normalized`: the rules per key are already lists of rule objects (schema() prepares them once). */
+    function runValues(data, schema, o, normalized, meta) {
+        const errors = {}, details = {};
+        const keys = meta ? meta.keys : Object.keys(schema || {});
+        const hasOwn = Object.prototype.hasOwnProperty;
+        const pathKeys = meta ? (meta.pathKeys.length ? meta.pathKeys.filter(k => !(data && hasOwn.call(data, k))) : meta.pathKeys) : keys.filter(k => hasPathChars(k) && !(data && hasOwn.call(data, k)));
         const flat = pathKeys.length ? flatten(data) : null;
         const fail = (key, r) => { if (!(key in errors)) { errors[key] = r.message; details[key] = { rule: r.rule, code: r.code, message: r.message }; } };
-        const wantsArray = rules => normalizeRules(rules).some(r => r.type === 'minItems' || r.type === 'maxItems');
+        let base = null;   // the other fields, for equalTo / notEqualTo: built once, and only when a rule asks
+        const baseValues = () => base || (base = Object.assign({}, data, flat, o.values));
         keys.forEach(name => {
-            const rules = schema[name];
+            const list = normalized ? schema[name] : normalizeRules(schema[name]);
+            const m = meta ? meta.by[name] : null;
+            const wantsArray = m ? m.wantsArray : list.some(r => r.type === 'minItems' || r.type === 'maxItems');
+            const needsValues = m ? m.needsValues : list.some(r => r.type === 'equalTo' || r.type === 'notEqualTo');
             if (pathKeys.indexOf(name) < 0) {   // a plain field, like before
                 const val = data ? data[name] : undefined;
-                const r = checkValue(val, rules, Object.assign({}, o, { values: Object.assign({}, data, flat, o.values), array: wantsArray(rules) ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }));
+                const opts = (needsValues || wantsArray) ? Object.assign({}, o, { values: needsValues ? baseValues() : o.values, array: wantsArray ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }) : o;
+                const r = checkRules(val, list, opts);
                 if (!r.valid) fail(name, r);
                 return;
             }
@@ -1894,10 +1913,9 @@
             const entries = expandPath(data, tokens);
             const wild = tokens.some(isWild);
             const column = wild ? entries.map(e => (e.value == null ? '' : String(e.value).trim())) : undefined;
-            const targets = targetsIn(rules);
-            const baseValues = Object.assign({}, data, flat, o.values);
+            const targets = targetsIn(list);
             entries.forEach((e, idx) => {
-                const values = targets.length ? Object.create(baseValues) : baseValues;   // one shared copy: rows only add what they override
+                const values = needsValues ? (targets.length ? Object.create(baseValues()) : baseValues()) : o.values;   // one shared copy: rows only add what they override
                 targets.forEach(t => {   // the same row first
                     const tt = ruleTokens(t);
                     if (!tt) return;
@@ -1905,7 +1923,8 @@
                     if (rel.length && rel[0].value !== undefined) values[t] = rel[0].value;
                 });
                 const val = e.value;
-                const r = checkValue(val !== null && typeof val === 'object' && !Array.isArray(val) ? '' : (Array.isArray(val) ? '' : val), rules, Object.assign({}, o, { values, column, index: idx, array: wantsArray(rules) ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }));
+                const r = checkRules(val !== null && typeof val === 'object' && !Array.isArray(val) ? '' : (Array.isArray(val) ? '' : val), list,
+                    Object.assign({}, o, { values, column, index: idx, array: wantsArray ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }));
                 if (!r.valid) fail(canonKey(e.tokens), r);
             });
         });
@@ -1914,13 +1933,18 @@
 
     // ------------------------------------------------------------------ schema: the rules as a Standard Schema (https://standardschema.dev)
     /** What parse() throws: `error.issues` is the Standard Schema issue list, `error.errors` is { field: message }. */
+    /** { field: first message } from Standard Schema issues; nested paths are keyed 'items[1].qty'. */
+    function errorsOfIssues(issues) {
+        const errors = {};
+        issues.forEach(i => { const k = i.path && i.path.length ? (i.path.length === 1 ? i.path[0] : canonKey(i.path)) : undefined; if (k !== undefined && k !== null && !(k in errors)) errors[k] = i.message; });
+        return errors;
+    }
     class ValidationError extends Error {
         constructor(issues) {
             super(issues.length ? issues[0].message : 'Validation failed');
             this.name = 'ValidationError';
             this.issues = issues;
-            this.errors = {};
-            issues.forEach(i => { const k = i.path && i.path.length ? (i.path.length === 1 ? i.path[0] : canonKey(i.path)) : undefined; if (k !== undefined && k !== null && !(k in this.errors)) this.errors[k] = i.message; });
+            this.errors = errorsOfIssues(issues);
         }
     }
 
@@ -1936,16 +1960,18 @@
     function schema(rulesMap, options) {
         const rules = rulesMap && typeof rulesMap === 'object' ? rulesMap : {};
         const fields = Object.keys(rules);
-        const keepsRaw = Object.create(null);
-        fields.forEach(f => { keepsRaw[f] = normalizeRules(rules[f]).some(r => r.type === 'pwcheck'); });   // passwords are never trimmed
+        const keepsRaw = Object.create(null), compiled = Object.create(null);
+        fields.forEach(f => { compiled[f] = normalizeRules(rules[f]); keepsRaw[f] = compiled[f].some(r => r.type === 'pwcheck'); });   // rules are read once; passwords are never trimmed
         const o = options || {};
 
         const pathFields = fields.filter(f => hasPathChars(f));
+        const meta = { keys: fields, pathKeys: pathFields, by: Object.create(null) };   // what runValues would otherwise work out on every call
+        fields.forEach(f => { meta.by[f] = { wantsArray: compiled[f].some(r => r.type === 'minItems' || r.type === 'maxItems'), needsValues: compiled[f].some(r => r.type === 'equalTo' || r.type === 'notEqualTo') }; });
         function run(input) {
             if (input === null || typeof input !== 'object' || Array.isArray(input)) return { issues: [{ message: 'Expected an object.', path: [] }] };
             const data = Object.assign({}, input);
             fields.forEach(f => { if (pathFields.indexOf(f) < 0 && data[f] == null) data[f] = ''; });     // a field that is not there is blank (equalTo may point at it)
-            const res = checkValues(data, rules, o);
+            const res = runValues(data, compiled, o, true, meta);
             if (!res.valid) {
                 const issues = Object.keys(res.errors).map(k => {
                     const tokens = pathFields.length && (hasPathChars(k) && !(k in input)) ? (ruleTokens(k) || [k]) : [k];
@@ -1982,15 +2008,16 @@
             safeParse(data) {
                 const r = run(data);
                 if (!r.issues) return { success: true, data: r.value, errors: {}, issues: [] };
-                const error = new ValidationError(r.issues);
-                return { success: false, error, errors: error.errors, issues: r.issues };
+                const issues = r.issues, errors = errorsOfIssues(issues);
+                let error = null;   // an Error object is only built (and its stack captured) when somebody reads it: safeParse stays cheap on invalid data
+                return { success: false, get error() { return error || (error = new ValidationError(issues)); }, errors, issues };
             },
             parse(data) {
                 const r = run(data);
                 if (r.issues) throw new ValidationError(r.issues);
                 return r.value;
             },
-            check: data => checkValues(data, rules, o)
+            check: data => runValues(data, compiled, o, true, meta)
         };
         return api;
     }
