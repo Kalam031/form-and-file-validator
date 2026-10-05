@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.25.0
+- **Malware scanner adapters** (`form-and-file-validator/scanners`, Node 18+): `clamav()` (clamd over TCP or a unix socket, INSTREAM), `virustotal()` (hash lookup, optional upload and wait, thresholds), `httpScanner()` (your own service) and `all()` to combine them, ready for the `scan` option. Tested against a fake clamd and mock services.
+
 ## 3.24.0
 - **Five more languages**: Bengali (`bn`), Indonesian (`id`), Vietnamese (`vi`), Korean (`ko`) and Swedish (`sv`): every form message, every file message, the upload widget text and the plural forms (Swedish one / other, the others have none). 18 packs now ship. They are machine-quality translations, marked as such in the file header and in docs/Languages.md; corrections from native speakers are welcome.
 

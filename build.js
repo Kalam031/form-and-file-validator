@@ -159,6 +159,9 @@ async function build(options) {
             const server = read('server.js');                      // Node-only companion: copied as is (it requires ./fileValidator.js next to it)
             fs.writeFileSync(path.join(DIST, 'server.js'), server);
             result.files['server.js'] = server.length;
+            const scanners = read('scanners.js');                  // Node-only malware scanner adapters (ClamAV, VirusTotal, HTTP)
+            fs.writeFileSync(path.join(DIST, 'scanners.js'), scanners);
+            result.files['scanners.js'] = scanners.length;
             const intDir = path.join(SRC, 'integrations');        // framework bindings (React, Vue, Alpine): copied as is
             if (fs.existsSync(intDir)) {
                 fs.mkdirSync(path.join(DIST, 'integrations'), { recursive: true });

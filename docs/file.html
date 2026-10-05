@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.24.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.25.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -1148,6 +1148,17 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
 </tbody></table></div>
 <p>If the scanner throws, or does not answer within <code>scanTimeout</code>, the file is blocked with <code>SCAN_ERROR</code>. Set <code>scanFailOpen: true</code> to let files through in that case. <code>ctx</code> holds <code>config</code>, <code>ext</code>, <code>category</code>, <code>files</code> and <code>index</code>.</p>
 <p>A scan in the browser only helps honest users, so scan again on the server before you store or serve a file.</p>
+<h3 id="ready-made-scanners-clamav-virustotal-your-own-service">Ready-made scanners (ClamAV, VirusTotal, your own service)</h3>
+<p><code>form-and-file-validator/scanners</code> (Node 18+, server side) gives <code>scan</code> functions so you do not have to write the glue:</p>
+<pre tabindex="0"><code class="language-js">const { clamav, virustotal, httpScanner, all } = require(&#39;form-and-file-validator/scanners&#39;);
+
+{ scan: clamav({ host: &#39;127.0.0.1&#39;, port: 3310 }) }                       // clamd over TCP (or { socket: &#39;/var/run/clamav/clamd.ctl&#39; }), INSTREAM: nothing is written to disk
+{ scan: virustotal({ apiKey: process.env.VT_KEY }) }                      // looks up the file&#39;s SHA-256 only
+{ scan: virustotal({ apiKey, upload: true, unknown: &#39;block&#39; }) }          // an unknown file is uploaded (shared with VirusTotal) and judged when the analysis ends
+{ scan: httpScanner({ url: &#39;https://scan.internal/check&#39;, field: &#39;file&#39; }) }
+{ scan: all(clamav({ port: 3310 }), virustotal({ apiKey })), scanTimeout: 60000 }   // the first threat wins
+</code></pre>
+<p>A threat becomes <code>MALWARE_DETECTED</code> with the scanner&#39;s name for it (<code>Eicar-Test-Signature</code>). A scanner that cannot be reached, answers an error or times out becomes <code>SCAN_ERROR</code>, or lets the file pass with <code>scanFailOpen: true</code>. clamd&#39;s <code>StreamMaxLength</code> (25 MB by default) limits file size; VirusTotal&#39;s free API is rate limited, so use it behind a queue or as a second opinion. <code>httpScanner</code> understands <code>{ clean }</code>, <code>{ infected, threat }</code>, <code>{ valid, threat }</code>, a 406 / 422 answer, or your own <code>parse(json, response)</code>.</p>
 <h2 id="legacy-config-style">Legacy config style</h2>
 <p>Configs written for version 1 keep working. In version 1 a check only ran when its <code>validate</code> flag was <code>true</code>. Now a check runs whenever its value is set, and a flag set to <code>false</code> turns it off.</p>
 <pre tabindex="0"><code class="language-js">{

@@ -694,6 +694,22 @@ If the scanner throws, or does not answer within `scanTimeout`, the file is bloc
 
 A scan in the browser only helps honest users, so scan again on the server before you store or serve a file.
 
+### Ready-made scanners (ClamAV, VirusTotal, your own service)
+
+`form-and-file-validator/scanners` (Node 18+, server side) gives `scan` functions so you do not have to write the glue:
+
+```js
+const { clamav, virustotal, httpScanner, all } = require('form-and-file-validator/scanners');
+
+{ scan: clamav({ host: '127.0.0.1', port: 3310 }) }                       // clamd over TCP (or { socket: '/var/run/clamav/clamd.ctl' }), INSTREAM: nothing is written to disk
+{ scan: virustotal({ apiKey: process.env.VT_KEY }) }                      // looks up the file's SHA-256 only
+{ scan: virustotal({ apiKey, upload: true, unknown: 'block' }) }          // an unknown file is uploaded (shared with VirusTotal) and judged when the analysis ends
+{ scan: httpScanner({ url: 'https://scan.internal/check', field: 'file' }) }
+{ scan: all(clamav({ port: 3310 }), virustotal({ apiKey })), scanTimeout: 60000 }   // the first threat wins
+```
+
+A threat becomes `MALWARE_DETECTED` with the scanner's name for it (`Eicar-Test-Signature`). A scanner that cannot be reached, answers an error or times out becomes `SCAN_ERROR`, or lets the file pass with `scanFailOpen: true`. clamd's `StreamMaxLength` (25 MB by default) limits file size; VirusTotal's free API is rate limited, so use it behind a queue or as a second opinion. `httpScanner` understands `{ clean }`, `{ infected, threat }`, `{ valid, threat }`, a 406 / 422 answer, or your own `parse(json, response)`.
+
 ## Legacy config style
 
 Configs written for version 1 keep working. In version 1 a check only ran when its `validate` flag was `true`. Now a check runs whenever its value is set, and a flag set to `false` turns it off.
