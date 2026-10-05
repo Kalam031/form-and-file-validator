@@ -7,9 +7,9 @@ Absolute numbers depend on the machine: compare the rows with each other, and ru
 
 | Library | Version | Size | Note |
 | --- | --- | --- | --- |
-| form-and-file-validator core (checkValue, schema, 47 rules) | 3.14.0 | 12.5 KB | no DOM |
-| form-and-file-validator form engine | 3.14.0 | 26.7 KB | DOM forms, 55 rules, 13 messages sets are separate |
-| form-and-file-validator everything | 3.14.0 | 72.0 KB | forms + files + widget + jQuery layer |
+| form-and-file-validator core (checkValue, schema, 49 rules) | 3.23.0 | 15.9 KB | no DOM |
+| form-and-file-validator form engine | 3.23.0 | 33.8 KB | DOM forms, 55 rules, 13 messages sets are separate |
+| form-and-file-validator everything | 3.23.0 | 87.6 KB | forms + files + widget + jQuery layer |
 | zod (object with 3 fields) | 4.6.5 | 90.5 KB | tree-shaken |
 | yup (object with 3 fields) | 1.7.1 | 13.1 KB | tree-shaken |
 | valibot (object with 3 fields) | 1.5.0 | 1.4 KB | tree-shaken |
@@ -23,30 +23,30 @@ Absolute numbers depend on the machine: compare the rows with each other, and ru
 
 | Library | Objects / second | ms per 10000 |
 | --- | --- | --- |
-| ajv | 10,753,844 | 0.9 |
-| zod | 4,401,796 | 2.3 |
-| valibot | 3,905,487 | 2.6 |
-| form-and-file-validator | 1,018,807 | 9.8 |
-| yup | 190,161 | 52.6 |
+| ajv | 11,147,029 | 0.9 |
+| zod | 4,056,795 | 2.5 |
+| valibot | 2,423,302 | 4.1 |
+| form-and-file-validator | 1,118,556 | 8.9 |
+| yup | 186,602 | 53.6 |
 
 **20% invalid**
 
 | Library | Objects / second | ms per 10000 |
 | --- | --- | --- |
-| ajv | 5,764,686 | 1.7 |
-| zod | 1,916,333 | 5.2 |
-| valibot | 1,265,326 | 7.9 |
-| form-and-file-validator | 912,101 | 11.0 |
-| yup | 39,299 | 254.5 |
+| ajv | 3,279,871 | 3.0 |
+| zod | 1,992,072 | 5.0 |
+| valibot | 1,755,710 | 5.7 |
+| form-and-file-validator | 942,516 | 10.6 |
+| yup | 44,493 | 224.8 |
 
 ## Validating a form of 300 fields in the DOM (jsdom, milliseconds, lower is better)
 
 | Library | First validation | Validating again |
 | --- | --- | --- |
-| form-and-file-validator | 23.5 | 24.8 |
-| form-and-file-validator (sync) | 18.7 | 19.6 |
-| jQuery Validation | 257.7 | 230.3 |
-| Pristine | 64.0 | 28.9 |
+| form-and-file-validator | 23.3 | 19.4 |
+| form-and-file-validator (sync) | 21.8 | 27.2 |
+| jQuery Validation | 198.9 | 196.9 |
+| Pristine | 47.5 | 24.5 |
 
 ## What this measures, and what it does not
 

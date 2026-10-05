@@ -359,7 +359,7 @@ FormValidator.schema(rules).safeParse(body);
 
 Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a `<form>`. Two ways to ship less:
 
-**`form-and-file-validator/core`** (about 12 KB gzip against 27 KB for the form engine, 73 KB for the whole bundle): the DOM-free part with every rule that needs no form.
+**`form-and-file-validator/core`** (about 16 KB gzip against 34 KB for the form engine, 89 KB for the whole bundle: it also carries masks, JSON Schema, explain and the server helpers): the DOM-free part with every rule that needs no form.
 
 ```js
 import { checkValue, checkValues, schema, action, serverErrors, precognition, parseFormData } from 'form-and-file-validator/core';

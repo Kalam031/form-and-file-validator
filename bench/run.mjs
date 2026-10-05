@@ -30,7 +30,7 @@ async function sizes() {
     const rows = [];
     const add = (name, version, bytes, note) => rows.push({ name, version, gzip: bytes, note });
     const fileGz = f => gz(fs.readFileSync(path.join(ROOT, f)));
-    add('form-and-file-validator core (checkValue, schema, 47 rules)', JSON.parse(read('package.json')).version, fileGz('dist/formValidator.core.min.js'), 'no DOM');
+    add('form-and-file-validator core (checkValue, schema, 49 rules)', JSON.parse(read('package.json')).version, fileGz('dist/formValidator.core.min.js'), 'no DOM');
     add('form-and-file-validator form engine', JSON.parse(read('package.json')).version, fileGz('dist/formValidator.min.js'), 'DOM forms, 55 rules, 13 messages sets are separate');
     add('form-and-file-validator everything', JSON.parse(read('package.json')).version, fileGz('dist/validator.min.js'), 'forms + files + widget + jQuery layer');
     add('zod (object with 3 fields)', pkgVersion('zod'), await bundleSize("import { z } from 'zod'; export default z.object({ name: z.string().min(2), email: z.string().email(), age: z.string().regex(/^\\d+$/) });"), 'tree-shaken');

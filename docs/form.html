@@ -580,7 +580,7 @@ FormValidator.schema(rules).safeParse(body);
 </ul>
 <h3 id="smaller-builds-the-core-and-your-own-subset">Smaller builds: the core and your own subset</h3>
 <p>Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a <code>&lt;form&gt;</code>. Two ways to ship less:</p>
-<p><strong><code>form-and-file-validator/core</code></strong> (about 12 KB gzip against 27 KB for the form engine, 73 KB for the whole bundle): the DOM-free part with every rule that needs no form.</p>
+<p><strong><code>form-and-file-validator/core</code></strong> (about 16 KB gzip against 34 KB for the form engine, 89 KB for the whole bundle: it also carries masks, JSON Schema, explain and the server helpers): the DOM-free part with every rule that needs no form.</p>
 <pre tabindex="0"><code class="language-js">import { checkValue, checkValues, schema, action, serverErrors, precognition, parseFormData } from &#39;form-and-file-validator/core&#39;;
 </code></pre>
 <p>It has no <code>init()</code>, <code>validate()</code>, <code>isValid()</code>, <code>unobtrusive</code> and no jQuery layer, and leaves out the rules that need a form, files or a server (<code>file</code>, <code>fileType</code>, <code>fileSize</code>, <code>minFiles</code>, <code>maxFiles</code>, <code>minChecked</code>, <code>maxChecked</code>, <code>remote</code>). Everything else gives the same answers as the full build (the shared vectors are run against both). A script-tag version is <code>dist/formValidator.core.min.js</code>.</p>
