@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.15.0",
+  "version": "3.16.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
@@ -51,6 +51,18 @@
     "./angular": {
       "types": "./types/angular.d.ts",
       "default": "./dist/integrations/angular.mjs"
+    },
+    "./svelte": {
+      "types": "./types/svelte.d.ts",
+      "default": "./dist/integrations/svelte.mjs"
+    },
+    "./lit": {
+      "types": "./types/lit.d.ts",
+      "default": "./dist/integrations/lit.mjs"
+    },
+    "./solid": {
+      "types": "./types/solid.d.ts",
+      "default": "./dist/integrations/solid.mjs"
     },
     "./angular-signals": {
       "types": "./types/angular-signals.d.ts",
@@ -110,12 +122,24 @@
     "test:browser": "node build.js && node --test --test-concurrency=1 browser-tests/browser.spec.js"
   },
   "peerDependencies": {
+    "@angular/core": ">=21",
     "@angular/forms": ">=14",
+    "lit": ">=2",
     "react": ">=17",
+    "solid-js": ">=1.6",
     "vue": ">=3"
   },
   "peerDependenciesMeta": {
+    "@angular/core": {
+      "optional": true
+    },
     "@angular/forms": {
+      "optional": true
+    },
+    "lit": {
+      "optional": true
+    },
+    "solid-js": {
       "optional": true
     },
     "react": {
@@ -152,6 +176,7 @@
     "jquery3": "npm:jquery@^3.7.1",
     "jsdom": "^26.0.0",
     "koa": "^3.2.1",
+    "lit": "^3.3.3",
     "marked": "^15.0.12",
     "multer": "^2.4.0",
     "playwright": "^1.63.0",
@@ -160,6 +185,8 @@
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",
     "rxjs": "^7.8.2",
+    "solid-js": "^1.9.15",
+    "svelte": "^5.57.1",
     "terser": "^5.51.2",
     "typescript": "^7.0.2",
     "valibot": "^1.5.0",

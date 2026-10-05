@@ -334,3 +334,19 @@ import { checkValue as coreCheck, schema as coreSchema, FormValidator as CoreFV 
     CoreFV.init;
     void [ok, parsed, names];
 }
+
+// ---------------------------------------------------------------- Svelte, Lit, Solid
+import { createFormValidator as svelteFv, fvForm } from '../svelte';
+import { createFormValidator as solidFv } from '../solid';
+import { FvFormController } from '../lit';
+{
+    const sv = svelteFv({ rules: { email: ['required', 'email'] } });
+    sv.errors.subscribe(list => { const n: string | undefined = list[0]?.message; void n; });
+    const pending: Promise<boolean> = sv.validate();
+    const act = fvForm(document.createElement('form'), { rules: {} });
+    act.destroy();
+    const so = solidFv({ rules: {} });
+    const errs: string[] = so.errors().map(e => e.name);
+    const v: boolean | null = so.valid();
+    void [pending, errs, v, FvFormController];
+}

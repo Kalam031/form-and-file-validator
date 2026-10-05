@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.16.0
+- **Svelte, Lit and Solid bindings**: `form-and-file-validator/svelte` (an action plus `errors` / `valid` / `submitting` stores that follow the store contract, for Svelte 3, 4 and 5), `form-and-file-validator/lit` (`FvFormController`, a ReactiveController, shadow or light DOM), `form-and-file-validator/solid` (`createFormValidator()` with reactive accessors). Each gives `handleSubmit`, `validate`, `getValues`, `setServerErrors` and `reset`, and updates while the user fixes fields. Tested on the real libraries (Svelte's `get()`, a LitElement in jsdom, Solid's reactive build).
+
 ## 3.15.0
 - **Benchmarks** (`npm run bench`, results in docs/Benchmarks.md): bundle size, objects per second and a 300-field form against zod, yup, valibot, ajv, jQuery Validation and Pristine, with what is and is not measured. The numbers are honest: ajv, valibot and zod check plain objects faster; form-and-file-validator is the smaller one next to zod and jQuery Validation, and a large form validates about ten times faster than jQuery Validation.
 - **Faster**: a 300-field form validated in 25 ms instead of 300 ms (one pass over the form instead of one query per field name, wildcard rule keys cached); `schema()` reads its rules once and `safeParse()` is 3 to 4 times faster (it builds the `error` object only when you read it).

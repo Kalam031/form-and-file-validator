@@ -274,3 +274,67 @@ f = form(this.model, p => {
 - **`fvServerErrors(form, body)`** turns a backend's validation answer (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod...) into errors for `submit()`: each message lands on its field (`items[1].qty` finds `f.items[1].qty`), the rest on the form.
 - **Standard Schema**: `validateStandardSchema(p, FormValidator.schema({...}))` from Angular also works, because `schema()` is a Standard Schema.
 - Tested on real Signal Forms (Angular 22). The Reactive Forms bindings (`form-and-file-validator/angular`) are unchanged.
+
+## Svelte
+
+`form-and-file-validator/svelte` works with Svelte 3, 4 and 5 (an action and stores that follow the store contract; it does not import Svelte).
+
+```svelte
+<script>
+  import { createFormValidator } from 'form-and-file-validator/svelte';
+  const { form, errors, valid, submitting, handleSubmit } = createFormValidator({ rules: { email: ['required', 'email'] } });
+  const save = handleSubmit(async values => { await fetch('/signup', { method: 'POST', body: JSON.stringify(values) }); });
+</script>
+
+<form use:form onsubmit={save}>            <!-- Svelte 3/4: on:submit={save} -->
+  <input name="email">
+  {#each $errors as e}<p>{e.name}: {e.message}</p>{/each}   <!-- or let the engine place the messages -->
+  <button disabled={$submitting}>Save</button>
+</form>
+```
+
+`errors` (`{ name, message, code, field }[]`), `valid` (`true` / `false` / `null` before the first check) and `submitting` are stores; they update while the user fixes fields, not only after a submit. Also `validate()`, `handleSubmit(fn)` (a handler that returns `{ errors }` from your server shows them), `getValues()`, `setServerErrors(body)`, `reset()`, `instance()`. For the action alone: `<form use:fvForm={{ rules, config }}>` (new options re-create the validator). Direct submit: leave out `onsubmit` and give the form `action` and `method`.
+
+## Lit
+
+`form-and-file-validator/lit` is a `ReactiveController` for `LitElement` (shadow DOM or light DOM):
+
+```js
+import { LitElement, html } from 'lit';
+import { FvFormController } from 'form-and-file-validator/lit';
+
+class SignupForm extends LitElement {
+  fv = new FvFormController(this, { rules: { email: ['required', 'email'] } });   // options.form: '#selector' picks a form
+  render() {
+    return html`<form @submit=${this.fv.handleSubmit(async values => { await save(values); })}>
+      <input name="email">
+      ${this.fv.errors.map(e => html`<p>${e.name}: ${e.message}</p>`)}
+      <button ?disabled=${this.fv.submitting}>Save</button>
+    </form>`;
+  }
+}
+```
+
+The validator starts after the first render and is destroyed with the element; the host re-renders when `errors` change. Also `valid`, `validate()`, `getValues()`, `setServerErrors(body)`, `reset()`, `instance`.
+
+## Solid
+
+`form-and-file-validator/solid` gives `createFormValidator()` with accessors (reactive in effects and JSX):
+
+```jsx
+import { createFormValidator } from 'form-and-file-validator/solid';
+
+function Signup() {
+  const fv = createFormValidator({ rules: { email: ['required', 'email'] } });
+  const save = fv.handleSubmit(async values => { await fetch('/signup', { method: 'POST', body: JSON.stringify(values) }); });
+  return (
+    <form ref={fv.ref} onSubmit={save}>
+      <input name="email" />
+      <For each={fv.errors()}>{e => <p>{e.name}: {e.message}</p>}</For>
+      <button disabled={fv.submitting()}>Save</button>
+    </form>
+  );
+}
+```
+
+`errors()`, `valid()` and `submitting()` are signals; the validator is created when the form gets its `ref` and destroyed with the owner (`onCleanup`). The three bindings are tested on the real libraries (Svelte's `get()`, a LitElement in jsdom, Solid's reactive build). **Qwik** has no binding: use the DOM-free core (`form-and-file-validator/core`) inside a `routeAction$` or `server$`, and `FormValidator.init` in `useVisibleTask$` on the client.

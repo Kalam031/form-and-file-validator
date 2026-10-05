@@ -303,14 +303,14 @@ The packs are machine-quality translations: please have a native speaker check t
 Always pin the exact version and keep the `integrity` attribute, so the file your visitors load can never change:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.15.0/dist/validator.min.js"
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.16.0/dist/validator.min.js"
         integrity="sha384-gpZQUAyqelFG1k2lvjPfCA14M8/vaLmgWkiNG1LI2CGqAmCsRzu+V/PhIM/IEKvQ" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.15.0/dist/locales/de.min.js"
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.16.0/dist/locales/de.min.js"
         integrity="sha384-5kTd4XVvAfzqtfngPwfy6yxyNKanSRVX2T9iX24J/WVKBg+Ag4Z8KpAXLXcWFUWM" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>
 ```
 
-Hashes for every file are in `dist/SRI.json` (they are for version 3.15.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
+Hashes for every file are in `dist/SRI.json` (they are for version 3.16.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
 
 ## Contributing
 
@@ -323,6 +323,7 @@ Anyone can contribute: fork, change `src/`, open a pull request. See [CONTRIBUTI
 - **Angular:** `import { fvValidator, fvControls, fvWatch, fvMessage } from 'form-and-file-validator/angular'`: validators for Reactive Forms, tested on real `@angular/forms`.
 - **React:** `import { useFormValidator, FileDropzone } from 'form-and-file-validator/react'`
 - **Vue 3:** `import { useFormValidator, FileDropzone, vFormValidator } from 'form-and-file-validator/vue'`
+- **Svelte** (`/svelte`), **Lit** (`/lit`), **Solid** (`/solid`), **Angular Signal Forms** (`/angular-signals`): see `docs/Server-and-Frameworks.md`
 - **Alpine.js:** `dist/integrations/alpine.min.js` adds `x-validate` and `x-dropzone`.
 
 Full examples: [Server and frameworks](docs/Server-and-Frameworks.md), languages: [Languages](docs/Languages.md). A live playground is in the docs site (`docs/playground.html`).
