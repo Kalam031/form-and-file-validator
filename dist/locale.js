@@ -66,6 +66,7 @@
             form: Object.assign({}, old.form, pack.form), file: Object.assign({}, old.file, pack.file), phrases: Object.assign({}, old.phrases, pack.phrases),
             units: Object.assign({}, old.units, pack.units), jquery: Object.assign({}, old.jquery, pack.jquery)
         });
+        try { const t = targets(); if (t.form && typeof t.form.registerMessages === 'function') t.form.registerMessages(key, packs[key].form); } catch (e) { /* no FormValidator */ }   // for { lang } on single calls
         if (key === current && key !== 'en') apply(key);   // a pack that arrives after use(): apply it right away
         return packs[key];
     }
@@ -82,6 +83,7 @@
         const pack = packs[code] || {};
         const t = targets();
         if (t.form && t.form.messages) reset('form', t.form.messages, pack.form);
+        try { if (t.form) t.form.locale = code; } catch (e) { /* older FormValidator */ }
         if (t.file) {
             if (t.file.defaultMessages) reset('file', t.file.defaultMessages, pack.file);
             if (t.file.units) reset('units', t.file.units, pack.units);
@@ -138,6 +140,14 @@
         get current() { return current; },
         get(code) { const k = find(code); return k ? packs[k] : null; },
         list() { pullQueued(); return Object.keys(packs).map(code => ({ code, name: packs[code].name || code, dir: packs[code].dir || 'ltr' })); },
+        /** What a language still lacks compared with English: { form: [keys], file: [keys], phrases: [keys] }; empty arrays mean complete. */
+        missing(code) {
+            const k = find(code);
+            if (!k) throw new Error('FVLocales.missing: unknown language "' + code + '"');
+            const need = this.keys(), p = packs[k];
+            const lack = (keys, obj) => keys.filter(x => !obj || obj[x] === undefined || obj[x] === null || String(obj[x]).trim() === '');
+            return { form: lack(need.form, p.form), file: lack(need.file, p.file), phrases: lack(need.phrases, p.phrases) };
+        },
         /** Every text a complete pack needs: use it as a checklist for your own language. */
         keys() {
             const t = targets();

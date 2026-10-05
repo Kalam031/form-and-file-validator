@@ -25,4 +25,6 @@ export interface LocalesStatic {
     get(code: string): LocalePack | null;
     list(): LocaleInfo[];
     keys(): { form: string[]; file: string[]; phrases: string[] };
+    /** What a language still lacks compared with English (empty arrays: complete). */
+    missing(code: string): { form: string[]; file: string[]; phrases: string[] };
 }

@@ -417,3 +417,14 @@ import { FvFormController } from '../lit';
     const rules = FormValidator.fromJsonSchema(js, { onUnsupported: (p, k) => void [p, k] });
     void [js, rules];
 }
+
+// ---------------------------------------------------------------- messages
+{
+    const m: string = FormValidator.checkValue('', 'required', { lang: 'de', label: 'Name' }).message;
+    const t = FormValidator.formatErrors({ a: 'x' }, 'tree');
+    const s: string | null = FormValidator.suggestEmail('bob@gmial.con', { domains: ['x.com'] });
+    FormValidator.init({ formId: 'm', rules: {}, config: { lang: 'sv' } });
+    FormValidator.checkValues({}, {}, { labels: { a: 'A' } });
+    const loc: string = FormValidator.locale;
+    void [m, t, s, loc];
+}

@@ -355,6 +355,25 @@ FormValidator.schema(rules).safeParse(body);
 - **What JSON Schema cannot say** (`equalTo`, `requiredIf`, `dateAfter`, `pwcheck`, `mask`, `unique` on a column of rows, your own rules) is kept in an **`x-fv-rules`** annotation that validators ignore and `fromJsonSchema` reads back: rules, schema, rules, schema is stable.
 - `fromJsonSchema` follows local `$ref` (`$defs`, `definitions`), merges `allOf`, and reports what it skips (`anyOf` / `oneOf`, `not`, `if`, `patternProperties`, remote refs, `exclusiveMinimum`) to `onUnsupported`; it never throws and ignores hostile keys. Checked against Ajv with the same payloads. Part of the core build.
 
+### Messages: plurals, labels, a language per call, error formats and email suggestions
+
+**ICU plurals and select** in your own messages: `{min, plural, one {# character} other {# characters}}`, `=0 {none}`, `offset:1`, `{kind, select, f {She} m {He} other {They}}`. `#` is the number; the categories follow the language (Russian one / few / many, Arabic zero / two ...). Plain `{min}` placeholders work as before, and unbalanced or unknown input is left as written.
+
+**`{label}` and `{name}`** in a message: the field's label on a form (the `<label>`, `aria-label` or legend), `labels: { email: 'Your email' }` (an option of `checkValues` / `schema`) or the key of the field:
+
+```js
+rules: { email: [{ type: 'required', message: '{label} is required, thanks' }] }     // "E-mail address is required, thanks"
+FormValidator.checkValues(body, rules, { labels: { email: 'Your email' } });
+```
+
+**A language for one call**, without switching the page: `FormValidator.checkValue(v, rules, { lang: 'de' })`, also in `checkValues`, `schema(rules, { lang })` and a form's `config: { lang: 'sv' }`. It uses any pack that is loaded (`de-AT` falls back to `de`, an unknown language to English); your own messages still win. The right choice for a server that answers each request in the caller's language. `FormValidator.locale` is the language of the page (set by `FVLocales.use`).
+
+**`FormValidator.formatErrors(errors, style)`** turns an error map (or the result of `checkValues` / `serverErrors`) into the shape you need: `'flat'`, `'tree'` (`{ items: [{ qty: 'Required' }] }`), `'list'` (`[{ field, message }]`), `'pretty'` (text lines) or `'problem'`, an RFC 9457 `application/problem+json` body (`{ type, title, status: 422, errors: { field: [messages] } }`; options `status`, `title`, `type`, `detail`, `instance`), which `serverErrors` reads back.
+
+**`FormValidator.suggestEmail('bob@gmial.con')`** answers `'bob@gmail.com'` (or `null`): a "did you mean" for mistyped domains and endings, as WCAG 3.3.3 recommends. It compares with common providers (and `options.domains` of your own), counts a swap of neighbours as one typo, and never touches the part before the `@`.
+
+**`FVLocales.missing('fr')`** lists what a language pack still lacks (`{ form, file, phrases }`).
+
 ### Smaller builds: the core and your own subset
 
 Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a `<form>`. Two ways to ship less:
@@ -1083,6 +1102,7 @@ The newest entries (each source file also keeps its own changelog in its header;
 
 - **2.15.0**: `requiredIf`, `dateAfter`, `dateBefore`, `atLeastOne`, `sumEquals`; `inst.state` / `getState()` / `onStateChange()`; `inst.validateStep()`; `FormValidator.explain()`.
 - **2.14.0**: field arrays and nested data: wildcard rule keys (`items[].qty`) and nested paths in `checkValues()` / `schema()` / forms, rules `unique`, `minItems`, `maxItems`; schema output is nested.
+- **2.15.0 (continued)**: ICU plurals / select and `{label}` in messages, `{ lang }` per call, `formatErrors()`, `suggestEmail()`, `FormValidator.locale`.
 - **2.15.0 (continued)**: `toJsonSchema()` / `fromJsonSchema()`.
 - **2.15.0 (continued)**: `antiBot`, `idempotencyKey`, `disableOnSubmit`, `draft`, `leaveWarning`, `FormValidator.isBotSubmission()`.
 - **2.15.0 (continued)**: `FormValidator.mask()`, the `mask` rule, `maskPattern()`, `unmaskValue()`, `parseRules()`, `FormValidator.auto()` / `data-fv` attributes / `data-fv-auto` script attribute.

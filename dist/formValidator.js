@@ -1063,10 +1063,11 @@
             if (!m) m = dataMessage(env.field, rule.type, false);         // data-msg-required="..." (like jQuery Validation)
             if (!m) m = dynamic;
             if (!m) m = dataMessage(env.field, rule.type, true);          // data-msg="..." : one message for every rule of the field
-            if (!m) m = cfg.messages[rule.type] || DEFAULT_MESSAGES[rule.type] || 'Invalid value.';
+            if (!m) m = cfg.messages[rule.type] || langText(cfg.lang, rule.type) || DEFAULT_MESSAGES[rule.type] || 'Invalid value.';
             if (isFn(m)) m = guard(m, '', env.field, rule, env);
             const ps = paramsOf(rule);
-            return fmt(m, rule).replace(/\{(\d+)\}/g, (x, i) => (ps[i] !== undefined ? ps[i] : x));
+            const extra = typeof m === 'string' && (m.indexOf('{label}') >= 0 || m.indexOf('{name}') >= 0) ? { label: labelOf({ fields: env.fields && env.fields.length ? env.fields : [env.field] }) || env.field.name, name: env.field.name } : null;
+            return fmtMessage(m, rule, extra, cfg.lang).replace(/\{(\d+)\}/g, (x, i) => (ps[i] !== undefined ? ps[i] : x));
         }
 
         // ---- error display
@@ -2269,14 +2270,165 @@
             if (res && isFn(res.then)) throw new Error('checkValue: the "' + rule.type + '" rule is asynchronous; use a form for it');
             const r = normalizeResult(res);
             if (!r.valid) {
-                const custom = typeof rule.message === 'string' ? rule.message : (o.messages && o.messages[rule.type]) || r.message || DEFAULT_MESSAGES[rule.type] || 'Invalid value.';
-                return { valid: false, rule: rule.type, code: typeof rule.code === 'string' && rule.code ? rule.code : rule.type, message: format(fmt(custom, rule), paramsOf(rule)) };
+                const custom = typeof rule.message === 'string' ? rule.message : (o.messages && o.messages[rule.type]) || r.message || langText(o.lang, rule.type) || DEFAULT_MESSAGES[rule.type] || 'Invalid value.';
+                return { valid: false, rule: rule.type, code: typeof rule.code === 'string' && rule.code ? rule.code : rule.type, message: format(fmtMessage(custom, rule, o.label !== undefined ? { label: o.label, name: o.label } : null, o.lang), paramsOf(rule)) };
             }
         }
         return { valid: true, rule: null, code: null, message: '' };
     }
 
     // ---- paths: 'user.email', 'items[0].qty', wildcards 'items[].qty' / 'items.*.qty' (every row)
+    // ------------------------------------------------------------------ messages: ICU plurals, {label}, a language per call, error formats, email suggestions
+    const LOCALE = { code: 'en' };
+    const LANG_PACKS = {};   // code -> { ruleType: text }: the packs a call can ask for with { lang: 'de' } without switching the whole page
+    function messageLocale(lang) { return lang || LOCALE.code || 'en'; }
+    /** Index of the brace that closes the one at `open`, or -1. */
+    function closeBrace(s, open) { let d = 0; for (let i = open; i < s.length; i++) { if (s.charAt(i) === '{') d++; else if (s.charAt(i) === '}' && --d === 0) return i; } return -1; }
+    /**
+     * ICU MessageFormat subset in custom messages: {min, plural, one {# character} other {# characters}}, {n, plural, =0 {none} one {#} other {#}},
+     * {kind, select, a {...} other {...}}; '#' is the number. Plural categories follow the language (Intl.PluralRules). Plain {name} placeholders are left to fmt().
+     */
+    function icu(tpl, values, lang, depth) {
+        let out = '', i = 0;
+        const s = String(tpl);
+        while (i < s.length) {
+            const ch = s.charAt(i);
+            if (ch !== '{') { out += ch; i++; continue; }
+            const end = closeBrace(s, i);
+            if (end < 0) { out += s.slice(i); break; }
+            const inner = s.slice(i + 1, end);
+            const m = /^\s*(\w+)\s*,\s*(plural|select)\s*,([\s\S]*)$/.exec(inner);
+            if (!m || (depth || 0) > 6) { out += s.slice(i, end + 1); i = end + 1; continue; }
+            const name = m[1], kind = m[2];
+            let rest = m[3];
+            let offset = 0;
+            const om = /^\s*offset:\s*(\d+)/.exec(rest);
+            if (om) { offset = +om[1]; rest = rest.slice(om[0].length); }
+            const branches = {};
+            let j = 0;
+            while (j < rest.length) {
+                const km = /^\s*(=?\w+)\s*\{/.exec(rest.slice(j));
+                if (!km) break;
+                const open = j + km[0].length - 1, close = closeBrace(rest, open);
+                if (close < 0) break;
+                branches[km[1]] = rest.slice(open + 1, close);
+                j = close + 1;
+            }
+            const val = values ? values[name] : undefined;
+            let chosen;
+            if (kind === 'select') chosen = branches[String(val)] !== undefined ? branches[String(val)] : branches.other;
+            else {
+                const n = Number(val);
+                if (isFinite(n)) {
+                    let cat = 'other';
+                    try { cat = new Intl.PluralRules(lang || 'en').select(n - offset); } catch (e) { cat = n - offset === 1 ? 'one' : 'other'; }
+                    chosen = branches['=' + n] !== undefined ? branches['=' + n] : (branches[cat] !== undefined ? branches[cat] : branches.other);
+                    if (chosen !== undefined) chosen = chosen.replace(/#/g, String(n - offset));
+                } else chosen = branches.other;
+            }
+            out += chosen === undefined ? '' : icu(chosen, values, lang, (depth || 0) + 1);
+            i = end + 1;
+        }
+        return out;
+    }
+    const hasIcu = s => s.indexOf(', plural,') >= 0 || s.indexOf(',plural,') >= 0 || s.indexOf(', select,') >= 0 || s.indexOf(',select,') >= 0 || /\{\s*\w+\s*,\s*(plural|select)\s*,/.test(s);
+    /** Placeholders of a message: ICU plural / select first, then {min} {max} {label} ... from the rule and `extra`. */
+    function fmtMessage(tpl, rule, extra, lang) {
+        let t = String(tpl);
+        const vals = Object.assign({}, rule, extra);
+        if (hasIcu(t)) t = icu(t, vals, messageLocale(lang));
+        return t.replace(/\{(\w+)\}/g, (m, k) => (vals[k] !== undefined && vals[k] !== null && typeof vals[k] !== 'object' ? vals[k] : m));
+    }
+    /** The text for a rule type in a language registered with a pack (an explicit lang for one call), else null. */
+    const langText = (lang, type) => { const p = lang ? LANG_PACKS[lang] || LANG_PACKS[String(lang).split('-')[0]] : null; return p && p[type] ? p[type] : null; };
+
+    /**
+     * Error maps in the shape you need: FormValidator.formatErrors({ 'items[0].qty': 'Required', email: 'Bad' }, 'tree' | 'flat' | 'list' | 'pretty' | 'problem')
+     *   flat    { 'items[0].qty': 'Required', email: 'Bad' } (as given)         tree  { items: [{ qty: 'Required' }], email: 'Bad' }
+     *   list    [{ field: 'email', message: 'Bad' }, ...]                      pretty  "email: Bad\nitems[0].qty: Required"
+     *   problem an RFC 9457 problem+json body: { type, title, status: 422, errors: { field: [messages] } }  (options: status, title, type, detail, instance)
+     * Accepts a { field: message | [messages] } map, the `errors` of checkValues() / schema(), or the output of serverErrors().
+     */
+    function formatErrors(errors, style, options) {
+        const o = options || {};
+        const src = errors && errors.errors && typeof errors.errors === 'object' && !Array.isArray(errors.errors) ? errors.errors : (errors || {});
+        const all = errors && errors.all && typeof errors.all === 'object' ? errors.all : null;
+        const keys = Object.keys(src).filter(k => BAD_KEYS.indexOf(k) < 0);
+        const first = k => [].concat(src[k])[0];
+        if (style === 'list') return keys.map(k => ({ field: k, message: first(k) }));
+        if (style === 'pretty') return keys.map(k => k + ': ' + first(k)).join('\n');
+        if (style === 'tree') {
+            const tree = {};
+            keys.forEach(k => {
+                const toks = pathTokens(k) || [k];
+                let node = tree;
+                toks.forEach((t, i) => {
+                    if (typeof t === 'number' ? false : BAD_KEYS.indexOf(t) >= 0) return;
+                    const last = i === toks.length - 1, key = t === '' ? 'length' : t;
+                    if (last) { node[key] = first(k); return; }
+                    if (node[key] === undefined || typeof node[key] !== 'object') node[key] = typeof toks[i + 1] === 'number' ? [] : {};
+                    node = node[key];
+                });
+            });
+            return tree;
+        }
+        if (style === 'problem') {
+            const map = {};
+            keys.forEach(k => { map[k] = all && all[k] ? all[k].slice() : [].concat(src[k]); });
+            const body = { type: o.type || 'about:blank', title: o.title || 'Your request is not valid.', status: o.status || 422, errors: map };
+            if (o.detail) body.detail = o.detail;
+            if (o.instance) body.instance = o.instance;
+            return body;
+        }
+        const flat = {};
+        keys.forEach(k => { flat[k] = first(k); });
+        return flat;
+    }
+
+    const EMAIL_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'live.com', 'aol.com', 'proton.me', 'protonmail.com', 'msn.com', 'me.com', 'mail.com', 'gmx.com', 'yandex.com', 'zoho.com', 'qq.com'];
+    const EMAIL_TLDS = ['com', 'net', 'org', 'edu', 'gov', 'info', 'io', 'co', 'uk', 'de', 'fr', 'es', 'it', 'nl', 'in', 'ca', 'au', 'br', 'ru', 'jp', 'cn'];
+    /** Edit distance with swaps of neighbours counted as one edit (optimal string alignment); `max + 1` once it is certain to be above `max`. */
+    function editDistance(a, b, max) {
+        if (Math.abs(a.length - b.length) > max) return max + 1;
+        const d = [];
+        for (let i = 0; i <= a.length; i++) { d[i] = [i]; }
+        for (let j = 0; j <= b.length; j++) d[0][j] = j;
+        for (let i = 1; i <= a.length; i++) {
+            for (let j = 1; j <= b.length; j++) {
+                const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+                d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+                if (i > 1 && j > 1 && a.charAt(i - 1) === b.charAt(j - 2) && a.charAt(i - 2) === b.charAt(j - 1)) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+            }
+        }
+        return d[a.length][b.length];
+    }
+    /**
+     * "Did you mean ...?" for an email address (WCAG 3.3.3 error suggestion): FormValidator.suggestEmail('bob@gmial.con') -> 'bob@gmail.com', or null when it looks fine
+     * or nothing is close. Compares the domain with common providers (and your own: options.domains) and a mistyped ending (.con, .vom, .cmo). Never changes the part before the @.
+     */
+    function suggestEmail(value, options) {
+        const o = options || {};
+        const v = String(value === null || value === undefined ? '' : value).trim();
+        const at = v.lastIndexOf('@');
+        if (at < 1 || at === v.length - 1) return null;
+        const local = v.slice(0, at), domain = v.slice(at + 1).toLowerCase();
+        const domains = (o.domains || []).map(d => String(d).toLowerCase()).concat(EMAIL_DOMAINS);
+        if (domains.indexOf(domain) >= 0) return null;
+        let best = null, bestD = 3;
+        domains.forEach(d => { const dist = editDistance(domain, d, 2); if (dist < bestD) { best = d; bestD = dist; } });
+        if (best && bestD <= (domain.length <= 6 ? 1 : 2)) return local + '@' + best;
+        const dot = domain.lastIndexOf('.');
+        if (dot > 0) {
+            const host = domain.slice(0, dot), tld = domain.slice(dot + 1);
+            if (EMAIL_TLDS.indexOf(tld) < 0) {
+                let t = null, td = 2;
+                EMAIL_TLDS.forEach(c => { const d = editDistance(tld, c, 1); if (d < td) { td = d; t = c; } });
+                if (t && tld.length >= 2) return local + '@' + host + '.' + t;
+            }
+        }
+        return null;
+    }
+
     const isWild = t => t === '' || t === '*';
     /** Rule key -> tokens ('' and '*' match every index), or null when unsafe. A plain key without path characters is one token. */
     function ruleTokens(key) {
@@ -2321,6 +2473,8 @@
         (Array.isArray(rules) ? rules : normalizeRules(rules)).forEach(r => { ruleTargetNames(r).forEach(t => list.push(t)); });
         return list;
     }
+
+    function registerMessages(code, messages) { if (code && messages && typeof messages === 'object') LANG_PACKS[String(code)] = Object.assign({}, LANG_PACKS[String(code)], messages); }
 
     /**
      * Checks a whole object (a JSON request body, a model) against { field: rules }:
@@ -2590,7 +2744,7 @@
             if (pathKeys.indexOf(name) < 0) {   // a plain field, like before
                 const val = data ? data[name] : undefined;
                 const opts = (needsValues || wantsArray) ? Object.assign({}, o, { values: needsValues ? baseValues() : o.values, array: wantsArray ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }) : o;
-                const r = checkRules(val, list, opts);
+                const r = checkRules(val, list, (o.labels && o.labels[name]) ? Object.assign({}, opts, { label: o.labels[name] }) : Object.assign({}, opts, { label: name }));
                 if (!r.valid) fail(name, r);
                 return;
             }
@@ -2610,7 +2764,7 @@
                 });
                 const val = e.value;
                 const r = checkRules(val !== null && typeof val === 'object' && !Array.isArray(val) ? '' : (Array.isArray(val) ? '' : val), list,
-                    Object.assign({}, o, { values, column, index: idx, array: wantsArray ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }));
+                    Object.assign({}, o, { label: (o.labels && o.labels[name]) || canonKey(e.tokens), values, column, index: idx, array: wantsArray ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }));
                 if (!r.valid) fail(canonKey(e.tokens), r);
             });
         });
@@ -3050,7 +3204,7 @@
     // `__FV_CORE__` does not exist in the normal build. The "core" build (dist/formValidator.core.min.js, tools/build-subset.js) defines it as true, which lets the
     // minifier drop the whole form engine and everything only it uses: what is left checks values, schemas and server answers without a DOM.
     const CORE = typeof __FV_CORE__ === 'boolean' && __FV_CORE__;
-    return Object.assign({
+    const api = Object.assign({
         parseFormData, // (formData | form | entries | object, { coerce? }) -> nested object: 'a.b[0].c' -> { a: { b: [{ c }] } }
         serverErrors,  // (response body, { format? }) -> { errors, all, form, format } from problem+json, Laravel, DRF, ASP.NET, FastAPI, Zod ...
         precognition,  // async (url, values, { only, method, ... }) -> { valid, errors, ... }: ask the real endpoint whether the values would pass
@@ -3065,6 +3219,9 @@
         isBotSubmission, // (body, { honeypot, timestampField, minTimeMs }) -> { bot, reason }: the server side of antiBot
         toJsonSchema,  // (rules, { title, additionalProperties }) -> a JSON Schema (2020-12); what it cannot say is kept in x-fv-rules
         fromJsonSchema, // (schema, { onUnsupported }) -> rules, from an OpenAPI / JSON Schema object
+        formatErrors,  // (errors, 'flat' | 'tree' | 'list' | 'pretty' | 'problem', options?) -> the same errors in the shape you need (problem = RFC 9457 body)
+        suggestEmail,  // ('bob@gmial.con') -> 'bob@gmail.com' | null: a "did you mean" for mistyped email domains
+        registerMessages, // (code, { ruleType: text }): a language that calls can ask for with { lang: 'de' } without switching the page
         explain,       // (value, rules, options?) -> [{ rule, code, param, passed, message?, skipped? }]: why a value passes or fails, rule by rule
         registerRule,
         addMethod,
@@ -3086,4 +3243,7 @@
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; }
     });
+    // the language messages are written in (set by FVLocales.use); plural categories in ICU messages follow it
+    Object.defineProperty(api, 'locale', { get: () => LOCALE.code, set: c => { LOCALE.code = String(c || 'en'); }, enumerable: true });
+    return api;
 });

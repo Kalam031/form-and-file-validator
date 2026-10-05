@@ -93,6 +93,8 @@ export type RuleMap = { [rule: string]: unknown } & { normalizer?: (value: strin
 export type RulesForField = string | RuleObject | Array<string | RuleObject> | RuleMap;
 
 export interface FormConfig {
+    /** Write this form's messages in this language (a loaded pack) whatever the page language is. */
+    lang?: string;
     trim?: boolean;
     novalidate?: boolean;
     focusInvalid?: boolean;
@@ -296,6 +298,12 @@ export interface ValueCheckResult {
 }
 
 export interface ValueCheckOptions {
+    /** Write the messages in this language for this call (a loaded pack; 'de-AT' falls back to 'de'). */
+    lang?: string;
+    /** For {label} / {name} in messages. */
+    label?: string;
+    /** { fieldKey: label } for checkValues / schema. */
+    labels?: Record<string, string>;
     /** Trim the value first (default true; pwcheck never trims). */
     trim?: boolean;
     /** The other fields, for equalTo / notEqualTo. */
@@ -558,6 +566,14 @@ export interface FormValidatorStatic {
     toJsonSchema(rules: Record<string, RulesForField>, options?: { title?: string; additionalProperties?: boolean }): Record<string, any>;
     /** A JSON Schema / OpenAPI schema object as rules; skipped keywords go to onUnsupported. */
     fromJsonSchema(schema: unknown, options?: { onUnsupported?: (path: string, keyword: string) => void }): Record<string, RulesForField>;
+    /** The error map in another shape: 'flat', 'tree', 'list', 'pretty' or 'problem' (RFC 9457 body). */
+    formatErrors(errors: unknown, style?: 'flat' | 'tree' | 'list' | 'pretty' | 'problem', options?: { status?: number; title?: string; type?: string; detail?: string; instance?: string }): any;
+    /** "Did you mean ...?" for a mistyped email domain or ending, or null. */
+    suggestEmail(value: unknown, options?: { domains?: string[] }): string | null;
+    /** A language that single calls can ask for with { lang } (FVLocales.register does this for you). */
+    registerMessages(code: string, messages: Record<string, string>): void;
+    /** The language of the page's messages (set by FVLocales.use); ICU plural categories follow it. */
+    locale: string;
     /** Why a value passes or fails, rule by rule (no short circuit; skipped rules say why). */
     explain(value: unknown, rules: RulesForField, options?: ValueCheckOptions): ExplainEntry[];
     /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */

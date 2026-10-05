@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.25.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.26.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -578,6 +578,16 @@ FormValidator.schema(rules).safeParse(body);
 <li><strong>What JSON Schema cannot say</strong> (<code>equalTo</code>, <code>requiredIf</code>, <code>dateAfter</code>, <code>pwcheck</code>, <code>mask</code>, <code>unique</code> on a column of rows, your own rules) is kept in an <strong><code>x-fv-rules</code></strong> annotation that validators ignore and <code>fromJsonSchema</code> reads back: rules, schema, rules, schema is stable.</li>
 <li><code>fromJsonSchema</code> follows local <code>$ref</code> (<code>$defs</code>, <code>definitions</code>), merges <code>allOf</code>, and reports what it skips (<code>anyOf</code> / <code>oneOf</code>, <code>not</code>, <code>if</code>, <code>patternProperties</code>, remote refs, <code>exclusiveMinimum</code>) to <code>onUnsupported</code>; it never throws and ignores hostile keys. Checked against Ajv with the same payloads. Part of the core build.</li>
 </ul>
+<h3 id="messages-plurals-labels-a-language-per-call-error-formats-and-email-suggestions">Messages: plurals, labels, a language per call, error formats and email suggestions</h3>
+<p><strong>ICU plurals and select</strong> in your own messages: <code>{min, plural, one {# character} other {# characters}}</code>, <code>=0 {none}</code>, <code>offset:1</code>, <code>{kind, select, f {She} m {He} other {They}}</code>. <code>#</code> is the number; the categories follow the language (Russian one / few / many, Arabic zero / two ...). Plain <code>{min}</code> placeholders work as before, and unbalanced or unknown input is left as written.</p>
+<p><strong><code>{label}</code> and <code>{name}</code></strong> in a message: the field&#39;s label on a form (the <code>&lt;label&gt;</code>, <code>aria-label</code> or legend), <code>labels: { email: &#39;Your email&#39; }</code> (an option of <code>checkValues</code> / <code>schema</code>) or the key of the field:</p>
+<pre tabindex="0"><code class="language-js">rules: { email: [{ type: &#39;required&#39;, message: &#39;{label} is required, thanks&#39; }] }     // &quot;E-mail address is required, thanks&quot;
+FormValidator.checkValues(body, rules, { labels: { email: &#39;Your email&#39; } });
+</code></pre>
+<p><strong>A language for one call</strong>, without switching the page: <code>FormValidator.checkValue(v, rules, { lang: &#39;de&#39; })</code>, also in <code>checkValues</code>, <code>schema(rules, { lang })</code> and a form&#39;s <code>config: { lang: &#39;sv&#39; }</code>. It uses any pack that is loaded (<code>de-AT</code> falls back to <code>de</code>, an unknown language to English); your own messages still win. The right choice for a server that answers each request in the caller&#39;s language. <code>FormValidator.locale</code> is the language of the page (set by <code>FVLocales.use</code>).</p>
+<p><strong><code>FormValidator.formatErrors(errors, style)</code></strong> turns an error map (or the result of <code>checkValues</code> / <code>serverErrors</code>) into the shape you need: <code>&#39;flat&#39;</code>, <code>&#39;tree&#39;</code> (<code>{ items: [{ qty: &#39;Required&#39; }] }</code>), <code>&#39;list&#39;</code> (<code>[{ field, message }]</code>), <code>&#39;pretty&#39;</code> (text lines) or <code>&#39;problem&#39;</code>, an RFC 9457 <code>application/problem+json</code> body (<code>{ type, title, status: 422, errors: { field: [messages] } }</code>; options <code>status</code>, <code>title</code>, <code>type</code>, <code>detail</code>, <code>instance</code>), which <code>serverErrors</code> reads back.</p>
+<p><strong><code>FormValidator.suggestEmail(&#39;bob@gmial.con&#39;)</code></strong> answers <code>&#39;bob@gmail.com&#39;</code> (or <code>null</code>): a &quot;did you mean&quot; for mistyped domains and endings, as WCAG 3.3.3 recommends. It compares with common providers (and <code>options.domains</code> of your own), counts a swap of neighbours as one typo, and never touches the part before the <code>@</code>.</p>
+<p><strong><code>FVLocales.missing(&#39;fr&#39;)</code></strong> lists what a language pack still lacks (<code>{ form, file, phrases }</code>).</p>
 <h3 id="smaller-builds-the-core-and-your-own-subset">Smaller builds: the core and your own subset</h3>
 <p>Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a <code>&lt;form&gt;</code>. Two ways to ship less:</p>
 <p><strong><code>form-and-file-validator/core</code></strong> (about 16 KB gzip against 34 KB for the form engine, 89 KB for the whole bundle: it also carries masks, JSON Schema, explain and the server helpers): the DOM-free part with every rule that needs no form.</p>
@@ -1626,6 +1636,7 @@ npm test
 <ul>
 <li><strong>2.15.0</strong>: <code>requiredIf</code>, <code>dateAfter</code>, <code>dateBefore</code>, <code>atLeastOne</code>, <code>sumEquals</code>; <code>inst.state</code> / <code>getState()</code> / <code>onStateChange()</code>; <code>inst.validateStep()</code>; <code>FormValidator.explain()</code>.</li>
 <li><strong>2.14.0</strong>: field arrays and nested data: wildcard rule keys (<code>items[].qty</code>) and nested paths in <code>checkValues()</code> / <code>schema()</code> / forms, rules <code>unique</code>, <code>minItems</code>, <code>maxItems</code>; schema output is nested.</li>
+<li><strong>2.15.0 (continued)</strong>: ICU plurals / select and <code>{label}</code> in messages, <code>{ lang }</code> per call, <code>formatErrors()</code>, <code>suggestEmail()</code>, <code>FormValidator.locale</code>.</li>
 <li><strong>2.15.0 (continued)</strong>: <code>toJsonSchema()</code> / <code>fromJsonSchema()</code>.</li>
 <li><strong>2.15.0 (continued)</strong>: <code>antiBot</code>, <code>idempotencyKey</code>, <code>disableOnSubmit</code>, <code>draft</code>, <code>leaveWarning</code>, <code>FormValidator.isBotSubmission()</code>.</li>
 <li><strong>2.15.0 (continued)</strong>: <code>FormValidator.mask()</code>, the <code>mask</code> rule, <code>maskPattern()</code>, <code>unmaskValue()</code>, <code>parseRules()</code>, <code>FormValidator.auto()</code> / <code>data-fv</code> attributes / <code>data-fv-auto</code> script attribute.</li>

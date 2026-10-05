@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.26.0
+- **Messages**: ICU plurals and select in custom messages (`{min, plural, one {# character} other {# characters}}`, categories per language), `{label}` / `{name}` placeholders (the form label, `labels`, or the key), `{ lang }` to write one call's messages in another language without switching the page (`checkValue`, `checkValues`, `schema`, form `config.lang`), `FormValidator.locale`.
+- **`FormValidator.formatErrors(errors, style)`**: flat, tree, list, pretty text and an RFC 9457 problem+json body that `serverErrors` reads back. **`FormValidator.suggestEmail()`**: "did you mean gmail.com" for mistyped domains and endings. **`FVLocales.missing(code)`** lists what a language still lacks.
+
 ## 3.25.0
 - **Malware scanner adapters** (`form-and-file-validator/scanners`, Node 18+): `clamav()` (clamd over TCP or a unix socket, INSTREAM), `virustotal()` (hash lookup, optional upload and wait, thresholds), `httpScanner()` (your own service) and `all()` to combine them, ready for the `scan` option. Tested against a fake clamd and mock services.
 
