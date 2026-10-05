@@ -20,6 +20,7 @@ const PARTS = [
     { name: 'fileValidator', file: 'fileValidator.js' },
     { name: 'fileValidator.widget', file: 'fileValidator.widget.js' },
     { name: 'formValidator', file: 'formValidator.js' },
+    { name: 'formValidator.element', file: 'formValidator.element.js' },
     { name: 'formValidator.jquery', file: 'formValidator.jquery.js' },
     { name: 'formValidator.additional', file: 'formValidator.additional.js' },
     { name: 'locale', file: 'locale.js' }
@@ -58,6 +59,7 @@ ${wrapped}
     var FileValidator = run('fileValidator');
     run('fileValidator.widget');                 // adds widget(), resizeImage(), filesFromDrop() ... to FileValidator
     var FormValidator = run('formValidator');
+    run('formValidator.element');                // <fv-field> (registers itself when the browser has custom elements)
     var locales = run('locale');                  // language packs: FVLocales.use('de')
     FormValidator.locales = locales; FileValidator.locales = locales;
 

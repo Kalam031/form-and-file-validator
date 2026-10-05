@@ -581,6 +581,31 @@ for (const b of BROWSERS) {
             await axeRun(page, 'demo-jquery.html (with errors)');
         }, '/demo-jquery.html');
 
+        // ============================================================ <fv-field>
+        it2('<fv-field>: the rules become native validity: blocked submit, our message instead of the bubble, :user-invalid, and the cross-field rule', async page => {
+            await setup(page, `<form id="f"><input type="password" name="pw" id="pw"><fv-field rules="required equalTo:pw"><label for="c">Confirm</label><input type="password" id="c" name="c"></fv-field>
+                <fv-field rules="required email"><label for="e">Email</label><input id="e" name="email"></fv-field><button id="go">Go</button></form>`,
+                `window.submits = 0; document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); window.submits++; });`);
+            assert.equal(await page.evaluate(() => document.getElementById('f').checkValidity()), false);
+            await page.click('#go');                                  // native validation runs: the form must not submit
+            assert.equal(await page.evaluate(() => window.submits), 0);
+            await page.waitForSelector('fv-field .fv-error');
+            assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'c', 'focus goes to the first invalid control');
+            await page.fill('#pw', 'Secret123');
+            await page.fill('#c', 'nope');
+            await page.keyboard.press('Tab');
+            assert.match(await page.textContent('fv-field:nth-of-type(1) .fv-error'), /match|differ|same/i);
+            assert.equal(await page.evaluate(() => document.getElementById('c').matches(':user-invalid')), true, 'the native pseudo-class follows our validity');
+            await page.fill('#c', 'Secret123');
+            assert.equal(await page.evaluate(() => document.querySelector('fv-field .fv-error') && document.querySelector('fv-field .fv-error').textContent !== ''), true, 'the email message is still there');
+            await page.fill('#e', 'a@b.co');
+            await page.waitForFunction(() => !document.querySelector('fv-field .fv-error'));
+            assert.equal(await page.evaluate(() => document.getElementById('f').checkValidity()), true);
+            await page.click('#go');
+            assert.equal(await page.evaluate(() => window.submits), 1, 'a valid form submits');
+            assert.equal(await page.evaluate(() => { try { return document.querySelector('fv-field').matches(':state(user-valid)'); } catch (e) { return 'unsupported'; } }).then(v => v === true || v === false || v === 'unsupported'), true);
+        });
+
         // ============================================================ the docs site (docs/*.html)
         it2('docs site playground: form errors, a rejected file, and the language switch (German, then Arabic right to left)', async page => {
             await page.selectOption('#lang', 'en');

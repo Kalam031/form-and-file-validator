@@ -186,6 +186,34 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 
 No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: `trim`, `values` (the other fields), `messages` (per rule type).
 
+### <fv-field>: rules in plain HTML, as native validation
+
+`<fv-field>` wraps a native input and gives it any FormValidator rule, **without an init call**. The rules are handed to the browser with `setCustomValidity()`, so `form.checkValidity()`, `reportValidity()`, a blocked submit, the native `:user-invalid` / `:user-valid` pseudo-classes and the browser's bubble all follow them. It is part of the bundle and registers itself (`dist/formValidator.element.js` is the same code on its own).
+
+```html
+<form>
+  <fv-field rules="required email">
+    <label for="e">Email</label>
+    <input id="e" name="email">
+  </fv-field>
+  <input type="password" name="pw">
+  <fv-field rules="required equalTo:pw"><label>Repeat <input type="password" name="pw2"></label></fv-field>
+  <fv-field rules="required minlength:3 pattern:^[A-Z]+$"><input name="code"></fv-field>
+  <fv-field rules='[{"type":"minDate","min":"2020-01-01","message":"Too early"}]'><input name="since"></fv-field>
+  <fv-field rules="required" server="/signup"><input name="username"></fv-field>   <!-- asks your endpoint when the user leaves it -->
+  <button>Save</button>
+</form>
+```
+
+- **Rules**: names separated by spaces, with an optional parameter after a colon (`minlength:3`, `range:1,10`, `pattern:^[A-Z]+$`); or JSON, a list or the map shorthand (`{"minlength":3}`). Properties `el.rules`, `el.messages` do the same from script.
+- **Reward early, punish late**: the browser's validity is always up to date, but the message under the field (`<div class="fv-error" role="alert">`) appears after the user leaves a field they changed (or after a submit attempt, `reportValidity()`), never for a field they only tabbed through, and disappears the moment the value is right. A cancelled `invalid` event means our message replaces the browser's bubble; add `native-bubble` to keep the bubble.
+- **Cross-field**: `equalTo` / `notEqualTo` read the other fields of the form, and the field is re-checked when they change.
+- **Inputs**: text-like inputs, textareas, selects, checkbox and radio groups (`control="#id"` picks one when there are several inputs). Rules that need files or a form object are ignored with one console warning.
+- **Server**: `server="/url"` runs the Precognition request (`server-encoding="json"`, `server-delay`) after the field passes the browser rules, was visited and holds a value; its message blocks the submit until the value changes. A failed check changes nothing.
+- **Styling and scripting**: `.fv-error`, `fv-field[data-state="invalid"]`, `[data-shown]`, `input:user-invalid`, and `fv-field:state(user-invalid)` where the browser has custom states. Event `fv-validate` (`detail: { valid, rule, code, message, shown }`), methods `validate()`, `reportValidity()`, `reset()`, `setServerError(text)`. Language packs and message overrides (`messages='{"required":"Fill me"}'`) work as everywhere.
+- Like the native pseudo-classes, `checkValidity()` fires `invalid`, so a field that gets one shows its message.
+- Another tag name: `FormValidator.fieldElement.define('my-field')`.
+
 ### ASP.NET MVC and Razor: data-val-* (unobtrusive validation)
 
 Drop-in for `jquery.validate.unobtrusive.js`, without jQuery. Razor renders the model's attributes (`[Required]`, `[StringLength]`, `[Range]`, `[EmailAddress]`, `[Compare]`, `[RegularExpression]`, `[Remote]` ...) as `data-val-*` attributes and `data-valmsg-for` / `data-valmsg-summary` placeholders; this reads them, so a Razor form validates in the browser with the messages from your model and no JavaScript of your own.
@@ -864,6 +892,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **element 1.0.0**: `<fv-field>`, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: `dist/formValidator.element.js`).
 - **2.13.0**: ASP.NET `data-val-*` (unobtrusive validation): `unobtrusive: true`, `FormValidator.unobtrusive.parse()` / `.auto()` / `.adapters`, `$.validator.unobtrusive` on the jQuery layer.
 - **2.12.0**: `validateOn` presets (`'smart'`, `'blur'`, `'input'`, `'submit'`, `'all'`; an `'input'` entry now works) and `validClass` (reward early, punish late); stable error codes (`data-code`, `code` in `getErrors()`, `checkValue`, schema issues, a rule's own `code`); `errorSummary` (accessible list with links and focus); `autoAttributes` and `inst.lint()`.
 - **2.11.0**: `FormValidator.serverErrors()` (any backend's validation answer), `precognition()` / `validateOnServer()` / `watchServer()`, `action()` for React 19 and Server Actions, `setServerErrors()`; `setErrors()` matches `items.0.qty` to `items[0].qty`.

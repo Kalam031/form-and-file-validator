@@ -299,3 +299,16 @@ void verdict;
     $.validator.unobtrusive.adapters.addBool('x');
     void [instances, stopAuto];
 }
+
+// ---------------------------------------------------------------- <fv-field>
+{
+    const field = document.querySelector('fv-field');
+    if (field) {
+        field.rules = { required: true, minlength: 3 };
+        const ok: boolean = field.reportValidity();
+        const c: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null = field.control;
+        field.addEventListener('fv-validate', e => { const m: string = e.detail.message; void m; });
+        void [ok, c];
+    }
+    FormValidator.fieldElement?.define('my-field');
+}

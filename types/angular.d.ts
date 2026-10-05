@@ -12,6 +12,9 @@ export interface ControlLike {
 export type FvErrors = { [rule: string]: { message: string } } & { fv: { rule: string; message: string } };
 export type FvGroupErrors = { fv: { errors: Record<string, string>; details: Record<string, { rule: string | null; message: string }> } };
 
+/** Names of the fields that equalTo / notEqualTo rules look at. */
+export declare function fvTargets(rules: RulesForField): string[];
+
 export interface FvOptions extends Pick<ValueCheckOptions, 'trim' | 'messages' | 'passwordStrength' | 'context'> {
     /** Fixed values for the "other fields" of equalTo / notEqualTo. By default the sibling controls of the group are used. */
     values?: Record<string, unknown>;

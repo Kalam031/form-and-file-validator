@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.11.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.12.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -219,6 +219,32 @@ if (!result.IsValid) return BadRequest(result.Summary());
 <p>Or put <code>[FileRules(Extensions = &quot;png,jpg&quot;, MaxSizeMB = 5, Required = true)]</code> on the model property and <code>ModelState.IsValid</code> covers it; <code>ModelFileRules.ToJson&lt;T&gt;()</code> (MVC 5: <code>Html.FileRulesJson()</code>) gives the matching browser configuration. Details in <code>dotnet/FormAndFileValidator/README.md</code>.</p>
 <h3 id="photos-strip-exif-and-gps-on-the-server">Photos: strip EXIF and GPS on the server</h3>
 <p>Browsers can clean photos before upload (<code>stripMetadata</code> in the upload widget), but a server must not rely on that. In Node call <code>FileValidator.stripMetadata(file)</code> on the upload before you store it; in .NET use <code>PhotoPrivacy.Strip(UploadedFile.From(file))</code>. Both remove EXIF, GPS, XMP, IPTC and comments from JPEG, PNG and WebP without re-encoding the picture, keep the orientation, and give the same bytes (<code>spec/metadata-vectors.json</code>).</p>
+<h2 id="angular-signal-forms">Angular Signal Forms</h2>
+<p><code>form-and-file-validator/angular-signals</code> gives Signal Forms (<code>form()</code> from <code>@angular/forms/signals</code>, Angular 21+) the same rules, messages and language packs:</p>
+<pre tabindex="0"><code class="language-ts">import { signal } from &#39;@angular/core&#39;;
+import { form, submit } from &#39;@angular/forms/signals&#39;;
+import { fvSchema, fvPrecognition, fvServerErrors } from &#39;form-and-file-validator/angular-signals&#39;;
+
+model = signal({ email: &#39;&#39;, password: &#39;&#39;, confirm: &#39;&#39; });
+f = form(this.model, p =&gt; {
+  fvSchema({
+    email: [&#39;required&#39;, &#39;email&#39;],
+    password: { required: true, pwcheck: { minLength: 8 } },
+    confirm: { equalTo: &#39;password&#39; }              // reads the other field from the model, re-checks when it changes
+  })(p);
+  fvPrecognition(p.email, &#39;/signup&#39;, { name: &#39;email&#39; });   // &quot;is it taken?&quot; to your real endpoint, after the sync rules pass
+});
+// template:  @for (e of f.email().errors(); track e.kind) { &lt;small&gt;{{ e.message }}&lt;/small&gt; }
+// submit:    submit(this.f, async () =&gt; { const res = await fetch(&#39;/signup&#39;, ...); if (!res.ok) return fvServerErrors(this.f, await res.json()); });
+</code></pre>
+<ul>
+<li><strong><code>fvSchema(rules)</code></strong> works as the schema of <code>form()</code> or inside your own schema next to Angular&#39;s <code>required()</code> and friends. Field names may be paths (<code>&#39;address.zip&#39;</code>). Errors are Signal Forms errors <code>{ kind, message, rule, code }</code>; <code>kind</code> is the rule&#39;s <code>code</code>, else its type (<code>required</code>, <code>email</code>, <code>minlength</code>, <code>equalTo</code>...). Numbers, booleans and <code>Date</code> values are read as text like the Reactive Forms bindings do.</li>
+<li><strong><code>fvValidate(rules, { values })</code></strong> is the function for a single <code>validate(p.field, ...)</code>; <code>values</code> (an object or <code>ctx =&gt; ({ other: ctx.valueOf(p.other) })</code>) feeds <code>equalTo</code>.</li>
+<li><strong><code>fvPrecognition(path, url, { name, values?, debounce? })</code></strong> is async validation through <code>validateAsync</code>: it waits for the sync rules, skips empty values, debounces (300 ms), cancels stale requests, and reports nothing when the check could not be made.</li>
+<li><strong><code>fvServerErrors(form, body)</code></strong> turns a backend&#39;s validation answer (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod...) into errors for <code>submit()</code>: each message lands on its field (<code>items[1].qty</code> finds <code>f.items[1].qty</code>), the rest on the form.</li>
+<li><strong>Standard Schema</strong>: <code>validateStandardSchema(p, FormValidator.schema({...}))</code> from Angular also works, because <code>schema()</code> is a Standard Schema.</li>
+<li>Tested on real Signal Forms (Angular 22). The Reactive Forms bindings (<code>form-and-file-validator/angular</code>) are unchanged.</li>
+</ul>
 
   </main>
 </div>

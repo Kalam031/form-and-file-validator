@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.11.0",
+  "version": "3.12.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
@@ -45,6 +45,10 @@
     "./angular": {
       "types": "./types/angular.d.ts",
       "default": "./dist/integrations/angular.mjs"
+    },
+    "./angular-signals": {
+      "types": "./types/angular-signals.d.ts",
+      "default": "./dist/integrations/angular-signals.mjs"
     },
     "./alpine": {
       "types": "./types/alpine.d.ts",

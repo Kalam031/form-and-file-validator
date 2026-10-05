@@ -1,5 +1,5 @@
 /*!
- * Angular bindings v1.0.0 — validators for Reactive Forms (and Signal Forms' validator functions). Needs @angular/forms >= 14 (optional peer dependency).
+ * Angular bindings v1.1.0 — validators for Reactive Forms (and Signal Forms' validator functions). Needs @angular/forms >= 14 (optional peer dependency).
  * Plain functions, no decorators and no compile step, so they work with any Angular version, standalone or NgModule, and in unit tests.
  * They run the same rules as the browser engine, the Node server and the .NET package (spec/form-rules.vectors.json).
  *
@@ -22,6 +22,7 @@
  * Values: null / undefined = blank, numbers and booleans are turned into text, a Date becomes yyyy-MM-dd (its local calendar date).
  *
  * Changelog
+ *   1.1.0  fvTargets(rules) (used by the Signal Forms bindings, form-and-file-validator/angular-signals).
  *   1.0.0  First release.
  */
 import { FormValidator } from 'form-and-file-validator';
@@ -74,6 +75,9 @@ export function fvControls(schema, initial, options) {
     Object.keys(schema).forEach(name => { out[name] = [init[name] === undefined ? '' : init[name], fvValidator(schema[name], options)]; });
     return out;
 }
+
+/** Names of the fields that equalTo / notEqualTo rules look at (without a leading #). Used by fvWatch and the Signal Forms bindings. */
+export function fvTargets(rules) { return targetsOf(rules); }
 
 function targetsOf(rules) {
     const out = [];
@@ -185,4 +189,4 @@ export function fvMessage(control) {
     return first ? e[first].message : '';
 }
 
-export default { fvValidator, fvControls, fvGroupValidator, fvMessage, fvText, fvWatch, fvValues, fvSetErrors, fvSubmit };
+export default { fvValidator, fvControls, fvGroupValidator, fvMessage, fvText, fvWatch, fvValues, fvSetErrors, fvSubmit, fvTargets };

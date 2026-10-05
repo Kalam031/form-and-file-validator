@@ -428,6 +428,38 @@ export interface FormValidatorUnobtrusive {
     auto(config?: Partial<FormConfig>): () => void;
 }
 
+/** The `<fv-field>` custom element: FormValidator rules as native constraint validation around an input. */
+export interface FvFieldElement extends HTMLElement {
+    /** Rules as a name list string ('required email minlength:3'), JSON, a list or the map shorthand. Setting it re-checks. */
+    rules: RulesForField | null;
+    messages: Record<string, string> | null;
+    readonly controls: HTMLElement[];
+    readonly control: (HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) | null;
+    readonly form: HTMLFormElement | null;
+    readonly name: string;
+    readonly value: string;
+    readonly validity: ValidityState | null;
+    readonly validationMessage: string;
+    readonly willValidate: boolean;
+    checkValidity(): boolean;
+    /** Checks now, shows the message and focuses the control when invalid. */
+    reportValidity(): boolean;
+    validate(): boolean;
+    reset(): void;
+    setServerError(text: string): void;
+}
+export interface FvFieldValidateDetail { valid: boolean; rule: string | null; code: string | null; message: string; shown: boolean }
+export interface FormValidatorFieldElement {
+    /** Registers the element under another tag name (default 'fv-field' is registered when the bundle loads). Returns null without custom elements. */
+    define(name?: string): CustomElementConstructor | null;
+    /** 'required minlength:3' or JSON -> rules. */
+    parseRules(text: string): RulesForField | null;
+}
+declare global {
+    interface HTMLElementTagNameMap { 'fv-field': FvFieldElement }
+    interface HTMLElementEventMap { 'fv-validate': CustomEvent<FvFieldValidateDetail> }
+}
+
 export interface FormValidatorStatic {
     readonly version: string;
     /**
@@ -441,6 +473,8 @@ export interface FormValidatorStatic {
      * `coerce: true` turns "42", "3.5", "true", "false" into numbers and booleans. Unsafe keys (`__proto__`, indexes above 999, over 20 levels) are dropped.
      */
     parseFormData(input: HTMLFormElement | FormData | URLSearchParams | Iterable<readonly [string, unknown]> | Record<string, unknown> | null | undefined, options?: { coerce?: boolean }): Record<string, any>;
+    /** The <fv-field> element (set when the bundle or formValidator.element.js is loaded). */
+    readonly fieldElement?: FormValidatorFieldElement;
     /** ASP.NET MVC / Razor `data-val-*` support (a drop-in for jquery.validate.unobtrusive.js, no jQuery needed). */
     readonly unobtrusive: FormValidatorUnobtrusive;
     /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */

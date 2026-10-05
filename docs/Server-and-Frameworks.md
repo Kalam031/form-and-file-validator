@@ -245,3 +245,32 @@ Or put `[FileRules(Extensions = "png,jpg", MaxSizeMB = 5, Required = true)]` on 
 ### Photos: strip EXIF and GPS on the server
 
 Browsers can clean photos before upload (`stripMetadata` in the upload widget), but a server must not rely on that. In Node call `FileValidator.stripMetadata(file)` on the upload before you store it; in .NET use `PhotoPrivacy.Strip(UploadedFile.From(file))`. Both remove EXIF, GPS, XMP, IPTC and comments from JPEG, PNG and WebP without re-encoding the picture, keep the orientation, and give the same bytes (`spec/metadata-vectors.json`).
+
+## Angular Signal Forms
+
+`form-and-file-validator/angular-signals` gives Signal Forms (`form()` from `@angular/forms/signals`, Angular 21+) the same rules, messages and language packs:
+
+```ts
+import { signal } from '@angular/core';
+import { form, submit } from '@angular/forms/signals';
+import { fvSchema, fvPrecognition, fvServerErrors } from 'form-and-file-validator/angular-signals';
+
+model = signal({ email: '', password: '', confirm: '' });
+f = form(this.model, p => {
+  fvSchema({
+    email: ['required', 'email'],
+    password: { required: true, pwcheck: { minLength: 8 } },
+    confirm: { equalTo: 'password' }              // reads the other field from the model, re-checks when it changes
+  })(p);
+  fvPrecognition(p.email, '/signup', { name: 'email' });   // "is it taken?" to your real endpoint, after the sync rules pass
+});
+// template:  @for (e of f.email().errors(); track e.kind) { <small>{{ e.message }}</small> }
+// submit:    submit(this.f, async () => { const res = await fetch('/signup', ...); if (!res.ok) return fvServerErrors(this.f, await res.json()); });
+```
+
+- **`fvSchema(rules)`** works as the schema of `form()` or inside your own schema next to Angular's `required()` and friends. Field names may be paths (`'address.zip'`). Errors are Signal Forms errors `{ kind, message, rule, code }`; `kind` is the rule's `code`, else its type (`required`, `email`, `minlength`, `equalTo`...). Numbers, booleans and `Date` values are read as text like the Reactive Forms bindings do.
+- **`fvValidate(rules, { values })`** is the function for a single `validate(p.field, ...)`; `values` (an object or `ctx => ({ other: ctx.valueOf(p.other) })`) feeds `equalTo`.
+- **`fvPrecognition(path, url, { name, values?, debounce? })`** is async validation through `validateAsync`: it waits for the sync rules, skips empty values, debounces (300 ms), cancels stale requests, and reports nothing when the check could not be made.
+- **`fvServerErrors(form, body)`** turns a backend's validation answer (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod...) into errors for `submit()`: each message lands on its field (`items[1].qty` finds `f.items[1].qty`), the rest on the form.
+- **Standard Schema**: `validateStandardSchema(p, FormValidator.schema({...}))` from Angular also works, because `schema()` is a Standard Schema.
+- Tested on real Signal Forms (Angular 22). The Reactive Forms bindings (`form-and-file-validator/angular`) are unchanged.
