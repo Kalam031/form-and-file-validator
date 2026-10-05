@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.12.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.13.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v2130-documentation">FormValidator v2.13.0 — Documentation</h1>
+<h1 id="formvalidator-v2140-documentation">FormValidator v2.14.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -526,6 +526,29 @@ const [state, formAction, pending] = useActionState(signup, signup.initialState)
 &lt;/form&gt;
 </code></pre>
 <p>State: <code>{ ok, values, errors, form, result }</code>. Invalid input never reaches your function. The function may return <code>{ errors: {...} }</code> or any backend body <code>serverErrors</code> understands (they land in <code>errors</code> / <code>form</code>); other return values arrive as <code>result</code>. Errors you throw are not swallowed (React&#39;s error boundary sees them). Repeated fields (checkbox groups) arrive joined with <code>,</code> (<code>join</code> option). <code>omitValues: [&#39;field&#39;]</code> keeps more fields out of <code>values</code>. You may pass an existing <code>FormValidator.schema(...)</code> instead of rules.</p>
+<h3 id="field-arrays-and-nested-data-wildcard-rules-unique-rows-minitems">Field arrays and nested data: wildcard rules, unique rows, minItems</h3>
+<p>Rules can point into nested objects and arrays, in <code>checkValues()</code>, <code>schema()</code> and on forms with repeated rows:</p>
+<pre tabindex="0"><code class="language-js">const order = FormValidator.schema({
+  title:          &#39;required&#39;,
+  &#39;user.email&#39;:   [&#39;required&#39;, &#39;email&#39;],                                   // a nested path
+  &#39;items[].sku&#39;:  [&#39;required&#39;, { type: &#39;unique&#39;, ignoreCase: true }],      // every row; no two rows may share a SKU
+  &#39;items[].qty&#39;:  [&#39;required&#39;, &#39;digits&#39;],
+  items:          { minItems: 1, maxItems: 20 }                            // the array itself
+});
+const r = order.safeParse(await request.json());           // JSON body
+const r2 = order.safeParse(FormValidator.parseFormData(new FormData(form)));   // a repeater form posted as flat fields (items[0].sku ...)
+r.errors;   // { &#39;items[1].qty&#39;: &#39;Please enter digits only.&#39;, &#39;items[0].sku&#39;: &#39;This value is used more than once.&#39;, ... }
+r.issues;   // [{ path: [&#39;items&#39;, 1, &#39;qty&#39;], message, rule, code }]   (Standard Schema paths, indexes are numbers)
+r.data;     // { title, user: { email }, items: [{ sku, qty }, ...] }    trimmed, nested like the input; only validated paths are kept
+</code></pre>
+<ul>
+<li><strong>Path keys</strong>: <code>user.email</code>, <code>items[0].qty</code>, <code>items.0.qty</code>; wildcards for every row: <code>items[].qty</code>, <code>items.*.qty</code>, <code>items[*].qty</code>. A wildcard over a missing or empty array checks nothing (use <code>minItems</code> for &quot;at least one row&quot;); a plain path through missing data is a blank value.</li>
+<li><strong>Row rules</strong>: <code>unique</code> (<code>ignoreCase: true</code> optional) fails every row that repeats a value in its column, empty values are not compared, values are compared trimmed; it also works for a list of plain values (<code>&#39;tags[]&#39;: &#39;unique&#39;</code>). <code>minItems</code> / <code>maxItems</code> check the array at that path. Messages exist in all 13 language packs.</li>
+<li><strong>equalTo / notEqualTo</strong> inside a row look at the same row first (<code>&#39;rows[].confirm&#39;: { equalTo: &#39;pw&#39; }</code> compares with <code>rows[i].pw</code>), then at an absolute path.</li>
+<li>A key that really is a field name in your data (<code>&#39;a.b&#39;</code>, PHP&#39;s <code>&#39;items[]&#39;</code>) still wins over path reading; keys such as <code>__proto__</code> are ignored.</li>
+<li><strong>On a form</strong>: <code>rules: { &#39;items[].sku&#39;: [&#39;required&#39;, &#39;unique&#39;], &#39;items[].qty&#39;: &#39;digits&#39; }</code> applies to every field named <code>items[0].sku</code>, <code>items[1].sku</code>... (or <code>items.0.sku</code>), including rows added later; removed rows stop counting; <code>unique</code> compares with the other rows live. Whole-array rules (<code>minItems</code>) are for data: run the schema on <code>parseFormData(new FormData(form))</code>.</li>
+<li>TypeScript: a schema with path keys has loose types (<code>Record&lt;string, any&gt;</code>); flat schemas keep the exact types.</li>
+</ul>
 <h3 id="parseformdata-flat-form-fields-to-a-nested-object">parseFormData: flat form fields to a nested object</h3>
 <p><code>FormValidator.parseFormData(input, options?)</code> turns a <code>&lt;form&gt;</code>, <code>FormData</code>, <code>URLSearchParams</code>, a list of <code>[name, value]</code> pairs or a plain object into the nested object your schema or API expects. Use it in a server action, a Next.js route or the browser.</p>
 <pre tabindex="0"><code class="language-js">FormValidator.parseFormData(new FormData(form));
@@ -1464,6 +1487,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.14.0</strong>: field arrays and nested data: wildcard rule keys (<code>items[].qty</code>) and nested paths in <code>checkValues()</code> / <code>schema()</code> / forms, rules <code>unique</code>, <code>minItems</code>, <code>maxItems</code>; schema output is nested.</li>
 <li><strong>element 1.0.0</strong>: <code>&lt;fv-field&gt;</code>, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: <code>dist/formValidator.element.js</code>).</li>
 <li><strong>2.13.0</strong>: ASP.NET <code>data-val-*</code> (unobtrusive validation): <code>unobtrusive: true</code>, <code>FormValidator.unobtrusive.parse()</code> / <code>.auto()</code> / <code>.adapters</code>, <code>$.validator.unobtrusive</code> on the jQuery layer.</li>
 <li><strong>2.12.0</strong>: <code>validateOn</code> presets (<code>&#39;smart&#39;</code>, <code>&#39;blur&#39;</code>, <code>&#39;input&#39;</code>, <code>&#39;submit&#39;</code>, <code>&#39;all&#39;</code>; an <code>&#39;input&#39;</code> entry now works) and <code>validClass</code> (reward early, punish late); stable error codes (<code>data-code</code>, <code>code</code> in <code>getErrors()</code>, <code>checkValue</code>, schema issues, a rule&#39;s own <code>code</code>); <code>errorSummary</code> (accessible list with links and focus); <code>autoAttributes</code> and <code>inst.lint()</code>.</li>

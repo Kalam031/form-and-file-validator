@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.13.0
+- **Field arrays and nested data** (FormValidator 2.14.0): rule keys can be paths and wildcards, `'user.email'`, `'items[].qty'` (also `items.*.qty`), in `checkValues()`, `schema()` and on forms with repeated rows (rows added later are covered, removed rows stop counting). New rules: `unique` (no two rows share a value, `ignoreCase` optional, works live on a form), `minItems`, `maxItems` (in all 13 language packs). `schema()` output is nested like the input; issues carry token paths (`['items', 1, 'qty']`) and `errors` are keyed by the concrete path (`items[1].qty`). `parseFormData()` + `schema()` validates a repeater form end to end. Flat schemas behave exactly as before.
+
 ## 3.12.0
 - **`<fv-field>`** (element 1.0.0, in the bundle and as `dist/formValidator.element.js`): any FormValidator rule as native constraint validation in plain HTML, no init call. The rules reach the input through `setCustomValidity()`, so `checkValidity()`, `reportValidity()`, a blocked submit, `:user-invalid` / `:user-valid`, and the browser's bubble follow them. Reward early, punish late: the inline message appears after the user leaves a changed field or tries to submit, and goes the moment the value is right. Cross-field rules, radio and checkbox groups, selects, textareas, language packs, `server="/url"` (Precognition), custom states (`:state(user-invalid)`), the `fv-validate` event. Tested in jsdom and in Chromium, Firefox and WebKit.
 - **Angular Signal Forms** (`form-and-file-validator/angular-signals` 1.0.0): `fvSchema(rules)` for `form()` (cross-field `equalTo`, nested paths), `fvValidate`, `fvPrecognition` (async validation with debounce and cancellation), `fvServerErrors` for `submit()`; `validateStandardSchema(p, FormValidator.schema(...))` works as well. Tested on real Angular 22 Signal Forms. Angular bindings 1.1.0: `fvTargets`.

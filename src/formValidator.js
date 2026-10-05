@@ -1,7 +1,9 @@
 /*!
- * FormValidator v2.13.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.14.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.14.0 Field arrays and nested data: path keys ('user.email', 'items[0].qty') and wildcards ('items[].qty') in checkValues / schema / forms; rules unique, minItems, maxItems;
+ *          schema output is nested like the input; ValidationError.errors are keyed by the concrete path.
  *   2.13.0 ASP.NET unobtrusive validation: `unobtrusive: true` reads data-val-* (required, length, range, regex, equalto, remote, email, url, ... + custom adapters),
  *          data-valmsg-for / data-valmsg-summary and the field-validation-* / input-validation-* classes. FormValidator.unobtrusive.parse() / auto() / adapters.
  *   2.12.0 validateOn presets ('smart' | 'blur' | 'input' | 'submit' | 'all'; an 'input' entry now works) + validClass reward while typing. Stable error codes (data-code, code in getErrors / checkValue /
@@ -109,6 +111,9 @@
         contains: 'Must contain {value}.',
         minWords: 'Please enter at least {min} words.',
         maxWords: 'Please enter no more than {max} words.',
+        unique: 'This value is used more than once.',
+        minItems: 'Please add at least {min}.',
+        maxItems: 'Please add no more than {max}.',
         notEqualTo: 'This value is not allowed.',
         equalTo: 'Values do not match.',
         pwcheck: 'Password does not meet the requirements.',
@@ -452,6 +457,23 @@
     R('contains', (v, r) => v.includes(String(r.value == null ? '' : r.value)));
     R('minWords', (v, r) => wordCount(v) >= r.min);
     R('maxWords', (v, r) => wordCount(v) <= r.max);
+    // rows of a repeater / items of an array (checkValues, schema, and wildcard rules on a form: 'items[].sku')
+    const uniqueCounts = new WeakMap();
+    R('unique', (v, r, env) => {   // the same value in two rows: every row that repeats it fails (empty values are not compared)
+        const column = env.column || (isFn(r.columnFn) ? r.columnFn() : null);
+        if (!column) return true;
+        const key = r.ignoreCase ? 'i' : 's';
+        let counts = uniqueCounts.get(column);   // counted once per column, so 5000 rows stay fast
+        if (!counts) { counts = { i: null, s: null }; uniqueCounts.set(column, counts); }
+        if (!counts[key]) {
+            const m = new Map();
+            column.forEach(x => { if (x === '') return; const k = r.ignoreCase ? String(x).toLowerCase() : String(x); m.set(k, (m.get(k) || 0) + 1); });
+            counts[key] = m;
+        }
+        return (counts[key].get(r.ignoreCase ? String(v).toLowerCase() : String(v)) || 0) <= 1;
+    });
+    R('minItems', (v, r, env) => !env.array || env.array.length >= Number(r.min !== undefined ? r.min : r.param), { runOnEmpty: true });
+    R('maxItems', (v, r, env) => !env.array || env.array.length <= Number(r.max !== undefined ? r.max : r.param), { runOnEmpty: true });
     const targetOf = (r, env) => r.selector ? safeQuery(env.form, r.selector) : safeQuery(env.form, `[name="${esc(r.target)}"]`);
     R('notEqualTo', (v, r, env) => { const t = targetOf(r, env); return !t || v !== t.value.trim(); });
     R('equalTo', (v, r, env) => {
@@ -581,7 +603,8 @@
         minDate: p => ({ min: p }), maxDate: p => ({ max: p }),
         pattern: p => ({ pattern: p }), oneOf: p => ({ values: [].concat(p) }), notOneOf: p => ({ values: [].concat(p) }),
         startsWith: p => ({ value: p }), endsWith: p => ({ value: p }), contains: p => ({ value: p }),
-        minWords: p => ({ min: +p }), maxWords: p => ({ max: +p }),
+        minWords: p => ({ min: +p }), maxWords: p => ({ max: +p }), minItems: p => ({ min: +p }), maxItems: p => ({ max: +p }),
+        unique: p => (p && typeof p === 'object' ? p : {}),
         equalTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
         notEqualTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
         minChecked: p => ({ min: +p }), maxChecked: p => ({ max: +p }), minFiles: p => ({ min: +p }), maxFiles: p => ({ max: +p }),
@@ -740,8 +763,31 @@
             if (grouped.length) units.unshift({ key: grouped[0], fields: grouped });
             return units;
         }
+        const wildKeys = () => Object.keys(inst.rules).filter(k => hasPathChars(k) && (ruleTokens(k) || []).some(isWild));
+        /** Does the field name 'items[2].qty' (or 'items.2.qty') belong to the wildcard rule key 'items[].qty'? */
+        function nameMatchesKey(name, key) {
+            const nt = ruleTokens(name), kt = ruleTokens(key);
+            return !!nt && !!kt && nt.length === kt.length && kt.every((t, i) => (isWild(t) ? typeof nt[i] === 'number' : t === nt[i]));
+        }
+        function wildcardRulesFor(name) {
+            const out = [];
+            wildKeys().forEach(key => {
+                if (name === key || !nameMatchesKey(name, key)) return;
+                inst.rules[key].forEach(r => {
+                    if (r.type !== 'unique') { out.push(r); return; }
+                    // the other rows of the same column: every field whose name matches the wildcard key
+                    out.push(Object.assign({}, r, { columnFn: () => Array.from(form.elements).filter(el => el.name && !/^(radio|checkbox|file|button|submit|reset|image)$/.test(el.type) && nameMatchesKey(el.name, key)).map(el => String(el.value == null ? '' : el.value).trim()) }));
+                });
+            });
+            return out;
+        }
         function names() {
             const set = new Set(Object.keys(inst.rules));
+            const wild = wildKeys();
+            if (wild.length) {
+                wild.forEach(k => { if (!Array.from(form.elements).some(e => e.name === k)) set.delete(k); });   // PHP-style 'items[]' that is a real field name stays a plain name
+                Array.from(form.elements).forEach(e => { if (e.name && wild.some(k => nameMatchesKey(e.name, k))) set.add(e.name); });
+            }
             if (cfg.autoRules || isFn(cfg.fieldRules) || hasClassRules()) {
                 Array.from(form.elements).forEach(e => {
                     if (e.name && e.tagName !== 'FIELDSET' && !['button', 'submit', 'reset', 'image'].includes(e.type)) set.add(e.name);
@@ -821,7 +867,7 @@
         const valmsgFor = f => (cfg.unobtrusive && f && f.name ? form.querySelector('[data-valmsg-for="' + esc(f.name) + '"]') : null);
 
         function rulesFor(unit) {
-            const explicit = inst.rules[unit.fields[0].name] || [];
+            const explicit = (inst.rules[unit.fields[0].name] || []).concat(wildKeys().length ? wildcardRulesFor(unit.fields[0].name) : []);
             if (!cfg.autoRules && !cfg.unobtrusive && !isFn(cfg.fieldRules) && !hasClassRules()) return explicit;
             const merged = new Map();  // later sources win per rule type: class < attributes / data-rule < data-val < fieldRules
             classRulesFor(unit.fields[0]).concat(cfg.autoRules ? attributeRules(unit.fields[0]) : [], cfg.unobtrusive ? dataValRules(unit.fields[0]) : [],
@@ -1751,7 +1797,7 @@
             const v = rule.type === 'pwcheck' ? raw : trimmed;
             const empty = v === '';
             const env = { value: v, empty, count: empty ? 0 : 1, files: null, field: null, fields: [], form: null, inst: null, badInput: false,
-                config: { passwordStrength: o.passwordStrength || {} }, context: o.context || {} };
+                config: { passwordStrength: o.passwordStrength || {} }, context: o.context || {}, column: o.column, index: o.index, array: o.array };
             if (isFn(rule.when) && !guard(rule.when, true, v, env)) continue;
             if (empty && !def.runOnEmpty && rule.type !== 'equalTo') continue;
             let res;
@@ -1773,16 +1819,95 @@
         return { valid: true, rule: null, code: null, message: '' };
     }
 
+    // ---- paths: 'user.email', 'items[0].qty', wildcards 'items[].qty' / 'items.*.qty' (every row)
+    const isWild = t => t === '' || t === '*';
+    /** Rule key -> tokens ('' and '*' match every index), or null when unsafe. A plain key without path characters is one token. */
+    function ruleTokens(key) {
+        const t = pathTokens(String(key));
+        if (!t) return null;
+        return t.map(x => (typeof x === 'string' && /^[0-9]+$/.test(x) ? +x : x));
+    }
+    const hasPathChars = key => /[.\[*]/.test(key);
+    /** Every concrete place a (wildcard) path points to in `data`: [{ tokens, value, parent }]. A missing plain path gives one entry with value undefined; a wildcard over nothing gives none. */
+    function expandPath(data, tokens) {
+        const out = [];
+        const step = (node, i, acc) => {
+            if (i === tokens.length) { out.push({ tokens: acc, value: node }); return; }
+            const t = tokens[i];
+            if (isWild(t)) {
+                if (Array.isArray(node)) node.forEach((child, idx) => step(child, i + 1, acc.concat([idx])));
+                else if (node && typeof node === 'object') Object.keys(node).forEach(k => { if (BAD_KEYS.indexOf(k) < 0) step(node[k], i + 1, acc.concat([k])); });
+                return;
+            }
+            if (BAD_KEYS.indexOf(t) >= 0) return;
+            const child = node !== null && typeof node === 'object' && Object.prototype.hasOwnProperty.call(node, t) ? node[t] : undefined;
+            step(child, i + 1, acc.concat([t]));
+        };
+        step(data, 0, []);
+        return out;
+    }
+    /** { 'user.email': .., 'items[0].qty': .. }: every leaf of a nested object by canonical path (capped) */
+    function flatten(data) {
+        const out = {};
+        let n = 0;
+        const walk = (node, path, depth) => {
+            if (n > 5000 || depth > 12) return;
+            if (node !== null && typeof node === 'object' && !(typeof Blob === 'function' && node instanceof Blob)) {
+                Object.keys(node).forEach(k => { if (BAD_KEYS.indexOf(k) < 0) walk(node[k], path.concat([Array.isArray(node) ? +k : k]), depth + 1); });
+            } else if (path.length) { out[canonKey(path)] = node; n++; }
+        };
+        walk(data, [], 0);
+        return out;
+    }
+    function targetsIn(rules) {
+        const list = [];
+        normalizeRules(rules).forEach(r => { if ((r.type === 'equalTo' || r.type === 'notEqualTo') && r.target) list.push(String(r.target).replace(/^#/, '')); });
+        return list;
+    }
+
     /**
      * Checks a whole object (a JSON request body, a model) against { field: rules }:
      *   FormValidator.checkValues(body, { email: ['required', 'email'], pw: { required: true, pwcheck: { minLength: 8 } }, pw2: { equalTo: 'pw' } })
-     *   -> { valid, errors: { field: message }, details: { field: { rule, message } } }
+     *   -> { valid, errors: { field: message }, details: { field: { rule, code, message } } }
+     * Keys may be paths into nested data and arrays: 'user.email', 'items[0].qty', and wildcards for every row: 'items[].qty' (or 'items.*.qty').
+     * Errors are keyed by the concrete path ('items[1].qty'). Array rules on the array itself: { items: { minItems: 1, maxItems: 10 } };
+     * rules on a wildcard column may use `unique` ({ 'items[].sku': ['required', { type: 'unique', ignoreCase: true }] }).
+     * equalTo / notEqualTo targets are looked up in the same row first ('items[].password' + target 'confirm'), then as an absolute path.
      */
     function checkValues(data, schema, options) {
         const o = options || {}, errors = {}, details = {};
-        Object.keys(schema || {}).forEach(name => {
-            const r = checkValue(data ? data[name] : undefined, schema[name], Object.assign({}, o, { values: Object.assign({}, data, o.values) }));
-            if (!r.valid) { errors[name] = r.message; details[name] = { rule: r.rule, code: r.code, message: r.message }; }
+        const keys = Object.keys(schema || {});
+        const pathKeys = keys.filter(k => hasPathChars(k) && !(data && Object.prototype.hasOwnProperty.call(data, k)));
+        const flat = pathKeys.length ? flatten(data) : null;
+        const fail = (key, r) => { if (!(key in errors)) { errors[key] = r.message; details[key] = { rule: r.rule, code: r.code, message: r.message }; } };
+        const wantsArray = rules => normalizeRules(rules).some(r => r.type === 'minItems' || r.type === 'maxItems');
+        keys.forEach(name => {
+            const rules = schema[name];
+            if (pathKeys.indexOf(name) < 0) {   // a plain field, like before
+                const val = data ? data[name] : undefined;
+                const r = checkValue(val, rules, Object.assign({}, o, { values: Object.assign({}, data, flat, o.values), array: wantsArray(rules) ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }));
+                if (!r.valid) fail(name, r);
+                return;
+            }
+            const tokens = ruleTokens(name);
+            if (!tokens) return;
+            const entries = expandPath(data, tokens);
+            const wild = tokens.some(isWild);
+            const column = wild ? entries.map(e => (e.value == null ? '' : String(e.value).trim())) : undefined;
+            const targets = targetsIn(rules);
+            const baseValues = Object.assign({}, data, flat, o.values);
+            entries.forEach((e, idx) => {
+                const values = targets.length ? Object.create(baseValues) : baseValues;   // one shared copy: rows only add what they override
+                targets.forEach(t => {   // the same row first
+                    const tt = ruleTokens(t);
+                    if (!tt) return;
+                    const rel = expandPath(data, e.tokens.slice(0, -1).concat(tt));
+                    if (rel.length && rel[0].value !== undefined) values[t] = rel[0].value;
+                });
+                const val = e.value;
+                const r = checkValue(val !== null && typeof val === 'object' && !Array.isArray(val) ? '' : (Array.isArray(val) ? '' : val), rules, Object.assign({}, o, { values, column, index: idx, array: wantsArray(rules) ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }));
+                if (!r.valid) fail(canonKey(e.tokens), r);
+            });
         });
         return { valid: Object.keys(errors).length === 0, errors, details };
     }
@@ -1795,7 +1920,7 @@
             this.name = 'ValidationError';
             this.issues = issues;
             this.errors = {};
-            issues.forEach(i => { const k = i.path && i.path[0]; if (k !== undefined && !(k in this.errors)) this.errors[k] = i.message; });
+            issues.forEach(i => { const k = i.path && i.path.length ? (i.path.length === 1 ? i.path[0] : canonKey(i.path)) : undefined; if (k !== undefined && k !== null && !(k in this.errors)) this.errors[k] = i.message; });
         }
     }
 
@@ -1815,16 +1940,38 @@
         fields.forEach(f => { keepsRaw[f] = normalizeRules(rules[f]).some(r => r.type === 'pwcheck'); });   // passwords are never trimmed
         const o = options || {};
 
+        const pathFields = fields.filter(f => hasPathChars(f));
         function run(input) {
             if (input === null || typeof input !== 'object' || Array.isArray(input)) return { issues: [{ message: 'Expected an object.', path: [] }] };
             const data = Object.assign({}, input);
-            fields.forEach(f => { if (data[f] == null) data[f] = ''; });     // a field that is not there is blank (equalTo may point at it)
+            fields.forEach(f => { if (pathFields.indexOf(f) < 0 && data[f] == null) data[f] = ''; });     // a field that is not there is blank (equalTo may point at it)
             const res = checkValues(data, rules, o);
             if (!res.valid) {
-                return { issues: fields.filter(f => f in res.errors).map(f => ({ message: res.errors[f], path: [f], rule: res.details[f].rule, code: res.details[f].code })) };
+                const issues = Object.keys(res.errors).map(k => {
+                    const tokens = pathFields.length && (hasPathChars(k) && !(k in input)) ? (ruleTokens(k) || [k]) : [k];
+                    return { message: res.errors[k], path: tokens, rule: res.details[k].rule, code: res.details[k].code };
+                });
+                // flat fields keep the order of the rules, nested ones follow
+                const order = k => { const i = fields.indexOf(k); return i < 0 ? fields.length : i; };
+                issues.sort((x, y) => order(x.path.length === 1 ? x.path[0] : '') - order(y.path.length === 1 ? y.path[0] : ''));
+                return { issues };
             }
             const value = {};
-            fields.forEach(f => { const raw = input[f] == null ? '' : String(input[f]); value[f] = keepsRaw[f] || o.trim === false ? raw : raw.trim(); });
+            fields.forEach(f => {
+                if (pathFields.indexOf(f) < 0) { const raw = input[f] == null ? '' : String(input[f]); value[f] = keepsRaw[f] || o.trim === false ? raw : raw.trim(); return; }
+                const tokens = ruleTokens(f);
+                if (!tokens) return;
+                expandPath(input, tokens).forEach(e => {
+                    if (e.value !== null && typeof e.value === 'object') return;
+                    const raw = e.value == null ? '' : String(e.value);
+                    let node = value;
+                    e.tokens.forEach((t, i) => {
+                        if (i === e.tokens.length - 1) { node[t] = keepsRaw[f] || o.trim === false ? raw : raw.trim(); return; }
+                        if (node[t] === undefined || node[t] === null || typeof node[t] !== 'object') node[t] = typeof e.tokens[i + 1] === 'number' ? [] : {};
+                        node = node[t];
+                    });
+                });
+            });
             return { value };
         }
 
@@ -2211,6 +2358,6 @@
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.13.0'
+        version: '2.14.0'
     };
 });

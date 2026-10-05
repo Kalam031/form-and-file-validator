@@ -1,4 +1,4 @@
-# FormValidator v2.13.0 — Documentation
+# FormValidator v2.14.0 — Documentation
 
 ## Overview
 
@@ -310,6 +310,32 @@ const [state, formAction, pending] = useActionState(signup, signup.initialState)
 ```
 
 State: `{ ok, values, errors, form, result }`. Invalid input never reaches your function. The function may return `{ errors: {...} }` or any backend body `serverErrors` understands (they land in `errors` / `form`); other return values arrive as `result`. Errors you throw are not swallowed (React's error boundary sees them). Repeated fields (checkbox groups) arrive joined with `,` (`join` option). `omitValues: ['field']` keeps more fields out of `values`. You may pass an existing `FormValidator.schema(...)` instead of rules.
+
+### Field arrays and nested data: wildcard rules, unique rows, minItems
+
+Rules can point into nested objects and arrays, in `checkValues()`, `schema()` and on forms with repeated rows:
+
+```js
+const order = FormValidator.schema({
+  title:          'required',
+  'user.email':   ['required', 'email'],                                   // a nested path
+  'items[].sku':  ['required', { type: 'unique', ignoreCase: true }],      // every row; no two rows may share a SKU
+  'items[].qty':  ['required', 'digits'],
+  items:          { minItems: 1, maxItems: 20 }                            // the array itself
+});
+const r = order.safeParse(await request.json());           // JSON body
+const r2 = order.safeParse(FormValidator.parseFormData(new FormData(form)));   // a repeater form posted as flat fields (items[0].sku ...)
+r.errors;   // { 'items[1].qty': 'Please enter digits only.', 'items[0].sku': 'This value is used more than once.', ... }
+r.issues;   // [{ path: ['items', 1, 'qty'], message, rule, code }]   (Standard Schema paths, indexes are numbers)
+r.data;     // { title, user: { email }, items: [{ sku, qty }, ...] }    trimmed, nested like the input; only validated paths are kept
+```
+
+- **Path keys**: `user.email`, `items[0].qty`, `items.0.qty`; wildcards for every row: `items[].qty`, `items.*.qty`, `items[*].qty`. A wildcard over a missing or empty array checks nothing (use `minItems` for "at least one row"); a plain path through missing data is a blank value.
+- **Row rules**: `unique` (`ignoreCase: true` optional) fails every row that repeats a value in its column, empty values are not compared, values are compared trimmed; it also works for a list of plain values (`'tags[]': 'unique'`). `minItems` / `maxItems` check the array at that path. Messages exist in all 13 language packs.
+- **equalTo / notEqualTo** inside a row look at the same row first (`'rows[].confirm': { equalTo: 'pw' }` compares with `rows[i].pw`), then at an absolute path.
+- A key that really is a field name in your data (`'a.b'`, PHP's `'items[]'`) still wins over path reading; keys such as `__proto__` are ignored.
+- **On a form**: `rules: { 'items[].sku': ['required', 'unique'], 'items[].qty': 'digits' }` applies to every field named `items[0].sku`, `items[1].sku`... (or `items.0.sku`), including rows added later; removed rows stop counting; `unique` compares with the other rows live. Whole-array rules (`minItems`) are for data: run the schema on `parseFormData(new FormData(form))`.
+- TypeScript: a schema with path keys has loose types (`Record<string, any>`); flat schemas keep the exact types.
 
 ### parseFormData: flat form fields to a nested object
 
@@ -892,6 +918,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.14.0**: field arrays and nested data: wildcard rule keys (`items[].qty`) and nested paths in `checkValues()` / `schema()` / forms, rules `unique`, `minItems`, `maxItems`; schema output is nested.
 - **element 1.0.0**: `<fv-field>`, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: `dist/formValidator.element.js`).
 - **2.13.0**: ASP.NET `data-val-*` (unobtrusive validation): `unobtrusive: true`, `FormValidator.unobtrusive.parse()` / `.auto()` / `.adapters`, `$.validator.unobtrusive` on the jQuery layer.
 - **2.12.0**: `validateOn` presets (`'smart'`, `'blur'`, `'input'`, `'submit'`, `'all'`; an `'input'` entry now works) and `validClass` (reward early, punish late); stable error codes (`data-code`, `code` in `getErrors()`, `checkValue`, schema issues, a rule's own `code`); `errorSummary` (accessible list with links and focus); `autoAttributes` and `inst.lint()`.

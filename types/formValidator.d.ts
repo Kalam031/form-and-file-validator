@@ -281,7 +281,7 @@ export declare namespace StandardSchemaV1 {
 
 /** One problem found by a schema: the Standard Schema issue plus the type of the rule that failed. */
 export interface SchemaIssue extends StandardSchemaV1.Issue {
-    readonly path: ReadonlyArray<string>;
+    readonly path: ReadonlyArray<string | number>;
     /** The rule that failed, for example 'email'. */
     readonly rule?: string;
     /** Stable code: the rule's `code`, else its type. */
@@ -305,16 +305,19 @@ type IsRequired<R> =
     : R extends readonly (infer E)[] ? (true extends IsRequired<E> ? true : false)
     : false;
 
+/** True when a key is a path into nested data or rows ('user.email', 'items[].qty'): such schemas get loose types. */
+type HasPathKeys<R> = [Extract<keyof R, `${string}.${string}` | `${string}[${string}` | `${string}*${string}`>] extends [never] ? false : true;
+
 /** The value a form has for each field, as text: fields with a `required` rule must be there, the others may be missing. */
-export type SchemaInput<R extends Record<string, RulesForField>> =
+export type SchemaInput<R extends Record<string, RulesForField>> = HasPathKeys<R> extends true ? Record<string, any> :
     { [K in keyof R as IsRequired<R[K]> extends true ? K : never]: string }
     & { [K in keyof R as IsRequired<R[K]> extends true ? never : K]?: string };
 
 /** What a valid check gives back: every field as trimmed text (passwords exactly as typed). */
-export type SchemaOutput<R extends Record<string, RulesForField>> = { [K in keyof R]: string };
+export type SchemaOutput<R extends Record<string, RulesForField>> = HasPathKeys<R> extends true ? Record<string, any> : { [K in keyof R]: string };
 
 /** { field: message } with the field names of the rules. */
-export type SchemaErrors<R extends Record<string, RulesForField>> = { [K in keyof R]?: string };
+export type SchemaErrors<R extends Record<string, RulesForField>> = HasPathKeys<R> extends true ? Record<string, string | undefined> : { [K in keyof R]?: string };
 
 export type SafeParseResult<R extends Record<string, RulesForField>> =
     | { success: true; data: SchemaOutput<R>; errors: {}; issues: [] }

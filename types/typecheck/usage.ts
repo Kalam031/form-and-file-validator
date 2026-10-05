@@ -312,3 +312,12 @@ void verdict;
     }
     FormValidator.fieldElement?.define('my-field');
 }
+
+// ---------------------------------------------------------------- field arrays
+{
+    const order = FormValidator.schema({ title: 'required', 'items[].sku': ['required', { type: 'unique', ignoreCase: true }], items: { minItems: 1 } });
+    const r = order.safeParse({});
+    if (!r.success) { const e: string | undefined = r.errors['items[0].sku']; const p: ReadonlyArray<string | number> = r.issues[0].path; void [e, p]; }
+    else { const t: any = r.data.items; void t; }
+    FormValidator.checkValues({}, { 'user.email': 'required', 'rows[].x': { unique: true } });
+}
