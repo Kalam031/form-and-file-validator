@@ -90,8 +90,8 @@ test('build-subset: the unminified output keeps readable source and marks what w
 
 // ---------------------------------------------------------------- size budget (gzip, bytes): raise a number only on purpose
 const BUDGET = {
-    'formValidator.core.min.js': 14800,
-    'formValidator.min.js': 31500,
+    'formValidator.core.min.js': 15000,
+    'formValidator.min.js': 34000,
     'fileValidator.min.js': 23000,
     'fileValidator.widget.min.js': 7500,
     'formValidator.jquery.min.js': 10500,
@@ -100,7 +100,7 @@ const BUDGET = {
     'formValidator.password.min.js': 4500,
     'locale.min.js': 2600,
     'integrations/alpine.min.js': 1500,
-    'validator.min.js': 84000
+    'validator.min.js': 86500
 };
 for (const f of Object.keys(BUDGET)) {
     test('size budget: ' + f + ' stays under ' + (BUDGET[f] / 1024).toFixed(1) + ' KB gzip', () => {

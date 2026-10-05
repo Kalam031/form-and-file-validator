@@ -214,6 +214,30 @@ No DOM is needed, so this runs in Node, in tests and in the Angular validators. 
 - Like the native pseudo-classes, `checkValidity()` fires `invalid`, so a field that gets one shows its message.
 - Another tag name: `FormValidator.fieldElement.define('my-field')`.
 
+### Bots, double submits, drafts and unsaved changes
+
+Five opt-in protections in the form config. None of them changes a form that does not ask for it.
+
+```js
+FormValidator.init({ formId: 'signup', rules, config: {
+  antiBot: { honeypot: true, minTime: 1500, timestampField: '_fv_t', onBot: reason => log(reason) },
+  idempotencyKey: true,
+  disableOnSubmit: true,
+  draft: { key: 'signup', exclude: ['coupon'] },
+  leaveWarning: true
+} });
+```
+
+**`antiBot`**: a hidden trap field (`website_url` by default, off-screen, `aria-hidden`, not focusable, `autocomplete="off"`) that humans never see and bots fill in, and an optional `minTime` (ms between the form starting and the submit). A submit that looks like a bot is dropped silently (no handler, no message): `onBot(reason)` is called, `fv:bot` fires on the form, `inst.botReason()` tells why (`'honeypot'` or `'too-fast'`) and `handleSubmit` resolves to `{ valid: false, bot: true, reason }`. The trap and the timestamp field are not form values. On the server, `FormValidator.isBotSubmission(body, { honeypot: 'website_url', timestampField: '_fv_t', minTimeMs: 1500 })` answers `{ bot, reason }` for submissions that bypass the browser code. Keep `minTime` modest: password managers and autofill can fill a form in under a second.
+
+**`idempotencyKey`**: one key (a UUID) per submission attempt, **the same for every retry** and new after a success, so a double click, a retry after a timeout or a replayed request reaches your server as the same request. `inst.idempotencyKey()` and `inst.idempotencyHeaders()` (`{ 'Idempotency-Key': key }`) for `fetch`; a hidden field (`_idempotency_key`, or `{ field }`) carries it for a native post. Your server stores the result under the key and answers a repeat with it.
+
+**`disableOnSubmit`**: submit buttons are disabled (and get `aria-busy`) and the form gets the class `fv-submitting` while your `handleSubmit` / `onSubmit` function runs; they are restored afterwards, also when it throws, and a button that was disabled before stays disabled. `inst.isSubmitting()`.
+
+**`draft`**: what the user typed survives a reload, a crash and an accidental navigation. It is saved while they type (debounced, to `sessionStorage`, or `{ storage: 'local' }`), restored when the form starts (the restored text counts as typed: the form is dirty, and the fields get `input` / `change` events so masks and live checks follow; `fv:draft-restored`), and cleared after a successful `handleSubmit` / `onSubmit`, by `inst.clearDraft()`, `inst.markSaved()` or `resetForm()`. **Never saved: passwords, files, hidden fields, `data-fv-no-draft` fields, `exclude` names.** Drafts older than `maxAgeDays` (7) and unreadable ones are dropped; blocked or full storage is ignored. After a failed save (`{ errors }`) the draft stays, so a server error does not lose the text. For a native post, call `clearDraft()` on the success page.
+
+**`leaveWarning`**: the browser asks before leaving a page whose form differs from how it started (passwords do not count); it stops asking after a successful save, `markSaved()`, `resetForm()` and `destroy()`. `inst.hasUnsavedChanges()`.
+
 ### Input masks
 
 `FormValidator.mask(input, pattern, options)` formats a text field while the user types: `9` a digit, `a` a letter (any alphabet), `*` a letter or digit, `\` makes the next character a literal.
@@ -1035,6 +1059,7 @@ The newest entries (each source file also keeps its own changelog in its header;
 
 - **2.15.0**: `requiredIf`, `dateAfter`, `dateBefore`, `atLeastOne`, `sumEquals`; `inst.state` / `getState()` / `onStateChange()`; `inst.validateStep()`; `FormValidator.explain()`.
 - **2.14.0**: field arrays and nested data: wildcard rule keys (`items[].qty`) and nested paths in `checkValues()` / `schema()` / forms, rules `unique`, `minItems`, `maxItems`; schema output is nested.
+- **2.15.0 (continued)**: `antiBot`, `idempotencyKey`, `disableOnSubmit`, `draft`, `leaveWarning`, `FormValidator.isBotSubmission()`.
 - **2.15.0 (continued)**: `FormValidator.mask()`, the `mask` rule, `maskPattern()`, `unmaskValue()`, `parseRules()`, `FormValidator.auto()` / `data-fv` attributes / `data-fv-auto` script attribute.
 - **password add-on 1.0.0**: `passwordStrength()`, `pwned()`, `watchPasswordStrength()`, rules `pwscore` and `pwned` (`dist/formValidator.password.js`).
 - **element 1.0.0**: `<fv-field>`, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: `dist/formValidator.element.js`).

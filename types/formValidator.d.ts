@@ -107,6 +107,16 @@ export interface FormConfig {
     rewardOnInput?: boolean;
     /** An accessible list of all problems with links to the fields, focused after a failed submit. true builds one at the top of the form; or pass a container (selector / element) or options. */
     errorSummary?: boolean | string | HTMLElement | { container?: string | HTMLElement; title?: string; focus?: 'summary' | 'field'; withLabel?: boolean; headingLevel?: 1 | 2 | 3 | 4 | 5 | 6; className?: string };
+    /** A hidden trap field and a minimum time: a bot's submit is dropped silently (onBot, fv:bot, inst.botReason()). */
+    antiBot?: boolean | { honeypot?: boolean | string; minTime?: number; timestampField?: string; onBot?: (reason: 'honeypot' | 'too-fast') => void };
+    /** One key per submission attempt, the same for retries, new after a success: inst.idempotencyKey() / idempotencyHeaders(), or a hidden field. */
+    idempotencyKey?: boolean | { field?: string; header?: string };
+    /** Disable the submit buttons (and add .fv-submitting) while your onSubmit / handleSubmit function runs. */
+    disableOnSubmit?: boolean;
+    /** Keep what the user typed (never passwords, files, hidden fields) and restore it; cleared after a successful save. */
+    draft?: boolean | { key?: string; storage?: 'session' | 'local'; exclude?: string[]; debounce?: number; maxAgeDays?: number };
+    /** The browser asks before leaving a page with unsaved changes. */
+    leaveWarning?: boolean | string;
     /** Read ASP.NET MVC / Razor data-val-* attributes (`required`, `length`, `range`, `regex`, `equalto`, `remote` ...), `data-valmsg-for`, `data-valmsg-summary` and the field-validation-* / input-validation-* classes. */
     unobtrusive?: boolean;
     /** Sets type / inputmode / autocomplete / aria-required from the rules and field names (never overriding what you wrote) and warns about autocomplete="off" and type="number" misuse. */
@@ -231,6 +241,18 @@ export interface FormInstance {
     validateOnServer(url: string | (PrecognitionOptions & { url: string }), options?: PrecognitionOptions): Promise<PrecognitionResult & { missed?: string[] }>;
     /** Live server checks: a field the browser rules accept is checked on the server when the user leaves it. Returns a function that stops it. */
     watchServer(url: string | (PrecognitionOptions & { url: string; delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }), options?: PrecognitionOptions & { delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }): () => void;
+    /** Why this submit looks like a bot ('honeypot' | 'too-fast'), or null. */
+    botReason(): 'honeypot' | 'too-fast' | null;
+    /** The key of the current submission attempt (null when idempotencyKey is off). */
+    idempotencyKey(): string | null;
+    idempotencyHeaders(): Record<string, string>;
+    isSubmitting(): boolean;
+    saveDraft(): boolean;
+    restoreDraft(): boolean;
+    clearDraft(): void;
+    hasUnsavedChanges(): boolean;
+    /** Call after your own successful save so leaveWarning stops asking and the draft is cleared. */
+    markSaved(): void;
     /** Shows a message on a field. `code` (default 'server') is written to the message's data-code and to getErrors(). */
     setError(name: string, message: string, code?: string): boolean;
     /** What a UI needs: validity, touched, dirty, pending, errors and the submit count, per field and for the form. Same as getState(). */
@@ -530,6 +552,8 @@ export interface FormValidatorStatic {
     pwned(password: string, options?: { url?: string; timeout?: number; fetch?: (url: string, init?: any) => Promise<{ ok: boolean; text(): Promise<string> }>; signal?: AbortSignal }): Promise<number | null>;
     /** Calls fn(strength) for the password input now and on every input. Returns the stop function. */
     watchPasswordStrength(input: HTMLInputElement, fn: (result: PasswordStrength) => void, options?: { userInputs?: unknown[] | (() => unknown[]) }): () => void;
+    /** The server side of antiBot: { bot, reason } for a submitted body. */
+    isBotSubmission(values: unknown, options?: { honeypot?: string | false; timestampField?: string; minTimeMs?: number; now?: number }): { bot: boolean; reason: 'honeypot' | 'too-fast' | null };
     /** Why a value passes or fails, rule by rule (no short circuit; skipped rules say why). */
     explain(value: unknown, rules: RulesForField, options?: ValueCheckOptions): ExplainEntry[];
     /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */

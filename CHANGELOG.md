@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.21.0
+- **Bots**: `antiBot: { honeypot, minTime, timestampField, onBot }` adds a hidden trap field and a minimum time; a bot's submit is dropped silently and reported through `onBot`, `fv:bot` and `inst.botReason()`. `FormValidator.isBotSubmission(body, options)` is the server side.
+- **Idempotency**: `idempotencyKey` gives one key per submission attempt, kept across retries and rotated after a success (`inst.idempotencyKey()`, `idempotencyHeaders()`, or a hidden field).
+- **Double submits**: `disableOnSubmit` disables the submit buttons and adds `.fv-submitting` while your handler runs.
+- **Drafts and unsaved changes**: `draft` saves what the user typed (never passwords, files or hidden fields), restores it at start, and clears it after a successful save; `leaveWarning` asks before leaving a page with unsaved changes. `inst.saveDraft()`, `restoreDraft()`, `clearDraft()`, `markSaved()`, `hasUnsavedChanges()`.
+
 ## 3.20.0
 - **Input masks**: `FormValidator.mask(input, '(999) 999-9999')` formats while typing (digits, letters, alphanumerics, escapes), keeps the caret when typing in the middle, and handles paste, backspace over literals, IME composition and huge pastes; the `mask` rule checks a complete value (message in all 13 packs), `unmaskValue()` and `maskPattern()` read it back. `<fv-field mask="...">` formats and requires completion.
 - **Declarative forms**: `data-fv="required email"` on fields, `data-fv-config` JSON on the form, `data-fv-mask`, and `FormValidator.auto()` (or `data-fv-auto` on the script tag) start validators on CMS pages and plain HTML with no script of your own; forms added later are picked up. `FormValidator.parseRules(text)` is the shared parser.

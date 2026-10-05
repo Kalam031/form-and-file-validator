@@ -172,6 +172,11 @@
         validClass: '',                   // class for a field that was checked and holds a valid value ('is-valid'); while typing it appears as soon as the value becomes valid, an error never does
         rewardOnInput: true,              // false: validClass only after a real check, not while typing
         errorSummary: false,              // true | selector | element | { container, title, focus: 'summary' | 'field', withLabel, headingLevel, className }: an accessible list of all problems with links to the fields
+        antiBot: false,                   // true | { honeypot: true | 'field_name', minTime: ms, timestampField: '_fv_t', onBot(reason) }: a hidden trap field and a minimum time; a bot's submit is dropped silently
+        idempotencyKey: false,            // true | { field: '_idempotency_key', header: 'Idempotency-Key' }: one key per submission attempt, kept across retries until it succeeds (inst.idempotencyKey())
+        disableOnSubmit: false,           // true: submit buttons are disabled (and the form gets .fv-submitting) while your onSubmit / handleSubmit function runs
+        draft: false,                     // true | { key, storage: 'session' | 'local', exclude: [names], debounce: 400, maxAgeDays: 7 }: keep what the user typed (never passwords or files) and restore it
+        leaveWarning: false,              // true: the browser asks before leaving a page with unsaved changes
         unobtrusive: false,               // read ASP.NET data-val-* attributes (MVC / Razor), use data-valmsg-for / data-valmsg-summary and the field-validation-* classes; see FormValidator.unobtrusive
         autoAttributes: false             // true | { type, inputmode, autocomplete, ariaRequired, lint }: set type / inputmode / autocomplete / aria-required from the rules and field names, and warn about autocomplete="off" and type="number" misuse
     };
@@ -1024,6 +1029,7 @@
             const out = {}, groups = new Map();
             Array.from(form.elements).forEach(el => {
                 if (!el.name || el.disabled || el.tagName === 'FIELDSET' || ['submit', 'button', 'reset', 'image'].includes(el.type)) return;
+                if (el.hasAttribute('data-fv-trap') || (stampEl && el === stampEl) || (idemEl && el === idemEl)) return;   // our own hidden fields are not form values
                 if (!groups.has(el.name)) groups.set(el.name, []);
                 groups.get(el.name).push(el);
             });
@@ -1367,6 +1373,8 @@
                 if (cfg.skipSubmitter && e.submitter && e.submitter.matches && e.submitter.matches(cfg.skipSubmitter)) return;
                 e.preventDefault();
                 e.stopImmediatePropagation();
+                const bot = botReason();
+                if (bot) { reportBot(bot); return; }   // a bot's submit goes nowhere, and says nothing
                 inst._submitted = true;
                 if (inst._busy) return;
                 inst._busy = true;
@@ -1376,9 +1384,11 @@
                     if (!ok) return;
                     if (isFn(cfg.onSubmit)) {   // AJAX, the short way: your function gets the validated values; it may return { errors: { field: message } } from the server to show them here
                         inst._busy = true;      // no double submit while the request runs
+                        setSubmitting(true);
+                        let failed = false;
                         return Promise.resolve().then(() => cfg.onSubmit(collectValues(), e, inst)).then(out => {
-                            if (out && out.errors && typeof out.errors === 'object') inst.setErrors(out.errors);
-                        }).catch(err => { if (root.console) console.error(err); }).then(() => { inst._busy = false; });
+                            if (out && out.errors && typeof out.errors === 'object') { failed = true; inst.setErrors(out.errors); }
+                        }).catch(err => { failed = true; if (root.console) console.error(err); }).then(() => { inst._busy = false; setSubmitting(false); if (!failed) { clearDraft(); rotateKey(); leaveOk = true; } });
                     }
                     if (isFn(cfg.submitHandler)) return cfg.submitHandler(form, e, collectValues());   // the AJAX place: the third argument is the validated data
                     // Hand the form back to the browser on the next task, not now: when every rule is synchronous this callback runs while the browser
@@ -1396,6 +1406,10 @@
 
             listen(form, 'reset', () => setTimeout(() => inst.resetForm(), 0));
             snapshotInitial();
+            mountAntiBot();
+            mountIdempotency();
+            if (draftCfg) { restoreDraft(); ['input', 'change'].forEach(t => listen(form, t, scheduleDraft)); }
+            if (cfg.leaveWarning && root.addEventListener) { root.addEventListener('beforeunload', onBeforeUnload); inst._listeners.push(() => root.removeEventListener('beforeunload', onBeforeUnload)); }
             if (autoCfg) {
                 runAutoAttributes();
                 listen(form, 'focusin', e => { if (e.target && e.target.name) applyAutoAttributes([e.target]); });   // fields added later
@@ -1434,6 +1448,162 @@
             if (!el || !el.contains) return [];
             return allUnits().filter(u => u.fields.some(f => el === f || el.contains(f)));
         }
+
+        // ---- flow protections: bots, double submits, idempotency keys, drafts and unsaved changes
+        const antiCfg = (() => {
+            const a = cfg.antiBot;
+            if (!a) return null;
+            const o = isObj(a) ? a : {};
+            return { honeypot: o.honeypot === false ? null : (typeof o.honeypot === 'string' && /^[A-Za-z][\w-]*$/.test(o.honeypot) ? o.honeypot : 'website_url'), minTime: isNum0(o.minTime) ? o.minTime : 0,
+                timestampField: typeof o.timestampField === 'string' && /^[A-Za-z_][\w-]*$/.test(o.timestampField) ? o.timestampField : null, onBot: isFn(o.onBot) ? o.onBot : null };
+        })();
+        function isNum0(v) { return typeof v === 'number' && isFinite(v) && v >= 0; }
+        let honeypotEl = null, honeypotWrap = null, stampEl = null;
+        inst._startedAt = Date.now();
+        function mountAntiBot() {
+            if (!antiCfg || honeypotWrap || stampEl) return;
+            const D = root.document;
+            if (antiCfg.honeypot) {
+                honeypotWrap = D.createElement('div');
+                honeypotWrap.setAttribute('aria-hidden', 'true');
+                honeypotWrap.style.cssText = 'position:absolute!important;left:-10000px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important';
+                const label = D.createElement('label');
+                label.textContent = 'Leave this field empty';
+                honeypotEl = D.createElement('input');
+                honeypotEl.type = 'text'; honeypotEl.name = antiCfg.honeypot; honeypotEl.tabIndex = -1; honeypotEl.autocomplete = 'off';
+                honeypotEl.setAttribute('data-fv-trap', '');
+                label.appendChild(honeypotEl); honeypotWrap.appendChild(label); form.appendChild(honeypotWrap);
+            }
+            if (antiCfg.timestampField) {
+                stampEl = D.createElement('input');
+                stampEl.type = 'hidden'; stampEl.name = antiCfg.timestampField; stampEl.value = String(inst._startedAt);
+                form.appendChild(stampEl);
+            }
+        }
+        function unmountAntiBot() { if (honeypotWrap) honeypotWrap.remove(); if (stampEl) stampEl.remove(); honeypotWrap = honeypotEl = stampEl = null; }
+        /** Why this submit looks like a bot ('honeypot' when the trap field is filled, 'too-fast' under antiBot.minTime ms), or null. */
+        function botReason() {
+            if (!antiCfg) return null;
+            if (honeypotEl && String(honeypotEl.value).trim() !== '') return 'honeypot';
+            if (antiCfg.minTime && Date.now() - inst._startedAt < antiCfg.minTime) return 'too-fast';
+            return null;
+        }
+        function reportBot(reason) {
+            if (antiCfg && antiCfg.onBot) guard(antiCfg.onBot, undefined, reason);
+            emit('fv:bot', { reason });
+        }
+        const idemCfg = (() => {
+            const k = cfg.idempotencyKey;
+            if (!k) return null;
+            const o = isObj(k) ? k : {};
+            return { field: typeof o.field === 'string' && /^[A-Za-z_][\w-]*$/.test(o.field) ? o.field : '_idempotency_key', header: typeof o.header === 'string' && o.header ? o.header : 'Idempotency-Key' };
+        })();
+        let idemKey = null, idemEl = null;
+        const newKey = () => {
+            const c = root.crypto;
+            if (c && isFn(c.randomUUID)) return c.randomUUID();
+            const b = new Uint8Array(16);
+            if (c && isFn(c.getRandomValues)) c.getRandomValues(b); else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+            b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+            const h = Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+            return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+        };
+        /** The key of the current submission attempt: the same for every retry, new after a success (and after resetForm). null when idempotencyKey is off. */
+        function idempotencyKey() {
+            if (!idemCfg) return null;
+            if (!idemKey) idemKey = newKey();
+            if (idemEl && idemEl.value !== idemKey) idemEl.value = idemKey;
+            return idemKey;
+        }
+        function mountIdempotency() {
+            if (!idemCfg || idemEl) return;
+            idemEl = root.document.createElement('input');
+            idemEl.type = 'hidden'; idemEl.name = idemCfg.field;
+            form.appendChild(idemEl);
+            idempotencyKey();
+        }
+        const rotateKey = () => { if (!idemCfg) return; idemKey = null; idempotencyKey(); };
+        let submittingNow = false;
+        const submitButtons = () => Array.from(form.querySelectorAll('button, input[type=submit], input[type=image]')).filter(b => !b.type || /^(submit|image)$/.test(b.type));
+        function setSubmitting(on) {
+            if (submittingNow === on) return;
+            submittingNow = on;
+            form.classList.toggle('fv-submitting', on);
+            if (!cfg.disableOnSubmit) return;
+            submitButtons().forEach(b => {
+                if (on) { b._fvWasDisabled = b.disabled; b.disabled = true; b.setAttribute('aria-busy', 'true'); }
+                else { b.disabled = !!b._fvWasDisabled; b.removeAttribute('aria-busy'); delete b._fvWasDisabled; }
+            });
+            scheduleState();
+        }
+        // drafts: what the user typed survives a reload, a crash and an accidental navigation
+        const draftCfg = (() => {
+            const d = cfg.draft;
+            if (!d) return null;
+            const o = isObj(d) ? d : {};
+            return { key: typeof o.key === 'string' && o.key ? o.key : 'fv-draft:' + (form.id || form.getAttribute('name') || (root.location ? root.location.pathname : 'form')), storage: o.storage === 'local' ? 'local' : 'session',
+                exclude: [].concat(o.exclude || []).map(String), debounce: isNum0(o.debounce) ? o.debounce : 400, maxAgeMs: (isNum0(o.maxAgeDays) ? o.maxAgeDays : 7) * 86400000 };
+        })();
+        const store = () => { try { return draftCfg ? (draftCfg.storage === 'local' ? root.localStorage : root.sessionStorage) : null; } catch (e) { return null; } };
+        const draftable = el => el.name && !el.disabled && !el.hasAttribute('data-fv-no-draft') && !/^(password|file|hidden|submit|button|reset|image)$/i.test(el.type) &&
+            (!draftCfg || draftCfg.exclude.indexOf(el.name) < 0) && el.name !== (antiCfg && antiCfg.honeypot) && el.name !== (idemCfg && idemCfg.field) && el.name !== (antiCfg && antiCfg.timestampField);
+        function draftValues() {
+            const out = {}, vals = collectValues();
+            Array.from(form.elements).filter(draftable).forEach(el => { if (el.name in vals) out[el.name] = vals[el.name]; });
+            return out;
+        }
+        function saveDraft() {
+            const st = store();
+            if (!st) return false;
+            try {
+                const vals = draftValues();
+                const dirty = Object.keys(vals).some(k => textOf(vals[k]) !== (k in (inst._initial || {}) ? inst._initial[k] : textOf(undefined)));
+                if (!dirty) { st.removeItem(draftCfg.key); return false; }
+                st.setItem(draftCfg.key, JSON.stringify({ v: 1, t: Date.now(), values: vals }));
+                return true;
+            } catch (e) { return false; }   // storage full or blocked: the form still works
+        }
+        function restoreDraft() {
+            const st = store();
+            if (!st) return false;
+            let saved = null;
+            try { saved = JSON.parse(st.getItem(draftCfg.key) || 'null'); } catch (e) { saved = null; }
+            if (!saved || saved.v !== 1 || !saved.values || typeof saved.values !== 'object' || (Date.now() - (saved.t || 0)) > draftCfg.maxAgeMs) { try { st.removeItem(draftCfg.key); } catch (e) { /* */ } return false; }
+            let applied = 0;
+            Object.keys(saved.values).forEach(name => {
+                if (BAD_KEYS.indexOf(name) >= 0) return;
+                const els = Array.from(form.querySelectorAll('[name="' + esc(name) + '"]')).filter(draftable);
+                if (!els.length) return;
+                const v = saved.values[name], first = els[0];
+                if (first.type === 'checkbox' || first.type === 'radio') {
+                    const want = [].concat(v === undefined ? [] : v).map(String);
+                    els.forEach(el => { el.checked = want.indexOf(el.value) >= 0; });
+                } else if (first.tagName === 'SELECT' && first.multiple) {
+                    const want = [].concat(v).map(String);
+                    Array.from(first.options).forEach(o => { o.selected = want.indexOf(o.value) >= 0; });
+                } else els.forEach((el, i) => { const x = Array.isArray(v) ? v[i] : v; if (x !== undefined && x !== null) el.value = String(x); });
+                applied++;
+                els.forEach(el => { el.dispatchEvent(new root.Event('input', { bubbles: true })); el.dispatchEvent(new root.Event('change', { bubbles: true })); });
+            });
+            if (applied) { emit('fv:draft-restored', { fields: applied }); scheduleState(); }
+            return applied > 0;
+        }
+        function clearDraft() { const st = store(); if (st) { try { st.removeItem(draftCfg.key); } catch (e) { /* */ } } }
+        let draftTimer = null;
+        function scheduleDraft() { if (!draftCfg) return; clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, draftCfg.debounce); }
+        const hasUnsaved = () => { if (!inst._initial) return false; return Object.keys(draftValuesAll()).some(k => textOf(draftValuesAll()[k]) !== (k in inst._initial ? inst._initial[k] : textOf(undefined))); };
+        function draftValuesAll() {   // everything except passwords and the traps: what "unsaved changes" means
+            const out = {}, vals = collectValues();
+            Array.from(form.elements).forEach(el => { if (el.name && el.name in vals && !/^(password|hidden|submit|button|reset|image)$/i.test(el.type) && el.name !== (antiCfg && antiCfg.honeypot)) out[el.name] = vals[el.name]; });
+            return out;
+        }
+        let leaveOk = false;
+        const onBeforeUnload = e => {
+            if (!cfg.leaveWarning || leaveOk || inst._bypass || !hasUnsaved()) return undefined;
+            e.preventDefault();
+            e.returnValue = typeof cfg.leaveWarning === 'string' ? cfg.leaveWarning : '';
+            return e.returnValue;
+        };
 
         // ---- valid state: a class on fields that were checked and hold a valid value (reward early)
         function markValid(unit, on) {
@@ -1668,10 +1838,15 @@
              */
             handleSubmit: fn => async event => {
                 if (event && isFn(event.preventDefault)) event.preventDefault();
+                const bot = botReason();
+                if (bot) { reportBot(bot); return { valid: false, bot: true, reason: bot, values: {}, errors: [] }; }
                 const r = await inst.validateAndGetValues({ submit: true });
                 if (!r.valid || !isFn(fn)) return r;
-                const out = await fn(r.values, event, inst);
+                setSubmitting(true);
+                let out;
+                try { out = await fn(r.values, event, inst); } finally { setSubmitting(false); }
                 if (out && out.errors && typeof out.errors === 'object') { inst.setErrors(out.errors); return Object.assign({}, r, { valid: false, errors: inst.getErrors(), result: out }); }
+                clearDraft(); rotateKey(); leaveOk = true;
                 return Object.assign({}, r, { result: out });
             },
             /** Shows messages from the server on the fields: { Email: 'Already registered' } (a list takes the first message). Names are matched exactly, then ignoring case. Returns the names that match no field. */
@@ -1775,7 +1950,20 @@
             /** Rebuilds the error summary (errorSummary option) from the errors that show now; focus: true moves keyboard focus to it. */
             showSummary: focus => { if (summaryCfg) renderSummary(!!focus); return summaryEl; },
             clearError: name => unitsFor(name).forEach(removeError),
-            resetForm: () => { inst.clearErrors(); inst._submitted = false; inst._submitCount = 0; inst._touched.clear(); inst._tokens.clear(); snapshotInitial(); scheduleState(); },
+            resetForm: () => { inst.clearErrors(); inst._submitted = false; inst._submitCount = 0; inst._touched.clear(); inst._tokens.clear(); snapshotInitial(); inst._startedAt = Date.now(); if (stampEl) stampEl.value = String(inst._startedAt); rotateKey(); leaveOk = false; clearDraft(); scheduleState(); },
+            /** Why this looks like a bot submit ('honeypot' | 'too-fast'), or null (also when antiBot is off). */
+            botReason,
+            /** The key of this submission attempt (the same for retries, new after a success); pass it to your server as the Idempotency-Key. null when idempotencyKey is off. */
+            idempotencyKey,
+            /** { 'Idempotency-Key': key } for fetch / axios (the header name is idempotencyKey.header). */
+            idempotencyHeaders: () => (idemCfg ? { [idemCfg.header]: idempotencyKey() } : {}),
+            isSubmitting: () => submittingNow,
+            /** Draft: saveDraft(), restoreDraft(), clearDraft(); a draft is saved by itself while the user types, restored at start, cleared after a successful handleSubmit / onSubmit. */
+            saveDraft, restoreDraft, clearDraft,
+            /** true when the form differs from how it started (passwords and traps aside). */
+            hasUnsavedChanges: hasUnsaved,
+            /** Call after your own successful save so leaveWarning stops asking. */
+            markSaved: () => { leaveOk = true; clearDraft(); },
             isSubmitted: () => inst._submitted,
             validateField: name => Promise.all(unitsFor(name).map(u => validateUnit(u))).then(r => r.every(Boolean)),
             clearErrors: () => { allUnits().forEach(removeError); Array.from(inst._errors.values()).forEach(r => removeError(r.unit)); },
@@ -1790,6 +1978,7 @@
                 inst._aborters.forEach(a => a.abort());
                 inst.clearErrors();
                 if (summaryTimer) { clearTimeout(summaryTimer); summaryTimer = null; }
+                clearTimeout(draftTimer); unmountAntiBot(); if (idemEl) { idemEl.remove(); idemEl = null; }
                 if (summaryEl) { while (summaryEl.firstChild) summaryEl.removeChild(summaryEl.firstChild); if (summaryOwned) summaryEl.remove(); else summaryEl.hidden = true; summaryEl = null; }
                 if (cfg.novalidate) form.noValidate = !!inst._hadNoValidate;
                 delete form._fvInstance; delete form._manualValidate;
@@ -2142,6 +2331,21 @@
      * rules on a wildcard column may use `unique` ({ 'items[].sku': ['required', { type: 'unique', ignoreCase: true }] }).
      * equalTo / notEqualTo targets are looked up in the same row first ('items[].password' + target 'confirm'), then as an absolute path.
      */
+    /**
+     * Server side of antiBot: FormValidator.isBotSubmission(body, { honeypot: 'website_url', timestampField: '_fv_t', minTimeMs: 1500 }) -> { bot, reason }.
+     * 'honeypot': the trap field came back filled in; 'too-fast': the form was submitted less than minTimeMs after it was rendered (the timestamp field holds the time in ms).
+     */
+    function isBotSubmission(values, options) {
+        const o = options || {}, v = values && typeof values === 'object' ? values : {};
+        const trap = typeof o.honeypot === 'string' ? o.honeypot : 'website_url';
+        if (o.honeypot !== false && v[trap] !== undefined && v[trap] !== null && String(v[trap]).trim() !== '') return { bot: true, reason: 'honeypot' };
+        const stamp = o.timestampField ? Number(v[o.timestampField]) : NaN;
+        const min = typeof o.minTimeMs === 'number' ? o.minTimeMs : 0;
+        const now = typeof o.now === 'number' ? o.now : Date.now();
+        if (min > 0 && isFinite(stamp) && now - stamp < min) return { bot: true, reason: 'too-fast' };
+        return { bot: false, reason: null };
+    }
+
     /**
      * Why does this value pass or fail? One entry per rule, in the order they run:
      *   FormValidator.explain('ab', ['required', { type: 'minlength', min: 3 }, 'email'])
@@ -2662,6 +2866,7 @@
         maskPattern,   // ('(999) 999-9999') -> RegExp of a complete masked value
         unmaskValue,   // (value, pattern) -> the typed characters without the mask's literals
         parseRules,    // ('required email minlength:3') -> rules, the text format of data-fv and <fv-field rules>
+        isBotSubmission, // (body, { honeypot, timestampField, minTimeMs }) -> { bot, reason }: the server side of antiBot
         explain,       // (value, rules, options?) -> [{ rule, code, param, passed, message?, skipped? }]: why a value passes or fails, rule by rule
         registerRule,
         addMethod,

@@ -389,3 +389,13 @@ import { FvFormController } from '../lit';
     const stop: () => void = FormValidator.auto({ validClass: 'ok' });
     void [done, rx, raw, rules, stop];
 }
+
+// ---------------------------------------------------------------- protections
+{
+    const pi = FormValidator.init({ formId: 'p', rules: {}, config: { antiBot: { honeypot: 'website_url', minTime: 1500, onBot: r => void r }, idempotencyKey: { header: 'X-Idem' }, disableOnSubmit: true, draft: { exclude: ['x'], storage: 'local' }, leaveWarning: 'Sure?' } });
+    const k: string | null = pi.idempotencyKey();
+    const reason: 'honeypot' | 'too-fast' | null = pi.botReason();
+    const verdict = FormValidator.isBotSubmission({}, { honeypot: false, minTimeMs: 1000 });
+    pi.markSaved();
+    void [k, reason, verdict.bot];
+}

@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.20.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.21.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -454,6 +454,21 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 <li>Like the native pseudo-classes, <code>checkValidity()</code> fires <code>invalid</code>, so a field that gets one shows its message.</li>
 <li>Another tag name: <code>FormValidator.fieldElement.define(&#39;my-field&#39;)</code>.</li>
 </ul>
+<h3 id="bots-double-submits-drafts-and-unsaved-changes">Bots, double submits, drafts and unsaved changes</h3>
+<p>Five opt-in protections in the form config. None of them changes a form that does not ask for it.</p>
+<pre tabindex="0"><code class="language-js">FormValidator.init({ formId: &#39;signup&#39;, rules, config: {
+  antiBot: { honeypot: true, minTime: 1500, timestampField: &#39;_fv_t&#39;, onBot: reason =&gt; log(reason) },
+  idempotencyKey: true,
+  disableOnSubmit: true,
+  draft: { key: &#39;signup&#39;, exclude: [&#39;coupon&#39;] },
+  leaveWarning: true
+} });
+</code></pre>
+<p><strong><code>antiBot</code></strong>: a hidden trap field (<code>website_url</code> by default, off-screen, <code>aria-hidden</code>, not focusable, <code>autocomplete=&quot;off&quot;</code>) that humans never see and bots fill in, and an optional <code>minTime</code> (ms between the form starting and the submit). A submit that looks like a bot is dropped silently (no handler, no message): <code>onBot(reason)</code> is called, <code>fv:bot</code> fires on the form, <code>inst.botReason()</code> tells why (<code>&#39;honeypot&#39;</code> or <code>&#39;too-fast&#39;</code>) and <code>handleSubmit</code> resolves to <code>{ valid: false, bot: true, reason }</code>. The trap and the timestamp field are not form values. On the server, <code>FormValidator.isBotSubmission(body, { honeypot: &#39;website_url&#39;, timestampField: &#39;_fv_t&#39;, minTimeMs: 1500 })</code> answers <code>{ bot, reason }</code> for submissions that bypass the browser code. Keep <code>minTime</code> modest: password managers and autofill can fill a form in under a second.</p>
+<p><strong><code>idempotencyKey</code></strong>: one key (a UUID) per submission attempt, <strong>the same for every retry</strong> and new after a success, so a double click, a retry after a timeout or a replayed request reaches your server as the same request. <code>inst.idempotencyKey()</code> and <code>inst.idempotencyHeaders()</code> (<code>{ &#39;Idempotency-Key&#39;: key }</code>) for <code>fetch</code>; a hidden field (<code>_idempotency_key</code>, or <code>{ field }</code>) carries it for a native post. Your server stores the result under the key and answers a repeat with it.</p>
+<p><strong><code>disableOnSubmit</code></strong>: submit buttons are disabled (and get <code>aria-busy</code>) and the form gets the class <code>fv-submitting</code> while your <code>handleSubmit</code> / <code>onSubmit</code> function runs; they are restored afterwards, also when it throws, and a button that was disabled before stays disabled. <code>inst.isSubmitting()</code>.</p>
+<p><strong><code>draft</code></strong>: what the user typed survives a reload, a crash and an accidental navigation. It is saved while they type (debounced, to <code>sessionStorage</code>, or <code>{ storage: &#39;local&#39; }</code>), restored when the form starts (the restored text counts as typed: the form is dirty, and the fields get <code>input</code> / <code>change</code> events so masks and live checks follow; <code>fv:draft-restored</code>), and cleared after a successful <code>handleSubmit</code> / <code>onSubmit</code>, by <code>inst.clearDraft()</code>, <code>inst.markSaved()</code> or <code>resetForm()</code>. <strong>Never saved: passwords, files, hidden fields, <code>data-fv-no-draft</code> fields, <code>exclude</code> names.</strong> Drafts older than <code>maxAgeDays</code> (7) and unreadable ones are dropped; blocked or full storage is ignored. After a failed save (<code>{ errors }</code>) the draft stays, so a server error does not lose the text. For a native post, call <code>clearDraft()</code> on the success page.</p>
+<p><strong><code>leaveWarning</code></strong>: the browser asks before leaving a page whose form differs from how it started (passwords do not count); it stops asking after a successful save, <code>markSaved()</code>, <code>resetForm()</code> and <code>destroy()</code>. <code>inst.hasUnsavedChanges()</code>.</p>
 <h3 id="input-masks">Input masks</h3>
 <p><code>FormValidator.mask(input, pattern, options)</code> formats a text field while the user types: <code>9</code> a digit, <code>a</code> a letter (any alphabet), <code>*</code> a letter or digit, <code>\</code> makes the next character a literal.</p>
 <pre tabindex="0"><code class="language-js">const phone = FormValidator.mask(document.querySelector(&#39;#phone&#39;), &#39;(999) 999-9999&#39;, { onComplete: (value, raw) =&gt; console.log(raw) });
@@ -1590,6 +1605,7 @@ npm test
 <ul>
 <li><strong>2.15.0</strong>: <code>requiredIf</code>, <code>dateAfter</code>, <code>dateBefore</code>, <code>atLeastOne</code>, <code>sumEquals</code>; <code>inst.state</code> / <code>getState()</code> / <code>onStateChange()</code>; <code>inst.validateStep()</code>; <code>FormValidator.explain()</code>.</li>
 <li><strong>2.14.0</strong>: field arrays and nested data: wildcard rule keys (<code>items[].qty</code>) and nested paths in <code>checkValues()</code> / <code>schema()</code> / forms, rules <code>unique</code>, <code>minItems</code>, <code>maxItems</code>; schema output is nested.</li>
+<li><strong>2.15.0 (continued)</strong>: <code>antiBot</code>, <code>idempotencyKey</code>, <code>disableOnSubmit</code>, <code>draft</code>, <code>leaveWarning</code>, <code>FormValidator.isBotSubmission()</code>.</li>
 <li><strong>2.15.0 (continued)</strong>: <code>FormValidator.mask()</code>, the <code>mask</code> rule, <code>maskPattern()</code>, <code>unmaskValue()</code>, <code>parseRules()</code>, <code>FormValidator.auto()</code> / <code>data-fv</code> attributes / <code>data-fv-auto</code> script attribute.</li>
 <li><strong>password add-on 1.0.0</strong>: <code>passwordStrength()</code>, <code>pwned()</code>, <code>watchPasswordStrength()</code>, rules <code>pwscore</code> and <code>pwned</code> (<code>dist/formValidator.password.js</code>).</li>
 <li><strong>element 1.0.0</strong>: <code>&lt;fv-field&gt;</code>, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: <code>dist/formValidator.element.js</code>).</li>
