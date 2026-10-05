@@ -1,0 +1,56 @@
+{
+  "FormValidator init": {
+    "scope": "javascript,typescript,javascriptreact,typescriptreact,html",
+    "prefix": "fv-init",
+    "body": ["FormValidator.init({", "  formId: '${1:signup}',", "  rules: {", "    ${2:email}: ['required', 'email']${3}", "  }", "});"],
+    "description": "Start FormValidator on a form"
+  },
+  "FormValidator schema": {
+    "scope": "javascript,typescript,javascriptreact,typescriptreact",
+    "prefix": "fv-schema",
+    "body": ["const ${1:signup} = FormValidator.schema({", "  ${2:email}: ['required', 'email'],", "  ${3:password}: { required: true, pwcheck: { minLength: 8 } }", "});", "const result = $1.safeParse(${4:body});"],
+    "description": "A Standard Schema from rules"
+  },
+  "FormValidator checkValues": {
+    "scope": "javascript,typescript",
+    "prefix": "fv-check",
+    "body": ["const { valid, errors } = FormValidator.checkValues(${1:body}, {", "  ${2:email}: ['required', 'email']", "});"],
+    "description": "Check an object on the server"
+  },
+  "FormValidator React hook": {
+    "scope": "javascriptreact,typescriptreact",
+    "prefix": "fv-react",
+    "body": ["const { ref, handleSubmit, errors } = useFormValidator({ rules: { ${1:email}: ['required', 'email'] } });", "<form ref={ref} onSubmit={handleSubmit(async values => { ${2:await save(values);} })}>"],
+    "description": "useFormValidator for React"
+  },
+  "FormValidator React action": {
+    "scope": "javascriptreact,typescriptreact,javascript,typescript",
+    "prefix": "fv-action",
+    "body": ["export const ${1:signup} = FormValidator.action({ ${2:email}: ['required', 'email'] }, async values => {", "  ${3:// save values}", "});", "const [state, formAction, pending] = useActionState($1, $1.initialState);"],
+    "description": "A Server Action / useActionState handler"
+  },
+  "FileValidator validate": {
+    "scope": "javascript,typescript,javascriptreact,typescriptreact",
+    "prefix": "fv-file",
+    "body": ["const result = await FileValidator.validateFiles(${1:input.files}, {", "  allowedExtensions: ['.jpg', '.png', '.pdf'],", "  maxFileSizeMB: ${2:5}", "});", "if (!result.isValid) ${3:console.log(result.details.map(d => d.message));}"],
+    "description": "Validate uploaded files"
+  },
+  "FileValidator upload": {
+    "scope": "javascript,typescript",
+    "prefix": "fv-upload",
+    "body": ["const up = FileValidator.upload(${1:file}, { url: '${2:/upload}', onProgress: p => ${3:console.log(p.percent)}, retries: 3 });", "// up.abort();", "const { status, body } = await up;"],
+    "description": "Upload with progress, retry and cancel"
+  },
+  "FormValidator rules JSON": {
+    "scope": "json,jsonc",
+    "prefix": "fv-rules",
+    "body": ["{", "  \"\\$schema\": \"https://unpkg.com/form-and-file-validator/schemas/rules.schema.json\",", "  \"${1:email}\": [\"required\", \"email\"]", "}"],
+    "description": "A rules file with editor completion"
+  },
+  "fv-field element": {
+    "scope": "html",
+    "prefix": "fv-field",
+    "body": ["<fv-field rules=\"${1:required email}\">", "  <label for=\"${2:email}\">${3:Email}</label>", "  <input id=\"$2\" name=\"$2\">", "</fv-field>"],
+    "description": "Rules in plain HTML"
+  }
+}

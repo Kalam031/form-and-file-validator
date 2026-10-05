@@ -4672,6 +4672,16 @@
         return () => { if (mo) mo.disconnect(); clearTimeout(timer); doc.removeEventListener('DOMContentLoaded', run); };
     }
 
+    /**
+     * FormValidator.initFromUrl(formId, url, options?): load() the rules from your backend and start the form with them (`options` = the init options such as config).
+     * Resolves to the form instance. The form is left alone (and the promise rejects) when the rules cannot be loaded.
+     */
+    async function initFromUrl(formId, url, options) {
+        const o = options || {};
+        const loaded = await load(url, o.load);
+        return init({ formId, rules: loaded.rules, messages: Object.assign({}, loaded.messages, o.messages), config: Object.assign({}, loaded.config, o.config), context: o.context });
+    }
+
     // ------------------------------------------------------------------ public API
     function init(options) {
         options = options || {};
@@ -5183,6 +5193,38 @@
         const fixed = {};
         Object.keys(out).forEach(k => { fixed[k.replace(/\.\[\]/g, '[]').replace(/\[\]\./g, '[].')] = out[k].length === 1 ? out[k][0] : out[k]; });
         return fixed;
+    }
+
+    // ------------------------------------------------------------------ rules served by your backend
+    const LOADED = new Map();
+    /**
+     * FormValidator.load(url) fetches the rules from your backend, so the server stays the one place that defines them:
+     *   { "rules": { "email": ["required", "email"], "age": { "range": [18, 99] } }, "messages": {...}, "config": { "errorSummary": true } }
+     * or a JSON Schema / OpenAPI object (read with fromJsonSchema). Resolves to { rules, messages, config } (messages / config only when present).
+     * Only declarative rules travel as JSON; add your own functions after loading. options: fetch, headers, credentials, cache (default true: one request per url), schemaPath
+     * ('components.schemas.Signup': a path inside an OpenAPI document), signal.
+     */
+    function load(url, options) {
+        const o = options || {};
+        const key = String(url);
+        if (o.cache !== false && LOADED.has(key)) return LOADED.get(key);
+        const doFetch = o.fetch || (typeof fetch === 'function' ? fetch : null);
+        if (!doFetch) return Promise.reject(new Error('FormValidator.load: no fetch available (pass options.fetch)'));
+        const p = doFetch(key, { headers: Object.assign({ Accept: 'application/json' }, o.headers), credentials: o.credentials, signal: o.signal }).then(async resp => {
+            if (!resp.ok) throw new Error('FormValidator.load: ' + key + ' answered ' + resp.status);
+            let data = await resp.json();
+            if (o.schemaPath) String(o.schemaPath).split('.').forEach(seg => { data = data && typeof data === 'object' && BAD_KEYS.indexOf(seg) < 0 ? data[seg] : undefined; });
+            if (!data || typeof data !== 'object') throw new Error('FormValidator.load: ' + key + ' did not answer rules');
+            const isSchema = !data.rules && (data.properties || data.$schema || data.type === 'object' || data.allOf);
+            const rules = isSchema ? fromJsonSchema(data) : (data.rules && typeof data.rules === 'object' ? data.rules : null);
+            if (!rules) throw new Error('FormValidator.load: ' + key + ' has no "rules"');
+            const out = { rules };
+            if (!isSchema && data.messages && typeof data.messages === 'object') out.messages = data.messages;
+            if (!isSchema && data.config && typeof data.config === 'object') out.config = data.config;
+            return out;
+        });
+        if (o.cache !== false) { LOADED.set(key, p); p.catch(() => LOADED.delete(key)); }   // a failure is not remembered
+        return p;
     }
 
     /**
@@ -5711,6 +5753,7 @@
         formatErrors,  // (errors, 'flat' | 'tree' | 'list' | 'pretty' | 'problem', options?) -> the same errors in the shape you need (problem = RFC 9457 body)
         suggestEmail,  // ('bob@gmial.con') -> 'bob@gmail.com' | null: a "did you mean" for mistyped email domains
         registerMessages, // (code, { ruleType: text }): a language that calls can ask for with { lang: 'de' } without switching the page
+        load,          // async (url, { fetch, cache, schemaPath }) -> { rules, messages?, config? }: rules served by your backend (or a JSON Schema / OpenAPI object)
         explain,       // (value, rules, options?) -> [{ rule, code, param, passed, message?, skipped? }]: why a value passes or fails, rule by rule
         registerRule,
         addMethod,
@@ -5721,6 +5764,7 @@
         version: '2.15.0'
     }, CORE ? {} : {
         init,
+        initFromUrl,   // async (formId, url, { config, messages }) -> instance: load() the rules and start the form
         mask,          // (input, '(999) 999-9999', { onComplete, trailing }) -> { value, raw, complete, update, destroy }: format while typing
         auto,          // (config?) -> stop: start validators from data-fv attributes, now and for forms added later
         unobtrusive,   // ASP.NET data-val-* support: unobtrusive.parse(scope), .auto(), .adapters.add / addBool / addSingleVal / addMinMax

@@ -1,0 +1,935 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unpkg.com/form-and-file-validator/schemas/rules.schema.json",
+  "title": "form-and-file-validator rules",
+  "description": "The rules of a form: { fieldName: rules }. A field takes a rule name, a list, or a map of rules to parameters. Field names may be paths (user.email, items[].qty).",
+  "type": "object",
+  "additionalProperties": {
+    "oneOf": [
+      {
+        "enum": [
+          "alpha",
+          "alphanumeric",
+          "atLeastOne",
+          "base64",
+          "contains",
+          "creditcard",
+          "custom",
+          "date",
+          "dateAfter",
+          "dateBefore",
+          "digits",
+          "domain",
+          "email",
+          "endsWith",
+          "equalTo",
+          "file",
+          "fileSize",
+          "fileType",
+          "hexColor",
+          "iban",
+          "integer",
+          "ipv4",
+          "ipv6",
+          "latitude",
+          "longitude",
+          "mac",
+          "mask",
+          "max",
+          "maxChecked",
+          "maxDate",
+          "maxFiles",
+          "maxItems",
+          "maxWords",
+          "maxlength",
+          "min",
+          "minChecked",
+          "minDate",
+          "minFiles",
+          "minItems",
+          "minWords",
+          "minlength",
+          "notEqualTo",
+          "notOneOf",
+          "number",
+          "oneOf",
+          "pattern",
+          "phone",
+          "pwcheck",
+          "pwned",
+          "pwscore",
+          "range",
+          "rangelength",
+          "remote",
+          "required",
+          "requiredIf",
+          "slug",
+          "startsWith",
+          "step",
+          "sumEquals",
+          "time",
+          "unique",
+          "url",
+          "uuid"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "message": {
+            "description": "Your message for this rule"
+          },
+          "code": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "alpha": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "alphanumeric": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "atLeastOne": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "fields"
+                ]
+              }
+            ]
+          },
+          "base64": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "contains": {},
+          "creditcard": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "custom": {},
+          "date": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string"
+                  },
+                  "strict": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "dateAfter": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "inclusive": {
+                    "type": "boolean"
+                  },
+                  "format": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field"
+                ]
+              }
+            ]
+          },
+          "dateBefore": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "inclusive": {
+                    "type": "boolean"
+                  },
+                  "format": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field"
+                ]
+              }
+            ]
+          },
+          "digits": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "domain": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "email": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "endsWith": {},
+          "equalTo": {
+            "type": "string",
+            "description": "The name of the other field (or a CSS selector)"
+          },
+          "file": {},
+          "fileSize": {},
+          "fileType": {},
+          "hexColor": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "iban": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "integer": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "ipv4": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "ipv6": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "latitude": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "longitude": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "mac": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "mask": {
+            "type": "string",
+            "description": "'9' digit, 'a' letter, '*' letter or digit, backslash escapes: (999) 999-9999"
+          },
+          "max": {
+            "type": "number"
+          },
+          "maxChecked": {
+            "type": "integer"
+          },
+          "maxDate": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "max": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "maxFiles": {
+            "type": "integer"
+          },
+          "maxItems": {
+            "type": "integer"
+          },
+          "maxWords": {
+            "type": "integer"
+          },
+          "maxlength": {
+            "type": "integer"
+          },
+          "min": {
+            "type": "number"
+          },
+          "minChecked": {
+            "type": "integer"
+          },
+          "minDate": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "min": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "minFiles": {
+            "type": "integer"
+          },
+          "minItems": {
+            "type": "integer"
+          },
+          "minWords": {
+            "type": "integer"
+          },
+          "minlength": {
+            "type": "integer"
+          },
+          "notEqualTo": {
+            "type": "string"
+          },
+          "notOneOf": {
+            "type": "array"
+          },
+          "number": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "oneOf": {
+            "type": "array"
+          },
+          "pattern": {
+            "type": "string",
+            "description": "A regular expression source"
+          },
+          "phone": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "pwcheck": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "minLength": {
+                    "type": "integer"
+                  },
+                  "maxLength": {
+                    "type": "integer"
+                  },
+                  "requireUppercase": {
+                    "type": "boolean"
+                  },
+                  "requireLowercase": {
+                    "type": "boolean"
+                  },
+                  "requireDigit": {
+                    "type": "boolean"
+                  },
+                  "requireSpecialChar": {
+                    "type": "boolean"
+                  },
+                  "noWhitespace": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "pwned": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "maxCount": {
+                    "type": "integer"
+                  },
+                  "timeout": {
+                    "type": "integer"
+                  },
+                  "failOpen": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "pwscore": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "min": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4
+                  },
+                  "userFields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "rangelength": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "remote": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object"
+                  },
+                  "failOpen": {
+                    "type": "boolean"
+                  },
+                  "timeout": {
+                    "type": "integer"
+                  },
+                  "cache": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              }
+            ]
+          },
+          "required": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string",
+                "description": "A CSS selector: required only when it matches"
+              }
+            ]
+          },
+          "requiredIf": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "equals": {},
+                  "in": {
+                    "type": "array"
+                  },
+                  "notEquals": {}
+                },
+                "required": [
+                  "field"
+                ]
+              }
+            ]
+          },
+          "slug": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "startsWith": {},
+          "step": {
+            "type": "number"
+          },
+          "sumEquals": {
+            "type": "object",
+            "properties": {
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "total": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "fields",
+              "total"
+            ]
+          },
+          "time": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "unique": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "ignoreCase": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "url": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          },
+          "uuid": {
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "true, or your own message"
+          }
+        },
+        "additionalProperties": true
+      },
+      {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "enum": [
+                "alpha",
+                "alphanumeric",
+                "atLeastOne",
+                "base64",
+                "contains",
+                "creditcard",
+                "custom",
+                "date",
+                "dateAfter",
+                "dateBefore",
+                "digits",
+                "domain",
+                "email",
+                "endsWith",
+                "equalTo",
+                "file",
+                "fileSize",
+                "fileType",
+                "hexColor",
+                "iban",
+                "integer",
+                "ipv4",
+                "ipv6",
+                "latitude",
+                "longitude",
+                "mac",
+                "mask",
+                "max",
+                "maxChecked",
+                "maxDate",
+                "maxFiles",
+                "maxItems",
+                "maxWords",
+                "maxlength",
+                "min",
+                "minChecked",
+                "minDate",
+                "minFiles",
+                "minItems",
+                "minWords",
+                "minlength",
+                "notEqualTo",
+                "notOneOf",
+                "number",
+                "oneOf",
+                "pattern",
+                "phone",
+                "pwcheck",
+                "pwned",
+                "pwscore",
+                "range",
+                "rangelength",
+                "remote",
+                "required",
+                "requiredIf",
+                "slug",
+                "startsWith",
+                "step",
+                "sumEquals",
+                "time",
+                "unique",
+                "url",
+                "uuid"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "enum": [
+                    "alpha",
+                    "alphanumeric",
+                    "atLeastOne",
+                    "base64",
+                    "contains",
+                    "creditcard",
+                    "custom",
+                    "date",
+                    "dateAfter",
+                    "dateBefore",
+                    "digits",
+                    "domain",
+                    "email",
+                    "endsWith",
+                    "equalTo",
+                    "file",
+                    "fileSize",
+                    "fileType",
+                    "hexColor",
+                    "iban",
+                    "integer",
+                    "ipv4",
+                    "ipv6",
+                    "latitude",
+                    "longitude",
+                    "mac",
+                    "mask",
+                    "max",
+                    "maxChecked",
+                    "maxDate",
+                    "maxFiles",
+                    "maxItems",
+                    "maxWords",
+                    "maxlength",
+                    "min",
+                    "minChecked",
+                    "minDate",
+                    "minFiles",
+                    "minItems",
+                    "minWords",
+                    "minlength",
+                    "notEqualTo",
+                    "notOneOf",
+                    "number",
+                    "oneOf",
+                    "pattern",
+                    "phone",
+                    "pwcheck",
+                    "pwned",
+                    "pwscore",
+                    "range",
+                    "rangelength",
+                    "remote",
+                    "required",
+                    "requiredIf",
+                    "slug",
+                    "startsWith",
+                    "step",
+                    "sumEquals",
+                    "time",
+                    "unique",
+                    "url",
+                    "uuid"
+                  ],
+                  "description": "The rule name"
+                },
+                "message": {},
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "x-fv-rule-names": [
+    "alpha",
+    "alphanumeric",
+    "atLeastOne",
+    "base64",
+    "contains",
+    "creditcard",
+    "custom",
+    "date",
+    "dateAfter",
+    "dateBefore",
+    "digits",
+    "domain",
+    "email",
+    "endsWith",
+    "equalTo",
+    "file",
+    "fileSize",
+    "fileType",
+    "hexColor",
+    "iban",
+    "integer",
+    "ipv4",
+    "ipv6",
+    "latitude",
+    "longitude",
+    "mac",
+    "mask",
+    "max",
+    "maxChecked",
+    "maxDate",
+    "maxFiles",
+    "maxItems",
+    "maxWords",
+    "maxlength",
+    "min",
+    "minChecked",
+    "minDate",
+    "minFiles",
+    "minItems",
+    "minWords",
+    "minlength",
+    "notEqualTo",
+    "notOneOf",
+    "number",
+    "oneOf",
+    "pattern",
+    "phone",
+    "pwcheck",
+    "pwned",
+    "pwscore",
+    "range",
+    "rangelength",
+    "remote",
+    "required",
+    "requiredIf",
+    "slug",
+    "startsWith",
+    "step",
+    "sumEquals",
+    "time",
+    "unique",
+    "url",
+    "uuid"
+  ]
+}
