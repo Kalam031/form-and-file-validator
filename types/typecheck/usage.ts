@@ -284,3 +284,18 @@ void verdict;
     const c: string | null = FormValidator.checkValue('x', ['email']).code;
     void [codes, lint, box, c];
 }
+
+// ---------------------------------------------------------------- ASP.NET unobtrusive
+{
+    FormValidator.unobtrusive.adapters
+        .addBool('even')
+        .addSingleVal('multipleof', 'by')
+        .addMinMax('between', 'atleast', 'atmost', 'range')
+        .add('startsx', ['prefix'], o => { o.rules.startswithx = { prefix: o.params.prefix }; o.messages.startswithx = o.message; });
+    const instances: FormInstance[] = FormValidator.unobtrusive.parse('#modal', { focusInvalid: false });
+    const stopAuto: () => void = FormValidator.unobtrusive.auto();
+    FormValidator.init({ formId: 'f', rules: {}, config: { unobtrusive: true } });
+    $.validator.unobtrusive.parse(document);
+    $.validator.unobtrusive.adapters.addBool('x');
+    void [instances, stopAuto];
+}

@@ -1,4 +1,4 @@
-/*! FormValidator 2.12.0 + FileValidator 2.10.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.13.0 + FileValidator 2.10.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
@@ -2105,9 +2105,11 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.12.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.13.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.13.0 ASP.NET unobtrusive validation: `unobtrusive: true` reads data-val-* (required, length, range, regex, equalto, remote, email, url, ... + custom adapters),
+ *          data-valmsg-for / data-valmsg-summary and the field-validation-* / input-validation-* classes. FormValidator.unobtrusive.parse() / auto() / adapters.
  *   2.12.0 validateOn presets ('smart' | 'blur' | 'input' | 'submit' | 'all'; an 'input' entry now works) + validClass reward while typing. Stable error codes (data-code, code in getErrors / checkValue /
  *          schema issues, rule.code). errorSummary: accessible list of problems with links and focus. autoAttributes (type / inputmode / autocomplete / aria-required) + inst.lint().
  *   2.11.0 FormValidator.serverErrors(body): problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API, express-validator, Ajv in one shape; inst.setServerErrors();
@@ -2263,6 +2265,7 @@ const api = (function (root) {
         validClass: '',                   // class for a field that was checked and holds a valid value ('is-valid'); while typing it appears as soon as the value becomes valid, an error never does
         rewardOnInput: true,              // false: validClass only after a real check, not while typing
         errorSummary: false,              // true | selector | element | { container, title, focus: 'summary' | 'field', withLabel, headingLevel, className }: an accessible list of all problems with links to the fields
+        unobtrusive: false,               // read ASP.NET data-val-* attributes (MVC / Razor), use data-valmsg-for / data-valmsg-summary and the field-validation-* classes; see FormValidator.unobtrusive
         autoAttributes: false             // true | { type, inputmode, autocomplete, ariaRequired, lint }: set type / inputmode / autocomplete / aria-required from the rules and field names, and warn about autocomplete="off" and type="number" misuse
     };
 
@@ -2809,6 +2812,13 @@ const api = (function (root) {
             const v = rawMessages[k], isType = k in DEFAULT_MESSAGES || !!validators[k];
             if ((v && typeof v === 'object') || !isType) fieldMessages[k] = v; else cfg.messages[k] = v;
         });
+        if (cfg.unobtrusive) {   // the class names MVC's CSS and Razor helpers already use
+            if (!('errorElement' in userConfig)) cfg.errorElement = 'span';
+            if (!('errorClass' in userConfig)) cfg.errorClass = 'field-validation-error';
+            if (!('invalidClass' in userConfig)) cfg.invalidClass = 'input-validation-error';
+            if (!('validClass' in userConfig)) cfg.validClass = 'input-validation-valid';
+            if (!('rewardOnInput' in userConfig)) cfg.rewardOnInput = false;
+        }
         const context = Object.assign({}, opts.context, { form });
 
         const inst = {
@@ -2842,6 +2852,8 @@ const api = (function (root) {
                 Array.from(form.elements).forEach(e => {
                     if (e.name && e.tagName !== 'FIELDSET' && !['button', 'submit', 'reset', 'image'].includes(e.type)) set.add(e.name);
                 });
+            } else if (cfg.unobtrusive) {
+                Array.from(form.elements).forEach(e => { if (e.name && e.getAttribute('data-val') === 'true') set.add(e.name); });
             }
             return Array.from(set);
         }
@@ -2887,11 +2899,38 @@ const api = (function (root) {
             return r;
         }
 
+        /** The rules ASP.NET rendered into data-val-* attributes of a field (data-val="true"), through the adapters of FormValidator.unobtrusive.adapters. */
+        function dataValRules(f) {
+            if (f.getAttribute('data-val') !== 'true') return [];
+            const name = f.name || '', prefix = name.slice(0, name.lastIndexOf('.') + 1), attrs = {}, out = [];
+            Array.from(f.attributes).forEach(a => { attrs[a.name.toLowerCase()] = a.value; });
+            Object.keys(attrs).forEach(k => {
+                const m = /^data-val-([a-z0-9_]+)$/.exec(k);
+                if (m && !UNOB[m[1]] && !unobWarned.has(m[1])) { unobWarned.add(m[1]); if (root.console) console.warn('FormValidator unobtrusive: no adapter for data-val-' + m[1] + ' (add one with FormValidator.unobtrusive.adapters.add); it is ignored.'); }
+            });
+            Object.keys(UNOB).forEach(adapter => {
+                const attr = 'data-val-' + adapter;
+                if (!(attr in attrs)) return;
+                const def = UNOB[adapter], options = { element: f, form, prefix, collect: collectValues, message: attrs[attr] || undefined, params: {}, rules: {}, messages: {} };
+                def.params.forEach(p => { options.params[p] = attrs[attr + '-' + p.toLowerCase()]; });
+                try { def.fn(options); } catch (e) { if (root.console) console.error('FormValidator unobtrusive: the adapter "' + adapter + '" threw:', e); return; }
+                Object.keys(options.rules).forEach(rn => {
+                    if (!validators[rn]) { if (root.console && !unobWarned.has('rule:' + rn)) { unobWarned.add('rule:' + rn); console.warn('FormValidator unobtrusive: the adapter "' + adapter + '" uses the rule "' + rn + '" which is not registered (FormValidator.addMethod / registerRule); it is ignored.'); } return; }
+                    const v = options.rules[rn];
+                    const r = typeof v === 'string' && !PARAM[rn] && !methodNames.has(rn) ? { type: rn, param: v } : ruleFromMap(rn, v);   // a text value is a parameter here, never a message
+                    if (options.messages[rn]) r.message = options.messages[rn];
+                    out.push(r);
+                });
+            });
+            return out;
+        }
+        const valmsgFor = f => (cfg.unobtrusive && f && f.name ? form.querySelector('[data-valmsg-for="' + esc(f.name) + '"]') : null);
+
         function rulesFor(unit) {
             const explicit = inst.rules[unit.fields[0].name] || [];
-            if (!cfg.autoRules && !isFn(cfg.fieldRules) && !hasClassRules()) return explicit;
-            const merged = new Map();  // later sources win per rule type: class < attributes / data-rule < fieldRules
-            classRulesFor(unit.fields[0]).concat(cfg.autoRules ? attributeRules(unit.fields[0]) : [],
+            if (!cfg.autoRules && !cfg.unobtrusive && !isFn(cfg.fieldRules) && !hasClassRules()) return explicit;
+            const merged = new Map();  // later sources win per rule type: class < attributes / data-rule < data-val < fieldRules
+            classRulesFor(unit.fields[0]).concat(cfg.autoRules ? attributeRules(unit.fields[0]) : [], cfg.unobtrusive ? dataValRules(unit.fields[0]) : [],
                 isFn(cfg.fieldRules) ? normalizeRules(guard(cfg.fieldRules, [], unit.fields[0], unit)) : []).forEach(r => merged.set(r.type, r));
             const derived = Array.from(merged.values()).filter(a => !explicit.some(e => e.type === a.type));
             return derived.concat(explicit);
@@ -2954,7 +2993,7 @@ const api = (function (root) {
         // ---- messages
         function resolveMessage(rule, env, dynamic) {
             if (isFn(cfg.resolveMessage)) { const custom = guard(cfg.resolveMessage, '', rule, env, dynamic); if (custom) return custom; }
-            let m = rule.message;
+            let m = rule.serverMessage && dynamic ? dynamic : rule.message;   // [Remote]: the text the server answers wins over the attribute's
             if (isFn(m)) m = guard(m, '', env.field, rule, env);
             if (!m) { const fm = fieldMessages[env.field.name]; m = fm && (typeof fm === 'string' || isFn(fm) ? fm : fm[rule.type]); } // messages: { email: { required: '...' } }
             if (!m) m = dataMessage(env.field, rule.type, false);         // data-msg-required="..." (like jQuery Validation)
@@ -2969,6 +3008,13 @@ const api = (function (root) {
         // ---- error display
         function place(err, unit) {
             const first = unit.fields[0], last = unit.fields[unit.fields.length - 1];
+            const slot = valmsgFor(first);   // ASP.NET: <span data-valmsg-for="Email" class="field-validation-valid">
+            if (slot) {
+                slot.classList.remove('field-validation-valid'); slot.classList.add('field-validation-error');
+                if (slot.getAttribute('data-valmsg-replace') !== 'false') { while (slot.firstChild) slot.removeChild(slot.firstChild); } else err.hidden = true;   // replace=false keeps your static text; the message stays reachable for screen readers
+                slot.appendChild(err);
+                return;
+            }
             if (isFn(cfg.errorPlacement)) {
                 try { cfg.errorPlacement(err, first, unit.fields); return; }
                 catch (e) { if (root.console) console.error('FormValidator: an error in your errorPlacement was ignored, using the default placement:', e); }
@@ -2989,6 +3035,11 @@ const api = (function (root) {
         function removeError(unit) {
             const rec = inst._errors.get(unit.key);
             if (rec) { rec.el.remove(); inst._errors.delete(unit.key); refreshSummary(); }
+            const slot = valmsgFor(unit.fields[0]);
+            if (slot) {
+                slot.classList.remove('field-validation-error'); slot.classList.add('field-validation-valid');
+                if (slot.getAttribute('data-valmsg-replace') !== 'false') while (slot.firstChild) slot.removeChild(slot.firstChild);
+            }
             unit.fields.forEach(f => {
                 if (cfg.validClass) cfg.validClass.split(/\s+/).forEach(c => c && f.classList.remove(c));
                 if (isFn(cfg.unhighlight)) guard(cfg.unhighlight, undefined, f, unit);
@@ -3125,6 +3176,7 @@ const api = (function (root) {
             if (!ok) {
                 invalid.sort((a, b) => (a.fields[0].compareDocumentPosition(b.fields[0]) & 4) ? -1 : 1);
                 const list = invalid.map(u => ({ name: u.fields[0].name, field: u.fields[0], message: inst._errors.get(u.key).message, code: inst._errors.get(u.key).code }));
+                renderValSummary();
                 const summaryFocus = !!summaryCfg && summaryCfg.focus === 'summary' && (!o || o.focus !== false) && cfg.focusInvalid;
                 if (summaryCfg && (o && (o.submit || o.summary) || inst._submitted)) renderSummary(summaryFocus);
                 if (cfg.focusInvalid && invalid[0] && !summaryFocus && (!o || o.focus !== false)) { // after the list: focus handlers may clear errors
@@ -3137,6 +3189,7 @@ const api = (function (root) {
             } else {
                 if (isFn(cfg.onSuccess)) guard(cfg.onSuccess, undefined);
                 if (summaryEl) renderSummary(false);
+                renderValSummary();
                 emit('fv:valid', {});
             }
             return ok;
@@ -3399,9 +3452,22 @@ const api = (function (root) {
             if (focus) { try { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* not focusable */ } }
         }
         let summaryTimer = null;
+        /** ASP.NET's <div data-valmsg-summary="true"><ul></ul></div>: the list of messages and the validation-summary-errors / -valid classes. */
+        function renderValSummary() {
+            if (!cfg.unobtrusive) return;
+            const box = form.querySelector('[data-valmsg-summary="true"]');
+            if (!box) return;
+            let ul = box.querySelector('ul');
+            if (!ul) { ul = root.document.createElement('ul'); box.appendChild(ul); }
+            while (ul.firstChild) ul.removeChild(ul.firstChild);
+            const list = Array.from(inst._errors.values()).sort((a, b) => (a.unit.fields[0].compareDocumentPosition(b.unit.fields[0]) & 4) ? -1 : 1);
+            list.forEach(r => { const li = root.document.createElement('li'); li.textContent = r.message; ul.appendChild(li); });
+            box.classList.toggle('validation-summary-errors', list.length > 0);
+            box.classList.toggle('validation-summary-valid', list.length === 0);
+        }
         const refreshSummary = () => {   // errors come and go one by one: rebuild once per tick, without stealing focus
-            if (!summaryCfg || summaryTimer) return;
-            summaryTimer = setTimeout(() => { summaryTimer = null; if (summaryEl && !summaryEl.hidden) renderSummary(false); }, 0);
+            if ((!summaryCfg && !cfg.unobtrusive) || summaryTimer) return;
+            summaryTimer = setTimeout(() => { summaryTimer = null; renderValSummary(); if (summaryCfg && summaryEl && !summaryEl.hidden) renderSummary(false); }, 0);
         };
 
         // ---- autoAttributes: type, inputmode, autocomplete and aria-required from the rules and the field names, and a lint for what browsers get wrong
@@ -3623,6 +3689,105 @@ const api = (function (root) {
         });
         return inst;
     }
+
+    // ------------------------------------------------------------------ ASP.NET unobtrusive validation: data-val-* attributes (MVC 5 / Razor / Core tag helpers)
+    const UNOB = {};   // adapter name (lower case) -> { params: [...], fn(options) }
+    const unobWarned = new Set();
+    /** FormValidator.unobtrusive.adapters: the same three helpers as $.validator.unobtrusive.adapters, so existing custom adapters keep working. */
+    const unobAdapters = {
+        /** add('name', ['p1', 'p2'], function (options) { options.rules.myRule = { p1: options.params.p1 }; options.messages.myRule = options.message; }) */
+        add(name, params, fn) {
+            if (isFn(params)) { fn = params; params = []; }
+            if (typeof name !== 'string' || !name || !isFn(fn)) throw new Error('unobtrusive.adapters.add: a name and a function are needed');
+            UNOB[name.toLowerCase()] = { params: [].concat(params || []), fn };
+            return unobAdapters;
+        },
+        /** addBool('email') or addBool('foo', 'fooRule'): data-val-foo="msg" turns the rule on. */
+        addBool(name, ruleName) {
+            return unobAdapters.add(name, [], o => { o.rules[ruleName || name] = true; o.messages[ruleName || name] = o.message; });
+        },
+        /** addSingleVal('minlength', 'min'): data-val-minlength-min="3" gives rule minlength = 3. */
+        addSingleVal(name, attribute, ruleName) {
+            return unobAdapters.add(name, [attribute || 'val'], o => { o.rules[ruleName || name] = o.params[attribute || 'val']; o.messages[ruleName || name] = o.message; });
+        },
+        /** addMinMax('length', 'minlength', 'maxlength', 'rangelength'): min only, max only, or both. */
+        addMinMax(name, minRule, maxRule, minMaxRule, minAttr, maxAttr) {
+            minAttr = minAttr || 'min'; maxAttr = maxAttr || 'max';
+            return unobAdapters.add(name, [minAttr, maxAttr], o => {
+                const min = o.params[minAttr], max = o.params[maxAttr], has = v => v !== undefined && v !== null && v !== '';
+                if (has(min) && has(max)) { o.rules[minMaxRule] = [min, max]; o.messages[minMaxRule] = o.message; }
+                else if (has(min)) { o.rules[minRule] = min; o.messages[minRule] = o.message; }
+                else if (has(max)) { o.rules[maxRule] = max; o.messages[maxRule] = o.message; }
+            });
+        }
+    };
+    ['email', 'url', 'creditcard', 'number', 'digits', 'date', 'phone'].forEach(n => unobAdapters.addBool(n));
+    unobAdapters.addBool('required');
+    unobAdapters.addMinMax('length', 'minlength', 'maxlength', 'rangelength');
+    unobAdapters.addSingleVal('minlength', 'min');
+    unobAdapters.addSingleVal('maxlength', 'max');
+    unobAdapters.addMinMax('range', 'min', 'max', 'range');
+    unobAdapters.add('regex', ['pattern'], o => {
+        const p = o.params.pattern;
+        if (p === undefined || p === '') return;
+        try { new RegExp('^(?:' + p + ')$'); } catch (e) { if (root.console) console.warn('FormValidator unobtrusive: the data-val-regex-pattern of "' + o.element.name + '" is not a valid JavaScript regular expression and is ignored: ' + p); return; }
+        o.rules.pattern = { pattern: '^(?:' + p + ')$' };   // MVC matches the whole value
+        o.messages.pattern = o.message;
+    });
+    unobAdapters.add('equalto', ['other'], o => {
+        const other = o.params.other;
+        if (!other) return;
+        o.rules.equalTo = { target: other.indexOf('*.') === 0 ? o.prefix + other.slice(2) : other };
+        o.messages.equalTo = o.message;
+    });
+    unobAdapters.add('fileextensions', ['extensions'], o => {
+        const list = String(o.params.extensions || '').split(/[,\s]+/).filter(Boolean).map(x => '.' + x.replace(/^\./, '').toLowerCase());
+        if (!list.length) return;
+        o.rules.file = { accept: list.join(',') };
+        o.messages.file = o.message;
+    });
+    unobAdapters.add('remote', ['url', 'type', 'additionalfields'], o => {
+        const url = o.params.url;
+        if (!url) return;
+        const data = {};
+        String(o.params.additionalfields || '').split(',').map(s => s.trim()).filter(Boolean).forEach(n => {
+            const name = n.indexOf('*.') === 0 ? o.prefix + n.slice(2) : n;
+            data[name] = () => { const vals = o.collect(); const v = vals[name]; return Array.isArray(v) ? v.join(',') : (v === undefined ? '' : v); };
+        });
+        o.rules.remote = { url, method: String(o.params.type || 'GET').toUpperCase(), encoding: 'form', data, serverMessage: true };   // MVC's [Remote] reads a classic form body / query string
+        o.messages.remote = o.message;
+    });
+    const unobtrusive = {
+        adapters: unobAdapters,
+        /**
+         * Starts FormValidator on every form under `scope` (default: the document) that holds data-val="true" fields, reading the rules from the data-val-* attributes
+         * that ASP.NET MVC / Razor / Core render. Returns the instances. Call it again after inserting HTML with AJAX (fields added to an initialised form are picked up
+         * by themselves; this is for new forms). config: any FormValidator config.
+         */
+        parse(scope, config) {
+            const doc = root.document;
+            let node = scope === undefined || scope === null ? doc : (typeof scope === 'string' ? doc.querySelector(scope) : scope);
+            if (node && node.jquery) node = node[0];
+            if (!node) return [];
+            const forms = [];
+            if (node.nodeType === 1 && node.tagName === 'FORM') forms.push(node);
+            else if (node.nodeType === 1 && node.closest && node.closest('form')) forms.push(node.closest('form'));
+            if (node.querySelectorAll) Array.from(node.querySelectorAll('form')).forEach(f => { if (!forms.includes(f)) forms.push(f); });
+            return forms.filter(f => f.querySelector('[data-val="true"]')).map(f => f._fvInstance || init({ form: f, rules: {}, config: Object.assign({ unobtrusive: true }, config) }));
+        },
+        /** parse() when the page is ready, and again for forms that are added later (partial views, AJAX, modals). Returns a function that stops it. */
+        auto(config) {
+            const doc = root.document;
+            const run = () => unobtrusive.parse(doc, config);
+            if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run, { once: true }); else run();
+            let mo = null, timer = null;
+            if (typeof root.MutationObserver === 'function' && doc.body) {
+                mo = new root.MutationObserver(() => { clearTimeout(timer); timer = setTimeout(run, 20); });
+                mo.observe(doc.body, { childList: true, subtree: true });
+            }
+            return () => { if (mo) mo.disconnect(); clearTimeout(timer); doc.removeEventListener('DOMContentLoaded', run); };
+        }
+    };
 
     // ------------------------------------------------------------------ public API
     function init(options) {
@@ -4131,6 +4296,7 @@ const api = (function (root) {
     return {
         init,
         parseFormData, // (formData | form | entries | object, { coerce? }) -> nested object: 'a.b[0].c' -> { a: { b: [{ c }] } }
+        unobtrusive,   // ASP.NET data-val-* support: unobtrusive.parse(scope), .auto(), .adapters.add / addBool / addSingleVal / addMinMax
         serverErrors,  // (response body, { format? }) -> { errors, all, form, format } from problem+json, Laravel, DRF, ASP.NET, FastAPI, Zod ...
         precognition,  // async (url, values, { only, method, ... }) -> { valid, errors, ... }: ask the real endpoint whether the values would pass
         action,        // (rules, serverFn) -> (prevState, formData) => state, for React 19 useActionState and Server Actions
@@ -4151,7 +4317,7 @@ const api = (function (root) {
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.12.0'
+        version: '2.13.0'
     };
 });
 
@@ -4651,6 +4817,7 @@ const api = (function (root) {
                 skipEmptyUntilSubmit: true,
                 debounce: 0,
                 errorElement: s.errorElement,
+                unobtrusive: !!s.unobtrusive,   // read ASP.NET data-val-* attributes and use data-valmsg-for / data-valmsg-summary
                 errorClass: s.errorClass,
                 pendingClass: s.pendingClass,   // jQuery Validation adds "pending" to a field while a remote check runs
                 invalidClass: '',
@@ -4659,6 +4826,7 @@ const api = (function (root) {
                 skipSubmitter: '.cancel',
                 fieldRules: field => self._coreRules(field),
                 resolveMessage: (rule, env, dynamic) => {
+                    if (!rule.method) return '';   // a rule that did not come from jQuery-style settings (ASP.NET data-val-*): the engine picks its message
                     // a message the developer wrote for this field wins over FileValidator's detailed one; server (remote) messages always win
                     if (dynamic && rule.method === 'fileValidator' && self._hasCustomMessage(env.field, rule.method)) dynamic = null;
                     return dynamic || self.defaultMessage(env.field, { method: rule.method, parameters: rule.param });
@@ -4890,6 +5058,25 @@ const api = (function (root) {
 
     // ------------------------------------------------------------------ jQuery plugin surface
     $.validator = Validator;
+
+    /**
+     * ASP.NET MVC's jquery.validate.unobtrusive replacement: $.validator.unobtrusive.parse(selector) validates the forms that hold data-val="true" fields from their
+     * data-val-* attributes (messages, data-valmsg-for, data-valmsg-summary and the input-validation-* / field-validation-* classes work as before), and
+     * $.validator.unobtrusive.adapters.add / addBool / addSingleVal / addMinMax are the same helpers, so custom adapters keep working.
+     */
+    Validator.unobtrusive = {
+        adapters: FV.unobtrusive.adapters,
+        parse(selector) {
+            const $scope = $(selector === undefined ? D() : selector);
+            const forms = $scope.find('form').addBack('form').add($scope.closest('form')).toArray().filter((f, i, a) => a.indexOf(f) === i);
+            forms.forEach(form => {
+                if (!form.querySelector('[data-val="true"]')) return;
+                if (!$.data(form, 'validator')) $(form).validate({ unobtrusive: true, errorClass: 'input-validation-error', validClass: 'input-validation-valid', errorElement: 'span' });
+            });
+            return $scope;
+        },
+        parseElement() { /* rules are read from the attributes when a field is checked; nothing to do */ }
+    };
 
     $.extend($.fn, {
         validate(options) {
@@ -6213,7 +6400,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.10.0","fileValidator.widget":"1.4.0","formValidator":"2.12.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.10.0","fileValidator.widget":"1.4.0","formValidator":"2.13.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;

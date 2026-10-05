@@ -1,4 +1,4 @@
-# FormValidator v2.12.0 — Documentation
+# FormValidator v2.13.0 — Documentation
 
 ## Overview
 
@@ -186,6 +186,30 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 
 No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: `trim`, `values` (the other fields), `messages` (per rule type).
 
+### ASP.NET MVC and Razor: data-val-* (unobtrusive validation)
+
+Drop-in for `jquery.validate.unobtrusive.js`, without jQuery. Razor renders the model's attributes (`[Required]`, `[StringLength]`, `[Range]`, `[EmailAddress]`, `[Compare]`, `[RegularExpression]`, `[Remote]` ...) as `data-val-*` attributes and `data-valmsg-for` / `data-valmsg-summary` placeholders; this reads them, so a Razor form validates in the browser with the messages from your model and no JavaScript of your own.
+
+```html
+<script src="~/Scripts/validator.min.js"></script>
+<script>FormValidator.unobtrusive.auto();</script>   <!-- every form with data-val fields, now and when added later (partial views, AJAX, modals) -->
+```
+
+```js
+FormValidator.unobtrusive.parse();                    // once, for forms that are on the page now (document, a selector or an element)
+FormValidator.unobtrusive.parse('#modal', { focusInvalid: false });   // with your own config
+FormValidator.init({ formId: 'f', rules: {}, config: { unobtrusive: true } });   // or for one form
+```
+
+Supported adapters (the ones MVC ships): `required`, `length` (`min` / `max`), `minlength`, `maxlength`, `range`, `regex` (the whole value must match, like MVC), `equalto` (`*.Password` is resolved against the model prefix of the field, `Model.Confirm` finds `Model.Password`), `email`, `url`, `phone`, `creditcard`, `number`, `digits`, `date`, `fileextensions`, and `remote` (`url`, `type`, `additionalfields`; sent as a query string for GET and as a form body for POST, your `[Remote]` action answers `true`, `false` or a message, and a message the server returns replaces the attribute's).
+
+- **Messages** come from the attributes; an empty `data-val-x=""` uses the library's default.
+- **Markup and classes MVC's CSS already knows**: the message goes into `<span data-valmsg-for="Email">` (with `field-validation-valid` / `field-validation-error`), the field gets `input-validation-error` / `input-validation-valid`, `data-valmsg-replace="false"` keeps your static text, and `<div data-valmsg-summary="true"><ul>` becomes the list of messages with `validation-summary-errors` / `validation-summary-valid`. Your own `errorClass`, `invalidClass`, `errorElement` still win.
+- **Checkboxes** (`CheckBoxFor` renders a hidden twin), radio groups, selects, file inputs and optional empty fields work.
+- **Server errors**: `inst.setServerErrors(modelStateJson)` reads classic `ModelState` and ValidationProblemDetails into the same spans.
+- **Custom adapters** use the API you already know: `FormValidator.unobtrusive.adapters.add('name', ['p'], options => { options.rules.myRule = options.params.p; options.messages.myRule = options.message; })`, `addBool`, `addSingleVal`, `addMinMax`. The rule itself is registered with `FormValidator.addMethod(name, (value, element, param) => ...)` (or `registerRule`). An adapter that uses a rule that is not registered, an unknown `data-val-x`, a regex that JavaScript cannot compile and an adapter that throws are each reported once in the console and ignored; the rest of the form keeps working.
+- **jQuery pages**: `$.validator.unobtrusive.parse(selector)` and `$.validator.unobtrusive.adapters.add / addBool / addSingleVal / addMinMax` exist with the same signatures, `$('form').valid()` works. It is not run automatically; call `parse` on ready (and after AJAX), like `jquery.validate.unobtrusive.js` asked you to.
+
 ### Server errors: one reader for every backend
 
 `FormValidator.serverErrors(body)` turns what your backend answered into `{ errors, all, form }`, whatever framework wrote it. It never throws; unreadable input gives empty results.
@@ -349,6 +373,7 @@ Options inside `config`:
 | `validClass` | `''` | Class for a field that holds a valid value (`'is-valid'`); appears while typing, an error never does |
 | `rewardOnInput` | `true` | `false`: `validClass` only after a real check |
 | `errorSummary` | `false` | `true`, a selector, an element or `{ container, title, focus, withLabel, headingLevel, className }`: the accessible list of all problems |
+| `unobtrusive` | `false` | Read ASP.NET `data-val-*` attributes and use `data-valmsg-for` / `data-valmsg-summary` (see ASP.NET MVC and Razor) |
 | `autoAttributes` | `false` | `true` or `{ type, inputmode, autocomplete, ariaRequired, lint }`: set autofill and keyboard attributes, lint the markup |
 | `debounce` | `150` | Milliseconds to wait while typing before re-checking a field that has an error |
 | `errorElement` | `'div'` | Tag used for the message |
@@ -839,6 +864,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.13.0**: ASP.NET `data-val-*` (unobtrusive validation): `unobtrusive: true`, `FormValidator.unobtrusive.parse()` / `.auto()` / `.adapters`, `$.validator.unobtrusive` on the jQuery layer.
 - **2.12.0**: `validateOn` presets (`'smart'`, `'blur'`, `'input'`, `'submit'`, `'all'`; an `'input'` entry now works) and `validClass` (reward early, punish late); stable error codes (`data-code`, `code` in `getErrors()`, `checkValue`, schema issues, a rule's own `code`); `errorSummary` (accessible list with links and focus); `autoAttributes` and `inst.lint()`.
 - **2.11.0**: `FormValidator.serverErrors()` (any backend's validation answer), `precognition()` / `validateOnServer()` / `watchServer()`, `action()` for React 19 and Server Actions, `setServerErrors()`; `setErrors()` matches `items.0.qty` to `items[0].qty`.
 - **2.10.0**: `FormValidator.parseFormData()`, `FormValidator.ruleNames()`, a ReDoS fuzz test for every rule.

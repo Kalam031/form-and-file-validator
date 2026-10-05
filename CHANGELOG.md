@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.11.0
+- **ASP.NET MVC / Razor unobtrusive validation** (FormValidator 2.13.0): `FormValidator.unobtrusive.auto()` (or `parse()`, or `unobtrusive: true`) validates Razor forms from the `data-val-*` attributes the model produces: `required`, `length`, `minlength`, `maxlength`, `range`, `regex`, `equalto` (with `*.` model prefixes), `email`, `url`, `phone`, `creditcard`, `number`, `digits`, `date`, `fileextensions` and `remote` (GET query string or POST form body, `additionalfields`, server message wins). Messages come from your model; `data-valmsg-for`, `data-valmsg-replace`, `data-valmsg-summary` and the `field-validation-*`, `input-validation-*`, `validation-summary-*` classes work as before. Custom adapters use `adapters.add / addBool / addSingleVal / addMinMax`; the jQuery layer gets `$.validator.unobtrusive.parse` and the same adapters, so `jquery.validate.unobtrusive.js` can be removed. Bad adapters, unknown `data-val-*` and regexes JavaScript cannot compile are reported once and ignored.
+- jQuery layer: rules that do not come from jQuery-style settings no longer break message selection.
+
 ## 3.10.0
 - **Reward early, punish late** (FormValidator 2.12.0): `validateOn` takes presets (`'smart'` is the default behaviour, `'blur'` never nags fields that were only tabbed through, `'input'`, `'submit'`, `'all'`), and `validClass: 'is-valid'` marks a field valid as soon as its value is, while typing; an error is still shown only after the user leaves the field. An `'input'` entry in a `validateOn` list used to be ignored for fields without an error; it now works.
 - **Stable error codes**: every message has a code that survives translation: the rule type, `badInput`, `server`, or a rule's own `code`. In `data-code`, `getErrors()`, `onError`, `checkValue()`, `checkValues().details` and schema issues.

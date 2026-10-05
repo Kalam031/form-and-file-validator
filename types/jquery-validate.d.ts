@@ -1,5 +1,5 @@
 // Types for the jQuery Validation compatibility layer (formValidator.jquery.js). Needs @types/jquery in your project.
-import type { RulesForField, MethodFn } from './formValidator';
+import type { RulesForField, MethodFn, UnobtrusiveAdapters } from './formValidator';
 import type { FileValidatorConfig } from './fileValidator';
 
 export namespace JQueryValidate {
@@ -78,6 +78,8 @@ export namespace JQueryValidate {
         methods: Record<string, MethodFn | ((this: Validator, value: any, element: HTMLElement, param: any) => unknown)>;
         classRuleSettings: Record<string, Record<string, unknown>>;
         autoCreateRanges: boolean;
+        /** Replacement for jquery.validate.unobtrusive.js: `parse(selector)` and the adapter helpers. */
+        unobtrusive: { adapters: UnobtrusiveAdapters; parse(selector?: any): JQuery; parseElement(element?: any): void };
         setDefaults(options: Options): void;
         addMethod(name: string, method: (this: Validator, value: any, element: HTMLElement, param: any) => boolean | string | Promise<boolean | string>, message?: string | MessageFn): void;
         addClassRules(name: string, rules: RulesForField): void;

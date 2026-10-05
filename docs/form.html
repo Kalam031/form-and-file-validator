@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.10.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.11.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v2120-documentation">FormValidator v2.12.0 — Documentation</h1>
+<h1 id="formvalidator-v2130-documentation">FormValidator v2.13.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -428,6 +428,24 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 // { valid, errors: { pw2: &#39;Values do not match.&#39; }, details: { pw2: { rule: &#39;equalTo&#39;, message: &#39;...&#39; } } }
 </code></pre>
 <p>No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: <code>trim</code>, <code>values</code> (the other fields), <code>messages</code> (per rule type).</p>
+<h3 id="aspnet-mvc-and-razor-data-val--unobtrusive-validation">ASP.NET MVC and Razor: data-val-* (unobtrusive validation)</h3>
+<p>Drop-in for <code>jquery.validate.unobtrusive.js</code>, without jQuery. Razor renders the model&#39;s attributes (<code>[Required]</code>, <code>[StringLength]</code>, <code>[Range]</code>, <code>[EmailAddress]</code>, <code>[Compare]</code>, <code>[RegularExpression]</code>, <code>[Remote]</code> ...) as <code>data-val-*</code> attributes and <code>data-valmsg-for</code> / <code>data-valmsg-summary</code> placeholders; this reads them, so a Razor form validates in the browser with the messages from your model and no JavaScript of your own.</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;~/Scripts/validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;FormValidator.unobtrusive.auto();&lt;/script&gt;   &lt;!-- every form with data-val fields, now and when added later (partial views, AJAX, modals) --&gt;
+</code></pre>
+<pre tabindex="0"><code class="language-js">FormValidator.unobtrusive.parse();                    // once, for forms that are on the page now (document, a selector or an element)
+FormValidator.unobtrusive.parse(&#39;#modal&#39;, { focusInvalid: false });   // with your own config
+FormValidator.init({ formId: &#39;f&#39;, rules: {}, config: { unobtrusive: true } });   // or for one form
+</code></pre>
+<p>Supported adapters (the ones MVC ships): <code>required</code>, <code>length</code> (<code>min</code> / <code>max</code>), <code>minlength</code>, <code>maxlength</code>, <code>range</code>, <code>regex</code> (the whole value must match, like MVC), <code>equalto</code> (<code>*.Password</code> is resolved against the model prefix of the field, <code>Model.Confirm</code> finds <code>Model.Password</code>), <code>email</code>, <code>url</code>, <code>phone</code>, <code>creditcard</code>, <code>number</code>, <code>digits</code>, <code>date</code>, <code>fileextensions</code>, and <code>remote</code> (<code>url</code>, <code>type</code>, <code>additionalfields</code>; sent as a query string for GET and as a form body for POST, your <code>[Remote]</code> action answers <code>true</code>, <code>false</code> or a message, and a message the server returns replaces the attribute&#39;s).</p>
+<ul>
+<li><strong>Messages</strong> come from the attributes; an empty <code>data-val-x=&quot;&quot;</code> uses the library&#39;s default.</li>
+<li><strong>Markup and classes MVC&#39;s CSS already knows</strong>: the message goes into <code>&lt;span data-valmsg-for=&quot;Email&quot;&gt;</code> (with <code>field-validation-valid</code> / <code>field-validation-error</code>), the field gets <code>input-validation-error</code> / <code>input-validation-valid</code>, <code>data-valmsg-replace=&quot;false&quot;</code> keeps your static text, and <code>&lt;div data-valmsg-summary=&quot;true&quot;&gt;&lt;ul&gt;</code> becomes the list of messages with <code>validation-summary-errors</code> / <code>validation-summary-valid</code>. Your own <code>errorClass</code>, <code>invalidClass</code>, <code>errorElement</code> still win.</li>
+<li><strong>Checkboxes</strong> (<code>CheckBoxFor</code> renders a hidden twin), radio groups, selects, file inputs and optional empty fields work.</li>
+<li><strong>Server errors</strong>: <code>inst.setServerErrors(modelStateJson)</code> reads classic <code>ModelState</code> and ValidationProblemDetails into the same spans.</li>
+<li><strong>Custom adapters</strong> use the API you already know: <code>FormValidator.unobtrusive.adapters.add(&#39;name&#39;, [&#39;p&#39;], options =&gt; { options.rules.myRule = options.params.p; options.messages.myRule = options.message; })</code>, <code>addBool</code>, <code>addSingleVal</code>, <code>addMinMax</code>. The rule itself is registered with <code>FormValidator.addMethod(name, (value, element, param) =&gt; ...)</code> (or <code>registerRule</code>). An adapter that uses a rule that is not registered, an unknown <code>data-val-x</code>, a regex that JavaScript cannot compile and an adapter that throws are each reported once in the console and ignored; the rest of the form keeps working.</li>
+<li><strong>jQuery pages</strong>: <code>$.validator.unobtrusive.parse(selector)</code> and <code>$.validator.unobtrusive.adapters.add / addBool / addSingleVal / addMinMax</code> exist with the same signatures, <code>$(&#39;form&#39;).valid()</code> works. It is not run automatically; call <code>parse</code> on ready (and after AJAX), like <code>jquery.validate.unobtrusive.js</code> asked you to.</li>
+</ul>
 <h3 id="server-errors-one-reader-for-every-backend">Server errors: one reader for every backend</h3>
 <p><code>FormValidator.serverErrors(body)</code> turns what your backend answered into <code>{ errors, all, form }</code>, whatever framework wrote it. It never throws; unreadable input gives empty results.</p>
 <pre tabindex="0"><code class="language-js">const r = FormValidator.serverErrors(await response.json());
@@ -616,6 +634,11 @@ if (!result.success) result.errors.email;       // string | undefined, a misspel
 <td><code>errorSummary</code></td>
 <td><code>false</code></td>
 <td><code>true</code>, a selector, an element or <code>{ container, title, focus, withLabel, headingLevel, className }</code>: the accessible list of all problems</td>
+</tr>
+<tr>
+<td><code>unobtrusive</code></td>
+<td><code>false</code></td>
+<td>Read ASP.NET <code>data-val-*</code> attributes and use <code>data-valmsg-for</code> / <code>data-valmsg-summary</code> (see ASP.NET MVC and Razor)</td>
 </tr>
 <tr>
 <td><code>autoAttributes</code></td>
@@ -1416,6 +1439,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.13.0</strong>: ASP.NET <code>data-val-*</code> (unobtrusive validation): <code>unobtrusive: true</code>, <code>FormValidator.unobtrusive.parse()</code> / <code>.auto()</code> / <code>.adapters</code>, <code>$.validator.unobtrusive</code> on the jQuery layer.</li>
 <li><strong>2.12.0</strong>: <code>validateOn</code> presets (<code>&#39;smart&#39;</code>, <code>&#39;blur&#39;</code>, <code>&#39;input&#39;</code>, <code>&#39;submit&#39;</code>, <code>&#39;all&#39;</code>; an <code>&#39;input&#39;</code> entry now works) and <code>validClass</code> (reward early, punish late); stable error codes (<code>data-code</code>, <code>code</code> in <code>getErrors()</code>, <code>checkValue</code>, schema issues, a rule&#39;s own <code>code</code>); <code>errorSummary</code> (accessible list with links and focus); <code>autoAttributes</code> and <code>inst.lint()</code>.</li>
 <li><strong>2.11.0</strong>: <code>FormValidator.serverErrors()</code> (any backend&#39;s validation answer), <code>precognition()</code> / <code>validateOnServer()</code> / <code>watchServer()</code>, <code>action()</code> for React 19 and Server Actions, <code>setServerErrors()</code>; <code>setErrors()</code> matches <code>items.0.qty</code> to <code>items[0].qty</code>.</li>
 <li><strong>2.10.0</strong>: <code>FormValidator.parseFormData()</code>, <code>FormValidator.ruleNames()</code>, a ReDoS fuzz test for every rule.</li>

@@ -107,6 +107,8 @@ export interface FormConfig {
     rewardOnInput?: boolean;
     /** An accessible list of all problems with links to the fields, focused after a failed submit. true builds one at the top of the form; or pass a container (selector / element) or options. */
     errorSummary?: boolean | string | HTMLElement | { container?: string | HTMLElement; title?: string; focus?: 'summary' | 'field'; withLabel?: boolean; headingLevel?: 1 | 2 | 3 | 4 | 5 | 6; className?: string };
+    /** Read ASP.NET MVC / Razor data-val-* attributes (`required`, `length`, `range`, `regex`, `equalto`, `remote` ...), `data-valmsg-for`, `data-valmsg-summary` and the field-validation-* / input-validation-* classes. */
+    unobtrusive?: boolean;
     /** Sets type / inputmode / autocomplete / aria-required from the rules and field names (never overriding what you wrote) and warns about autocomplete="off" and type="number" misuse. */
     autoAttributes?: boolean | { type?: boolean; inputmode?: boolean; autocomplete?: boolean; ariaRequired?: boolean; lint?: boolean };
     debounce?: number;
@@ -396,6 +398,36 @@ export type FormAction<R extends Record<string, RulesForField>, T> =
     ((previous: ActionState<R, T> | null | undefined, formData: FormData | Record<string, unknown> | null | undefined) => Promise<ActionState<R, T>>)
     & { readonly initialState: ActionState<R, T> };
 
+/** What an unobtrusive adapter function receives (the shape of `$.validator.unobtrusive.adapters`). */
+export interface UnobtrusiveOptions {
+    element: HTMLElement;
+    form: HTMLFormElement;
+    /** The data-val-<adapter> text, undefined when empty. */
+    message: string | undefined;
+    /** data-val-<adapter>-<param> values. */
+    params: Record<string, string | undefined>;
+    /** Fill these: rule name -> parameter (true for a flag). */
+    rules: Record<string, unknown>;
+    messages: Record<string, string | undefined>;
+    /** The model prefix of the field name ('Model.' for 'Model.Email'), for resolving '*.Other'. */
+    prefix: string;
+    /** The current values of the form, by field name. */
+    collect(): FormValues;
+}
+export interface UnobtrusiveAdapters {
+    add(name: string, params: string[] | ((options: UnobtrusiveOptions) => void), fn?: (options: UnobtrusiveOptions) => void): UnobtrusiveAdapters;
+    addBool(name: string, ruleName?: string): UnobtrusiveAdapters;
+    addSingleVal(name: string, attribute?: string, ruleName?: string): UnobtrusiveAdapters;
+    addMinMax(name: string, minRule: string, maxRule: string, minMaxRule: string, minAttribute?: string, maxAttribute?: string): UnobtrusiveAdapters;
+}
+export interface FormValidatorUnobtrusive {
+    adapters: UnobtrusiveAdapters;
+    /** Starts every form under `scope` (document, selector or element) that holds data-val="true" fields. Returns the instances. */
+    parse(scope?: string | Element | Document | null, config?: Partial<FormConfig>): FormInstance[];
+    /** parse() when the page is ready and for forms added later. Returns a function that stops it. */
+    auto(config?: Partial<FormConfig>): () => void;
+}
+
 export interface FormValidatorStatic {
     readonly version: string;
     /**
@@ -409,6 +441,8 @@ export interface FormValidatorStatic {
      * `coerce: true` turns "42", "3.5", "true", "false" into numbers and booleans. Unsafe keys (`__proto__`, indexes above 999, over 20 levels) are dropped.
      */
     parseFormData(input: HTMLFormElement | FormData | URLSearchParams | Iterable<readonly [string, unknown]> | Record<string, unknown> | null | undefined, options?: { coerce?: boolean }): Record<string, any>;
+    /** ASP.NET MVC / Razor `data-val-*` support (a drop-in for jquery.validate.unobtrusive.js, no jQuery needed). */
+    readonly unobtrusive: FormValidatorUnobtrusive;
     /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */
     serverErrors(body: unknown, options?: { format?: ServerErrorFormat }): ServerErrorsResult;
     /** Asks your real endpoint whether the values would pass (Laravel Precognition protocol); nothing is saved. Never throws. */

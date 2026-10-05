@@ -491,6 +491,7 @@
                 skipEmptyUntilSubmit: true,
                 debounce: 0,
                 errorElement: s.errorElement,
+                unobtrusive: !!s.unobtrusive,   // read ASP.NET data-val-* attributes and use data-valmsg-for / data-valmsg-summary
                 errorClass: s.errorClass,
                 pendingClass: s.pendingClass,   // jQuery Validation adds "pending" to a field while a remote check runs
                 invalidClass: '',
@@ -499,6 +500,7 @@
                 skipSubmitter: '.cancel',
                 fieldRules: field => self._coreRules(field),
                 resolveMessage: (rule, env, dynamic) => {
+                    if (!rule.method) return '';   // a rule that did not come from jQuery-style settings (ASP.NET data-val-*): the engine picks its message
                     // a message the developer wrote for this field wins over FileValidator's detailed one; server (remote) messages always win
                     if (dynamic && rule.method === 'fileValidator' && self._hasCustomMessage(env.field, rule.method)) dynamic = null;
                     return dynamic || self.defaultMessage(env.field, { method: rule.method, parameters: rule.param });
@@ -730,6 +732,25 @@
 
     // ------------------------------------------------------------------ jQuery plugin surface
     $.validator = Validator;
+
+    /**
+     * ASP.NET MVC's jquery.validate.unobtrusive replacement: $.validator.unobtrusive.parse(selector) validates the forms that hold data-val="true" fields from their
+     * data-val-* attributes (messages, data-valmsg-for, data-valmsg-summary and the input-validation-* / field-validation-* classes work as before), and
+     * $.validator.unobtrusive.adapters.add / addBool / addSingleVal / addMinMax are the same helpers, so custom adapters keep working.
+     */
+    Validator.unobtrusive = {
+        adapters: FV.unobtrusive.adapters,
+        parse(selector) {
+            const $scope = $(selector === undefined ? D() : selector);
+            const forms = $scope.find('form').addBack('form').add($scope.closest('form')).toArray().filter((f, i, a) => a.indexOf(f) === i);
+            forms.forEach(form => {
+                if (!form.querySelector('[data-val="true"]')) return;
+                if (!$.data(form, 'validator')) $(form).validate({ unobtrusive: true, errorClass: 'input-validation-error', validClass: 'input-validation-valid', errorElement: 'span' });
+            });
+            return $scope;
+        },
+        parseElement() { /* rules are read from the attributes when a field is checked; nothing to do */ }
+    };
 
     $.extend($.fn, {
         validate(options) {
