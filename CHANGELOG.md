@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.28.0
+- **`FormValidator.devtools(form)`**: a live inspector panel with each field's value, pristine / dirty / touched / pending state, error message and error code. Built only from `textContent`, removed with `destroy()`.
+- **Fuzz tests for FileValidator**: 600 seeded mutations (truncated, bit-flipped, spliced, polyglot-appended) of every file family plus hand-made hostile inputs; the validator must never throw or hang.
+
 ## 3.27.0
 - **Rules from your backend**: `FormValidator.load(url)` and `initFromUrl(formId, url)` read rules (or a JSON Schema / OpenAPI component) served by the server.
 - **Testing helpers** (`form-and-file-validator/testing`): `fill`, `submit`, `fillAndSubmit`, `settle`, `errors`, `expectError`, `expectValid`, `fakeFetch`.

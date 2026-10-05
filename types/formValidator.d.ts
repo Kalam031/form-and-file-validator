@@ -592,6 +592,8 @@ export interface FormValidatorStatic {
     /** Check an initialised form, or any form against ad-hoc rules. */
     validate(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): Promise<boolean>;
     getInstance(form: string | HTMLFormElement): FormInstance | null;
+    /** A live panel showing every field's value, state, error and error code. Needs a started form and a DOM; otherwise `element` is null. */
+    devtools(form: string | HTMLFormElement, options?: { container?: HTMLElement }): { element: HTMLElement | null; refresh(): void; destroy(): void };
     /** jQuery valid() without jQuery: true / false right now (shows the errors). Remote and file checks count as valid until they answer; validate() waits for them. */
     isValid(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): boolean;
     /**

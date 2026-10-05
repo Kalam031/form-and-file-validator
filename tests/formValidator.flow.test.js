@@ -245,3 +245,19 @@ test('explain: every rule in order, failures with messages, skips with reasons',
     assert.deepEqual(FormValidator.explain('x', 'email').map(x => x.rule), ['email']);
     assert.deepEqual(FormValidator.explain('x', null), []);
 });
+
+test('devtools: shows live state, escapes hostile text, and removes itself', async () => {
+    const form = mount('<input name="email" required type="email"><input name="x" value="<img src=x onerror=alert(1)>">');
+    FormValidator.init({ form, rules: { email: { required: true, email: true } } });
+    const dt = FormValidator.devtools(form);
+    assert.ok(dt.element && document.body.contains(dt.element));
+    assert.match(dt.element.textContent, /email/);
+    form.elements.email.value = 'nope'; fire(form.elements.email, 'input'); fire(form.elements.email, 'blur'); fire(form.elements.email, 'focusout');
+    await FormValidator.validate(form);
+    await settle();
+    assert.match(dt.element.textContent, /error/);
+    assert.equal(dt.element.querySelector('img'), null);
+    dt.destroy();
+    assert.equal(document.body.contains(dt.element), false);
+    assert.equal(FormValidator.devtools('missing-form').element, null);
+});

@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.27.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.28.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -1443,6 +1443,8 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 form.addEventListener(&#39;fv:valid&#39;, () =&gt; console.log(&#39;valid&#39;));
 </code></pre>
 <p><strong>Submitting.</strong> With no <code>submitHandler</code>, a valid form is submitted with <code>form.requestSubmit()</code>, so the button that was clicked, its name and value, and your other submit listeners are all preserved. With <code>submitHandler</code>, only your function runs.</p>
+<h3 id="devtools-panel">Devtools panel</h3>
+<p><code>FormValidator.devtools(form, { container })</code> shows a live panel with every field&#39;s value, pristine / dirty / touched / pending state, error message and error code, plus the form&#39;s error count and submit count. It updates through <code>onStateChange</code>, only uses <code>textContent</code>, and <code>destroy()</code> removes it. Without a started form or a DOM, <code>element</code> is <code>null</code>. Use it in development only.</p>
 <h2 id="jquery-style-api-on-the-native-engine">jQuery-style API on the native engine</h2>
 <p>If you know the jQuery Validation plugin, the native <code>FormValidator</code> speaks the same language, without jQuery.</p>
 <p><strong>Scalar rule parameters</strong></p>

@@ -954,6 +954,10 @@ form.addEventListener('fv:valid', () => console.log('valid'));
 
 **Submitting.** With no `submitHandler`, a valid form is submitted with `form.requestSubmit()`, so the button that was clicked, its name and value, and your other submit listeners are all preserved. With `submitHandler`, only your function runs.
 
+### Devtools panel
+
+`FormValidator.devtools(form, { container })` shows a live panel with every field's value, pristine / dirty / touched / pending state, error message and error code, plus the form's error count and submit count. It updates through `onStateChange`, only uses `textContent`, and `destroy()` removes it. Without a started form or a DOM, `element` is `null`. Use it in development only.
+
 ## jQuery-style API on the native engine
 
 If you know the jQuery Validation plugin, the native `FormValidator` speaks the same language, without jQuery.

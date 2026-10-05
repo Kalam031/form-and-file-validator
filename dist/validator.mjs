@@ -1,4 +1,4 @@
-/*! FormValidator 2.15.0 + FileValidator 2.11.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.16.0 + FileValidator 2.11.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
@@ -2488,9 +2488,10 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.15.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.16.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.16.0 FormValidator.devtools(form): a live panel (value, pristine/dirty/touched/pending, error and code per field).
  *   2.15.0 registerRule(name, fn, { raw: true }) keeps a value untrimmed (pwcheck and the password add-on use it). Rules requiredIf, dateAfter, dateBefore, atLeastOne, sumEquals (other fields come from the form, options.values or the data). inst.state / getState() / onStateChange():
  *          touched, dirty, pending, errors, submit count. inst.validateStep(scope) for wizards. FormValidator.explain(value, rules): why a value passes or fails, rule by rule.
  *   2.14.0 Field arrays and nested data: path keys ('user.email', 'items[0].qty') and wildcards ('items[].qty') in checkValues / schema / forms; rules unique, minItems, maxItems;
@@ -4640,6 +4641,41 @@ const api = (function (root) {
      * Form attributes: data-fv-config='{"errorSummary":true,"validClass":"is-valid"}' (any config as JSON). Forms added later are picked up. Returns a function that stops it.
      * Add data-fv-auto to the script tag that loads the bundle to run it by itself.
      */
+    function devtools(target, opts) {
+        opts = opts || {};
+        const inst = api.getInstance(target);
+        if (!inst || typeof document === 'undefined') return { element: null, refresh() {}, destroy() {} };
+        const el = document.createElement('div');
+        el.setAttribute('data-fv-devtools', '');
+        el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'FormValidator devtools');
+        el.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:2147483647;max-width:90vw;max-height:50vh;overflow:auto;background:#111;color:#eee;font:12px/1.4 monospace;padding:8px;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.5)';
+        const cell = (tr, text, color) => { const td = document.createElement('td'); td.textContent = text; td.style.cssText = 'padding:1px 8px;white-space:nowrap' + (color ? ';color:' + color : ''); tr.appendChild(td); };
+        const show = v => { try { const t = typeof v === 'string' ? v : JSON.stringify(v); return t === undefined ? '' : (t.length > 40 ? t.slice(0, 40) + '…' : t); } catch (e) { return String(v); } };
+        function refresh() {
+            const st = inst.getState();
+            el.textContent = '';
+            const head = document.createElement('div');
+            head.textContent = (st.valid ? 'valid' : st.errorCount + ' error(s)') + ' · submits: ' + st.submitCount + (st.validating ? ' · validating…' : '') + (st.dirty ? ' · dirty' : '');
+            head.style.cssText = 'font-weight:bold;margin-bottom:4px;color:' + (st.valid ? '#7ee787' : '#ff7b72');
+            el.appendChild(head);
+            const table = document.createElement('table');
+            Object.keys(st.fields).forEach(name => {
+                const f = st.fields[name], tr = document.createElement('tr');
+                cell(tr, name, '#79c0ff'); cell(tr, show(f.value));
+                cell(tr, [f.dirty ? 'dirty' : 'pristine', f.touched ? 'touched' : '', f.pending ? 'pending' : ''].filter(Boolean).join(' '), '#8b949e');
+                cell(tr, f.valid === false ? (f.code ? f.code + ': ' : '') + (f.error || 'invalid') : (f.valid ? 'ok' : ''), f.valid === false ? '#ff7b72' : '#7ee787');
+                table.appendChild(tr);
+            });
+            el.appendChild(table);
+        }
+        refresh();
+        const off = inst.onStateChange(refresh);
+        const parent = opts.container || document.body;
+        if (opts.container) el.style.position = 'static';
+        parent.appendChild(el);
+        return { element: el, refresh, destroy() { off(); if (el.parentNode) el.parentNode.removeChild(el); } };
+    }
+
     function auto(config) {
         const doc = root.document;
         if (!doc) return () => {};
@@ -5761,7 +5797,7 @@ const api = (function (root) {
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.15.0'
+        version: '2.16.0'
     }, CORE ? {} : {
         init,
         initFromUrl,   // async (formId, url, { config, messages }) -> instance: load() the rules and start the form
@@ -5774,7 +5810,8 @@ const api = (function (root) {
         addClassRules,
         setDefaults: obj => Object.assign(DEFAULTS, obj),
         defaults: DEFAULTS,             // mutable global defaults
-        getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; }
+        getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
+        devtools      // (form, { container }) -> { element, refresh, destroy }: a live panel with every field's value, state, error and error code
     });
     // the language messages are written in (set by FVLocales.use); plural categories in ICU messages follow it
     Object.defineProperty(api, 'locale', { get: () => LOCALE.code, set: c => { LOCALE.code = String(c || 'en'); }, enumerable: true });
@@ -8473,7 +8510,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.11.0","fileValidator.widget":"1.4.0","fileValidator.upload":"1.0.0","formValidator":"2.15.0","formValidator.element":"1.0.0","formValidator.password":"1.0.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.11.0","fileValidator.widget":"1.4.0","fileValidator.upload":"1.0.0","formValidator":"2.16.0","formValidator.element":"1.0.0","formValidator.password":"1.0.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;
