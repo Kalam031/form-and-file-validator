@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.21.0",
+  "version": "3.22.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
@@ -35,6 +35,10 @@
     "./form": {
       "types": "./types/formValidator.d.ts",
       "default": "./dist/formValidator.js"
+    },
+    "./upload": {
+      "types": "./types/fileValidator.d.ts",
+      "default": "./dist/fileValidator.upload.js"
     },
     "./file": {
       "types": "./types/fileValidator.d.ts",
@@ -165,6 +169,8 @@
     "@koa/multer": "^4.0.0",
     "@koa/router": "^15.7.0",
     "@standard-schema/spec": "^1.1.0",
+    "@tus/file-store": "^2.1.1",
+    "@tus/server": "^2.4.5",
     "@types/jquery": "^4.0.1",
     "@types/react": "^19.3.0",
     "alpinejs": "^3.17.4",

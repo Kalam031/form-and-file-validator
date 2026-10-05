@@ -10,6 +10,12 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 function start() {
     return new Promise(resolve => {
         const server = http.createServer((req, res) => {
+            if (req.method === 'POST' || req.method === 'PUT') {   // upload endpoint for the browser tests: counts the bytes it receives, slowly, so progress events are visible
+                let size = 0;
+                req.on('data', c => { size += c.length; });
+                req.on('end', () => { setTimeout(() => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ size, method: req.method })); }, 30); });
+                return;
+            }
             const url = decodeURIComponent(req.url.split('?')[0]);
             const file = path.normalize(path.join(ROOT, url === '/' ? 'index.html' : url));
             if (!file.startsWith(ROOT)) { res.writeHead(403); return res.end('no'); }

@@ -425,6 +425,44 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
 
 **Accessibility.** The list, the live regions, the remove buttons and the focus handling are covered in `Accessibility.md`. Keep the file input available: dragging is not possible with a keyboard.
 
+## Uploading: progress, cancel, retry, direct-to-storage and resumable
+
+A file that passed validation still has to get there. `FileValidator.upload(file, options)` (the upload add-on, part of the bundle; `dist/fileValidator.upload.js` on its own) sends it and returns a Promise with `abort()`:
+
+```js
+const up = FileValidator.upload(file, {
+  url: '/upload', fields: { folder: 'avatars' }, headers: { 'X-CSRF': token },
+  onProgress: p => { bar.value = p.percent; },        // { loaded, total, percent }
+  retries: 3                                          // 5xx, 408, 429 and network errors, with backoff
+});
+cancelButton.onclick = () => up.abort();
+try { const { status, body } = await up; } catch (e) { e.code; /* 'ABORTED' | 'NETWORK' | 'TIMEOUT' | 'HTTP' (e.status, e.response) | 'INVALID' | 'PROTOCOL' */ }
+```
+
+- **Transport**: `XMLHttpRequest` in browsers (real upload progress), `fetch` in Node 18+ and workers (progress at the start and the end only). A multipart POST by default (`fieldName` 'file', extra `fields`), `method: 'PUT'` or `raw: true` sends the file itself as the body.
+- **Retry**: network errors, timeouts, 408, 409, 423, 429 and 5xx are retried `retries` times (3) with exponential backoff and jitter; `Retry-After` is honoured. Other 4xx answers are not retried. `retryDelayMs`, `retryOn(error, attempt)` and `onRetry({ attempt, delayMs, error })` tune it; an abort stops it at once, also during a wait.
+- **`validate`**: pass a FileValidator config and the file is checked first; an invalid file is not sent (`code: 'INVALID'`, `errors`).
+- **Direct to storage (S3, GCS, Azure, R2)**: let your server sign one URL per file and send the bytes there, so they never pass through your server.
+
+```js
+// a presigned PUT
+FileValidator.upload(file, { presign: async f => ({ url: await api.signPut(f.name, f.type), method: 'PUT', headers: { 'Content-Type': f.type } }) });
+// a presigned POST policy: the policy fields are sent before the file, as S3 requires
+FileValidator.upload(file, { presign: async f => { const p = await api.signPost(f.name); return { url: p.url, method: 'POST', fields: p.fields, fileField: 'file' }; } });
+```
+
+- **Resumable uploads (tus 1.0.0)**: for big files and bad connections. Works with tusd, `@tus/server`, Uppy's tus servers, Cloudflare Stream, Vimeo and every other tus endpoint (tested against the official `@tus/server`).
+
+```js
+const t = FileValidator.upload(file, { tus: { endpoint: '/files', chunkSize: 5 * 1024 * 1024, metadata: { owner: userId } }, onProgress });
+t.pause(); t.resume();     // stops the request in flight, continues from the offset the server reports
+await t;                   // { url, size, offset }
+```
+
+  The upload is created with `Upload-Length` and metadata, sent in `PATCH` chunks, and each chunk is retried at the offset the server reports (a 409 is answered with a `HEAD`). The location is remembered in `localStorage` under a fingerprint of the file (name, size, date, type, endpoint), so after a closed tab, a crash or a reload the same file **continues where it stopped**; an upload the server no longer knows (404 / 410) starts over, and the entry is removed after success. `resume: false` keeps it to the current page; `headers` can be a function (fresh tokens); `onChunkComplete(bytes, offset, total)`.
+
+For a whole selection, call `upload()` for each accepted file (the upload widget's `zone.files`), limit the concurrency yourself, and use `signal` to cancel them together. Remember the server decides: see the upload security checklist.
+
 ## Photos and privacy
 
 A photo from a phone carries more than the picture: the camera and phone model, the exact time, often the **GPS position** where it was taken, sometimes the name of the person who edited it. If you store or publish uploads, strip it first. `FileValidator` does it on the bytes of the file, without re-encoding, so the picture stays identical and there is no quality loss. It works for JPEG, PNG and WebP, in the browser and in Node.

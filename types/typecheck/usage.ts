@@ -399,3 +399,14 @@ import { FvFormController } from '../lit';
     pi.markSaved();
     void [k, reason, verdict.bot];
 }
+
+// ---------------------------------------------------------------- upload
+{
+    const task = FileValidator.upload(new File([], 'a.bin'), {
+        url: '/upload', fields: { a: 'b' }, onProgress: p => { const n: number = p.percent; void n; }, retries: 2,
+        tus: { endpoint: '/files', chunkSize: 1024 * 1024, metadata: { owner: 'x' } }
+    });
+    task.pause(); task.resume(); task.abort();
+    task.then(r => { const s: number = r.status; void s; }).catch((e: unknown) => { if (e instanceof FileValidator.UploadError) { const c: string = e.code; void c; } });
+    FileValidator.upload(new File([], 'b'), { presign: async f => ({ url: '/u/' + (f as File).name, method: 'PUT' }) });
+}

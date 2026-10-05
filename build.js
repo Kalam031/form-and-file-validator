@@ -19,6 +19,7 @@ const DIST = path.join(ROOT, 'dist');
 const PARTS = [
     { name: 'fileValidator', file: 'fileValidator.js' },
     { name: 'fileValidator.widget', file: 'fileValidator.widget.js' },
+    { name: 'fileValidator.upload', file: 'fileValidator.upload.js' },
     { name: 'formValidator', file: 'formValidator.js' },
     { name: 'formValidator.element', file: 'formValidator.element.js' },
     { name: 'formValidator.password', file: 'formValidator.password.js' },
@@ -59,6 +60,7 @@ ${wrapped}
 
     var FileValidator = run('fileValidator');
     run('fileValidator.widget');                 // adds widget(), resizeImage(), filesFromDrop() ... to FileValidator
+    run('fileValidator.upload');                 // adds upload(): progress, cancel, retry, presigned and tus uploads
     var FormValidator = run('formValidator');
     run('formValidator.element');                // <fv-field> (registers itself when the browser has custom elements)
     run('formValidator.password');               // passwordStrength(), pwned(), the pwscore and pwned rules (before the locale registry, so its messages are translated)

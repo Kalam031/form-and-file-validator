@@ -581,6 +581,28 @@ for (const b of BROWSERS) {
             await axeRun(page, 'demo-jquery.html (with errors)');
         }, '/demo-jquery.html');
 
+        // ============================================================ FileValidator.upload
+        it2('upload: real XMLHttpRequest progress, the result, retry-free abort and a presigned PUT', async page => {
+            const r = await page.evaluate(async () => {
+                const file = new File([new Uint8Array(24 * 1024 * 1024)], 'big.bin');
+                const steps = [];
+                const done = await FileValidator.upload(file, { url: '/upload-test', onProgress: p => steps.push(p.percent) });
+                const put = await FileValidator.upload(file, { presign: async () => ({ url: '/put-test', method: 'PUT' }) });
+                const up = FileValidator.upload(file, { url: '/upload-test' });
+                setTimeout(() => up.abort(), 5);
+                let aborted = false;
+                try { await up; } catch (e) { aborted = e.aborted === true; }
+                return { size: done.body.size, steps, putSize: put.body.size, putMethod: put.body.method, aborted };
+            });
+            assert.ok(r.size >= 24 * 1024 * 1024, 'the multipart body holds the file: ' + r.size);
+            assert.equal(r.steps[r.steps.length - 1], 100);
+            assert.ok(r.steps.length >= 1, 'progress was reported: ' + r.steps.join(','));   // loopback is so fast that Chromium may send one event; slower links give many
+            assert.ok(r.steps.every((v, i) => i === 0 || v >= r.steps[i - 1]));
+            assert.equal(r.putSize, 24 * 1024 * 1024);
+            assert.equal(r.putMethod, 'PUT');
+            assert.equal(r.aborted, true);
+        });
+
         // ============================================================ <fv-field>
         it2('<fv-field>: the rules become native validity: blocked submit, our message instead of the bubble, :user-invalid, and the cross-field rule', async page => {
             await setup(page, `<form id="f"><input type="password" name="pw" id="pw"><fv-field rules="required equalTo:pw"><label for="c">Confirm</label><input type="password" id="c" name="c"></fv-field>

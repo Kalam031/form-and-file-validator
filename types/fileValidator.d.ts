@@ -192,6 +192,49 @@ export interface GuardHandle {
     unbind(): void;
 }
 
+export interface UploadProgress { loaded: number; total: number; percent: number }
+export interface UploadTarget { url: string; method?: string; headers?: Record<string, string>; fields?: Record<string, string>; fileField?: string }
+export interface UploadResult { status: number; headers: Record<string, string>; body: any; url: string; response?: { status: number; headers: Record<string, string>; text: string }; offset?: number; size?: number }
+export declare class UploadError extends Error {
+    /** 'ABORTED' | 'NETWORK' | 'TIMEOUT' | 'HTTP' | 'INVALID' | 'PROTOCOL' */
+    code: string;
+    status?: number;
+    response?: { status: number; headers: Record<string, string>; text: string };
+    errors?: string[];
+    readonly aborted: boolean;
+}
+export interface UploadOptions {
+    url?: string;
+    method?: string;
+    fieldName?: string;
+    fields?: Record<string, string>;
+    headers?: Record<string, string> | ((file: File | Blob) => Record<string, string>);
+    withCredentials?: boolean;
+    timeout?: number;
+    responseType?: 'json' | 'text';
+    onProgress?: (progress: UploadProgress) => void;
+    signal?: AbortSignal;
+    retries?: number;
+    retryDelayMs?: number;
+    retryOn?: (error: UploadError, attempt: number) => boolean;
+    onRetry?: (info: { attempt: number; delayMs: number; error: UploadError }) => void;
+    /** Direct-to-storage: ask your server to sign a URL (PUT) or a POST policy (fields) for this file. */
+    presign?: (file: File | Blob) => Promise<UploadTarget>;
+    /** Send the file itself as the body even for POST. */
+    raw?: boolean;
+    /** Resumable upload to a tus 1.0.0 endpoint. */
+    tus?: { endpoint: string; chunkSize?: number; headers?: Record<string, string> | ((file: File | Blob) => Record<string, string>); metadata?: Record<string, string>; resume?: boolean; storage?: 'local' | false; withCredentials?: boolean; timeout?: number; onChunkComplete?: (bytes: number, offset: number, total: number) => void };
+    /** A FileValidator config: the file is checked first and an invalid one is not sent. */
+    validate?: FileValidatorConfig;
+    fetch?: (url: string, init?: any) => Promise<any>;
+}
+export interface UploadTask extends Promise<UploadResult> {
+    abort(): void;
+    /** tus only. */
+    pause(): void;
+    resume(): void;
+}
+
 export interface FileValidatorStatic {
     readonly version: string;
     validateFiles(files: FilesInput, config?: FileValidatorConfig): Promise<ValidationResult>;
@@ -232,6 +275,9 @@ export interface FileValidatorStatic {
     getPath(file: File): string;
     isIgnored(file: File, ignoreFiles: boolean | Array<string | RegExp>): boolean;
     /** What the content is, whatever the name or file.type says: { type, mime, extensions, executable }, null when no known signature matches, undefined when the file cannot be read. */
+    /** Sends a file: progress, cancel, retry, presigned and tus uploads (upload add-on: bundle or fileValidator.upload.js). Returns a Promise with abort() (and pause() / resume() for tus). */
+    upload(file: File | Blob, options: UploadOptions): UploadTask;
+    readonly UploadError: typeof UploadError;
     detect(file: File): Promise<{ type: string; mime: string | null; extensions: string[]; executable: boolean } | null | undefined>;
     /** A file name that is safe to store and to show: no path, bidi / control characters or reserved names, bounded length, only the last dot. */
     safeName(name: unknown, options?: { replacement?: string; maxLength?: number; lowercase?: boolean; ascii?: boolean; dots?: 'replace' | 'keep'; fallback?: string; extensionMaxLength?: number }): string;

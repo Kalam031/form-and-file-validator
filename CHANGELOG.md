@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.22.0
+- **Upload add-on** (`FileValidator.upload()`, `dist/fileValidator.upload.js` 1.0.0, in the bundle): send a validated file with real progress (XMLHttpRequest in browsers, fetch in Node), `abort()`, retries with backoff (5xx, 408, 429, network, `Retry-After`), a `validate` check first, **direct-to-storage uploads** (presigned PUT and presigned POST policies for S3, GCS, Azure, R2) and **resumable uploads over tus 1.0.0** (chunks, `pause()` / `resume()`, resume after a closed tab through a fingerprint in `localStorage`, an upload the server forgot starts over). Tested against a small server of our own and the official `@tus/server`, and in Chromium, Firefox and WebKit.
+
 ## 3.21.0
 - **Bots**: `antiBot: { honeypot, minTime, timestampField, onBot }` adds a hidden trap field and a minimum time; a bot's submit is dropped silently and reported through `onBot`, `fv:bot` and `inst.botReason()`. `FormValidator.isBotSubmission(body, options)` is the server side.
 - **Idempotency**: `idempotencyKey` gives one key per submission attempt, kept across retries and rotated after a success (`inst.idempotencyKey()`, `idempotencyHeaders()`, or a hidden field).
