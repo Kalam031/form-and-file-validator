@@ -52,6 +52,7 @@
         minItems: "Voeg er minstens {min} toe.",
         maxItems: "Voeg er maximaal {max} toe.",
         requiredIf: "Dit veld is verplicht.",
+        mask: "Vul dit veld volledig in.",
         pwscore: "Kies een sterker wachtwoord.",
         pwned: "Dit wachtwoord is in een datalek opgedoken. Kies een ander wachtwoord.",
         dateAfter: "Voer een latere datum in.",

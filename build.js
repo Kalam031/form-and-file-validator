@@ -84,6 +84,8 @@ ${wrapped}
     else if (typeof module === 'object' && module.exports) module.exports = api;
     else { root.FormValidator = FormValidator; root.FileValidator = FileValidator; root.FVLocales = locales; }
 
+    // <script src="validator.min.js" data-fv-auto></script> starts validators from data-fv attributes by itself
+    try { if (root.document && root.document.currentScript && root.document.currentScript.hasAttribute('data-fv-auto')) FormValidator.auto(); } catch (e) { /* no document */ }
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
 })(typeof self !== 'undefined' ? self : (typeof globalThis !== 'undefined' ? globalThis : this));
 `;

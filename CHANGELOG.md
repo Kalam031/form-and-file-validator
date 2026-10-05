@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.20.0
+- **Input masks**: `FormValidator.mask(input, '(999) 999-9999')` formats while typing (digits, letters, alphanumerics, escapes), keeps the caret when typing in the middle, and handles paste, backspace over literals, IME composition and huge pastes; the `mask` rule checks a complete value (message in all 13 packs), `unmaskValue()` and `maskPattern()` read it back. `<fv-field mask="...">` formats and requires completion.
+- **Declarative forms**: `data-fv="required email"` on fields, `data-fv-config` JSON on the form, `data-fv-mask`, and `FormValidator.auto()` (or `data-fv-auto` on the script tag) start validators on CMS pages and plain HTML with no script of your own; forms added later are picked up. `FormValidator.parseRules(text)` is the shared parser.
+
 ## 3.19.0
 - **Password add-on** (`dist/formValidator.password.js` 1.0.0, in the bundle, `form-and-file-validator/password`): `FormValidator.passwordStrength()` is an offline estimate (score 0 to 4, bits, feedback codes; keyboard runs, repeats, years, common passwords with l33t substitutions and what the site knows about the user), `watchPasswordStrength(input, fn)` feeds a meter, `pwned(password)` asks Have I Been Pwned's range API with k-anonymity (only 5 hash characters are sent, never the password; a built-in SHA-1 covers pages without `crypto.subtle`), and the rules `pwscore` (minimum score, `userFields`) and `pwned` (`maxCount`, `timeout`, `failOpen`) are asynchronous where needed and never trim a password. Messages in all 13 language packs. `registerRule(name, fn, { raw: true })` keeps a value untrimmed for your own rules.
 

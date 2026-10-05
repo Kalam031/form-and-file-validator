@@ -115,6 +115,7 @@
         maxWords: 'Please enter no more than {max} words.',
         unique: 'This value is used more than once.',
         requiredIf: 'This field is required.',
+        mask: 'Please complete this field.',
         dateAfter: 'Please enter a later date.',
         dateBefore: 'Please enter an earlier date.',
         atLeastOne: 'Please fill in at least one of these fields.',
@@ -481,6 +482,69 @@
     });
     R('minItems', (v, r, env) => !env.array || env.array.length >= Number(r.min !== undefined ? r.min : r.param), { runOnEmpty: true });
     R('maxItems', (v, r, env) => !env.array || env.array.length <= Number(r.max !== undefined ? r.max : r.param), { runOnEmpty: true });
+    // ------------------------------------------------------------------ masks: '(999) 999-9999' (9 = digit, a = letter, * = letter or digit, \ escapes) and the text rules in attributes
+    /** Pattern -> tokens [{ t: 'digit' | 'letter' | 'alnum' | 'lit', c }] */
+    function maskTokens(pattern) {
+        const out = [], p = Array.from(String(pattern === null || pattern === undefined ? '' : pattern));
+        for (let i = 0; i < p.length; i++) {
+            const ch = p[i];
+            if (ch === '\\' && i + 1 < p.length) { out.push({ t: 'lit', c: p[++i] }); continue; }
+            out.push(ch === '9' ? { t: 'digit' } : ch === 'a' ? { t: 'letter' } : ch === '*' ? { t: 'alnum' } : { t: 'lit', c: ch });
+        }
+        return out;
+    }
+    const MASK_CLASS = { digit: /[0-9]/, letter: /\p{L}/u, alnum: /[\p{L}0-9]/u };
+    const maskFits = (tok, ch) => MASK_CLASS[tok.t].test(ch);
+    /** The characters a user typed, without the mask's own literals: 'raw' of '(555) 123' is '555123'. */
+    function maskRaw(value, tokens) {
+        const v = Array.from(String(value === null || value === undefined ? '' : value));
+        let vi = 0, raw = '';
+        for (let ti = 0; ti < tokens.length && vi < v.length; ti++) {
+            const tok = tokens[ti];
+            if (tok.t === 'lit') { if (v[vi] === tok.c) vi++; continue; }
+            while (vi < v.length && !maskFits(tok, v[vi])) vi++;
+            if (vi < v.length) raw += v[vi++];
+        }
+        return raw;
+    }
+    /** Raw characters -> the formatted text. Literals appear as soon as the next character has to follow them (or always, with trailing: true). */
+    function maskFormat(raw, tokens, trailing) {
+        const r = Array.from(raw);
+        let ri = 0, out = '', pendingLits = '';
+        for (const tok of tokens) {
+            if (tok.t === 'lit') { pendingLits += tok.c; continue; }
+            while (ri < r.length && !maskFits(tok, r[ri])) ri++;
+            if (ri >= r.length) return trailing ? out + pendingLits : out;
+            out += pendingLits + r[ri++]; pendingLits = '';
+        }
+        return trailing ? out + pendingLits : out;
+    }
+    /** The RegExp a complete masked value matches: maskPattern('(999) 999-9999') -> /^\(\d{3}\) \d{3}-\d{4}$/ */
+    function maskPattern(pattern) {
+        const src = maskTokens(pattern).map(t => t.t === 'lit' ? t.c.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&') : t.t === 'digit' ? '[0-9]' : t.t === 'letter' ? '\\p{L}' : '[\\p{L}0-9]').join('');
+        return new RegExp('^' + src + '$', 'u');
+    }
+    /** The typed characters of a masked value: unmaskValue('(555) 123-4567', '(999) 999-9999') -> '5551234567' */
+    function unmaskValue(value, pattern) { return maskRaw(value, maskTokens(pattern)); }
+    R('mask', (v, r) => { const p = r.pattern || r.param; return !p || maskPattern(p).test(v); });
+
+    // 'required email minlength:3 pattern:^a:b$' | '["required"]' | '{"minlength":3}' -> rules (the format of data-fv attributes and <fv-field rules="">), or null
+    function parseRules(text) {
+        const s = String(text === null || text === undefined ? '' : text).trim();
+        if (!s) return null;
+        if (s.charAt(0) === '[' || s.charAt(0) === '{') {
+            try { return JSON.parse(s); } catch (e) { return null; }
+        }
+        const map = {};
+        s.split(/\s+/).forEach(tok => {
+            const i = tok.indexOf(':');
+            const name = i < 0 ? tok : tok.slice(0, i);
+            if (!name || BAD_KEYS.indexOf(name) >= 0) return;
+            map[name] = i < 0 ? true : tok.slice(i + 1);
+        });
+        return Object.keys(map).length ? map : null;
+    }
+
     // rules that look at other fields: the other values come from checkValue's options.values, or from the form
     const valuesOf = env => env.values || (env.inst && isFn(env.inst.getValues) ? env.inst.getValues() : null);
     /** The other field as trimmed text (checkbox groups joined with ','), undefined when it is not known. */
@@ -650,6 +714,7 @@
         startsWith: p => ({ value: p }), endsWith: p => ({ value: p }), contains: p => ({ value: p }),
         minWords: p => ({ min: +p }), maxWords: p => ({ max: +p }), minItems: p => ({ min: +p }), maxItems: p => ({ max: +p }),
         unique: p => (p && typeof p === 'object' ? p : {}),
+        mask: p => (p && typeof p === 'object' ? p : { pattern: p }),
         requiredIf: p => ({ field: p }), dateAfter: p => ({ field: p }), dateBefore: p => ({ field: p }), atLeastOne: p => ({ fields: [].concat(p) }),
         equalTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
         notEqualTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
@@ -1834,6 +1899,100 @@
         }
     };
 
+    // ------------------------------------------------------------------ mask(): format an input while the user types
+    /**
+     * FormValidator.mask(input, '(999) 999-9999', options) formats the text field as the user types: 9 digit, a letter, * letter or digit, \ escapes a character.
+     * It keeps the caret where the user is, handles paste, delete and backspace over a literal, IME composition and maxlength-free fields. Returns
+     *   { value, raw, complete, update(pattern), destroy() }.   options: onComplete(value, raw), trailing (show literals before the next character is typed, e.g. ") ").
+     * Validate with { mask: '(999) 999-9999' } (the whole value matches), and read the digits with FormValidator.unmaskValue(value, pattern).
+     */
+    function mask(input, pattern, options) {
+        if (!input || typeof input.addEventListener !== 'function') throw new Error('mask: pass the text input');
+        const o = options || {};
+        let tokens = maskTokens(pattern), pat = pattern;
+        let last = { raw: maskRaw(input.value, tokens), value: '' };
+        const slots = () => tokens.filter(t => t.t !== 'lit').length;
+        function apply(deleteBack) {
+            const el = input;
+            const caret = typeof el.selectionStart === 'number' ? el.selectionStart : el.value.length;
+            const before = el.value.slice(0, caret);
+            let rawBefore = maskRaw(before, tokens).length;
+            let raw = maskRaw(el.value, tokens);
+            if (deleteBack && raw === last.raw && rawBefore > 0) {   // backspace removed a literal: take the character before it instead
+                const arr = Array.from(raw); arr.splice(rawBefore - 1, 1); raw = arr.join(''); rawBefore--;
+            }
+            raw = Array.from(raw).slice(0, slots()).join('');
+            rawBefore = Math.min(rawBefore, Array.from(raw).length);
+            const formatted = maskFormat(raw, tokens, !!o.trailing);
+            if (el.value !== formatted) el.value = formatted;
+            // the caret goes after the same number of typed characters as before
+            let pos = 0, seen = 0;
+            const f = Array.from(formatted);
+            while (pos < f.length && seen < rawBefore) { const t = maskRaw(f.slice(0, pos + 1).join(''), tokens).length; pos++; seen = t; }
+            const at = f.slice(0, pos).join('').length;
+            if (typeof el.setSelectionRange === 'function' && (root.document ? root.document.activeElement === el : true)) { try { el.setSelectionRange(at, at); } catch (e) { /* type without selection */ } }
+            const wasComplete = last.complete;
+            last = { raw, value: formatted, complete: maskPattern(pat).test(formatted) };
+            if (last.complete && !wasComplete && isFn(o.onComplete)) guard(o.onComplete, undefined, formatted, raw);
+        }
+        let composing = false;
+        const onInput = e => { if (composing || (e && e.isComposing)) return; apply(!!(e && e.inputType === 'deleteContentBackward')); };
+        const onStart = () => { composing = true; };
+        const onEnd = () => { composing = false; apply(false); };
+        input.addEventListener('input', onInput);
+        input.addEventListener('compositionstart', onStart);
+        input.addEventListener('compositionend', onEnd);
+        if (input.value) apply(false);
+        return {
+            get value() { return input.value; },
+            get raw() { return maskRaw(input.value, tokens); },
+            get complete() { return maskPattern(pat).test(input.value); },
+            update(next) { tokens = maskTokens(next); pat = next; last = { raw: '', value: '' }; apply(false); },
+            destroy() { input.removeEventListener('input', onInput); input.removeEventListener('compositionstart', onStart); input.removeEventListener('compositionend', onEnd); }
+        };
+    }
+
+    // ------------------------------------------------------------------ declarative: <input name="email" data-fv="required email"> on any page, no script of your own
+    const DECLARATIVE_FORMS = new WeakSet();
+    /**
+     * FormValidator.auto(config) starts a validator on every form that has data-fv (the form itself, or fields inside it):
+     *   <form data-fv>  <input name="email" data-fv="required email">  <input name="zip" data-fv="required digits minlength:5" data-fv-mask="99999">
+     * Field attributes: data-fv (the rules, like <fv-field rules>: 'required email minlength:3' or JSON), data-fv-mask (a mask), data-msg-<rule> (messages).
+     * Form attributes: data-fv-config='{"errorSummary":true,"validClass":"is-valid"}' (any config as JSON). Forms added later are picked up. Returns a function that stops it.
+     * Add data-fv-auto to the script tag that loads the bundle to run it by itself.
+     */
+    function auto(config) {
+        const doc = root.document;
+        if (!doc) return () => {};
+        const setup = () => {
+            Array.from(doc.querySelectorAll('form')).forEach(form => {
+                if (DECLARATIVE_FORMS.has(form) || form._fvInstance) return;
+                const fields = Array.from(form.querySelectorAll('[data-fv]')).filter(el => el !== form && el.name);
+                if (!form.hasAttribute('data-fv') && !fields.length) return;
+                const rules = {};
+                fields.forEach(el => { const r = parseRules(el.getAttribute('data-fv')); if (r) rules[el.name] = r; });
+                let formConfig = {};
+                const cfgText = form.getAttribute('data-fv-config');
+                if (cfgText) { try { formConfig = JSON.parse(cfgText); } catch (e) { if (root.console) console.warn('FormValidator.auto: data-fv-config is not valid JSON and is ignored.'); } }
+                DECLARATIVE_FORMS.add(form);
+                const masks = [];
+                Array.from(form.querySelectorAll('[data-fv-mask]')).forEach(el => { if (el.name || el.id) masks.push(mask(el, el.getAttribute('data-fv-mask'))); });
+                const inst = init({ form, rules, config: Object.assign({ autoRules: false }, config, formConfig) });
+                inst._listeners.push(() => masks.forEach(m => m.destroy()));
+            });
+        };
+        const run = () => setup();
+        if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run, { once: true }); else run();
+        let mo = null, timer = null;
+        if (typeof root.MutationObserver === 'function' && doc.body) {
+            mo = new root.MutationObserver(() => { clearTimeout(timer); timer = setTimeout(run, 20); });
+            mo.observe(doc.body, { childList: true, subtree: true });
+        } else if (typeof root.MutationObserver === 'function') {
+            doc.addEventListener('DOMContentLoaded', () => { if (!mo && doc.body) { mo = new root.MutationObserver(() => { clearTimeout(timer); timer = setTimeout(run, 20); }); mo.observe(doc.body, { childList: true, subtree: true }); } }, { once: true });
+        }
+        return () => { if (mo) mo.disconnect(); clearTimeout(timer); doc.removeEventListener('DOMContentLoaded', run); };
+    }
+
     // ------------------------------------------------------------------ public API
     function init(options) {
         options = options || {};
@@ -2500,6 +2659,9 @@
         ValidationError,
         checkValue,
         checkValues,
+        maskPattern,   // ('(999) 999-9999') -> RegExp of a complete masked value
+        unmaskValue,   // (value, pattern) -> the typed characters without the mask's literals
+        parseRules,    // ('required email minlength:3') -> rules, the text format of data-fv and <fv-field rules>
         explain,       // (value, rules, options?) -> [{ rule, code, param, passed, message?, skipped? }]: why a value passes or fails, rule by rule
         registerRule,
         addMethod,
@@ -2510,6 +2672,8 @@
         version: '2.15.0'
     }, CORE ? {} : {
         init,
+        mask,          // (input, '(999) 999-9999', { onComplete, trailing }) -> { value, raw, complete, update, destroy }: format while typing
+        auto,          // (config?) -> stop: start validators from data-fv attributes, now and for forms added later
         unobtrusive,   // ASP.NET data-val-* support: unobtrusive.parse(scope), .auto(), .adapters.add / addBool / addSingleVal / addMinMax
         validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
         isValid,       // sync (form, rules?) -> true / false, like jQuery's valid()

@@ -214,6 +214,38 @@ No DOM is needed, so this runs in Node, in tests and in the Angular validators. 
 - Like the native pseudo-classes, `checkValidity()` fires `invalid`, so a field that gets one shows its message.
 - Another tag name: `FormValidator.fieldElement.define('my-field')`.
 
+### Input masks
+
+`FormValidator.mask(input, pattern, options)` formats a text field while the user types: `9` a digit, `a` a letter (any alphabet), `*` a letter or digit, `\` makes the next character a literal.
+
+```js
+const phone = FormValidator.mask(document.querySelector('#phone'), '(999) 999-9999', { onComplete: (value, raw) => console.log(raw) });
+phone.value;     // '(555) 123-4567'
+phone.raw;       // '5551234567'
+phone.complete;  // true
+phone.update('99-99');  phone.destroy();
+```
+
+It keeps the caret where the user is (also when typing in the middle), handles paste (formatted or not, with extra characters, over a selection), backspace over a literal, IME composition (nothing is touched until the composition ends) and very long pastes. `trailing: true` shows the literals before the next character is typed. Validate with the **`mask` rule**: `{ mask: '(999) 999-9999' }` (a complete value; empty is left to `required`), read the typed characters with `FormValidator.unmaskValue(value, pattern)` and get the regular expression with `FormValidator.maskPattern(pattern)`. `<fv-field mask="...">` and `data-fv-mask="..."` (below) do both.
+
+### Declarative forms: data-fv, for CMS pages and plain HTML
+
+No script of your own: put the rules in the markup and add one attribute to the script tag.
+
+```html
+<form data-fv data-fv-config='{"errorSummary":true,"validClass":"is-valid"}'>
+  <input name="email" data-fv="required email" data-msg-required="Tell us your email">
+  <input name="zip" data-fv="required digits minlength:5" data-fv-mask="99999">
+  <input name="note">                                       <!-- no data-fv: not validated -->
+  <button>Send</button>
+</form>
+<script src="validator.min.js" data-fv-auto></script>      <!-- or: FormValidator.auto() -->
+```
+
+- **Rules** use the same text format as `<fv-field rules>`: names with optional parameters (`minlength:3`, `range:1,10`, `pattern:^a:b$`), or JSON (`data-fv='["required",{"type":"email"}]'`). `FormValidator.parseRules(text)` does the parsing.
+- **Config** for a form is JSON in `data-fv-config`; `FormValidator.auto(config)` takes a base config for all of them. `data-msg-<rule>` sets messages as everywhere.
+- **Forms added later** (AJAX, modals, partial views) are started by themselves; `auto()` returns a function that stops it. A form that already has a validator is left alone.
+
 ### Password strength and breached passwords
 
 `FormValidator.passwordStrength(password, { userInputs })` is a fast, **offline** estimate for a strength meter or a minimum (about 1 KB of common passwords; nothing is downloaded or sent):
@@ -1003,6 +1035,7 @@ The newest entries (each source file also keeps its own changelog in its header;
 
 - **2.15.0**: `requiredIf`, `dateAfter`, `dateBefore`, `atLeastOne`, `sumEquals`; `inst.state` / `getState()` / `onStateChange()`; `inst.validateStep()`; `FormValidator.explain()`.
 - **2.14.0**: field arrays and nested data: wildcard rule keys (`items[].qty`) and nested paths in `checkValues()` / `schema()` / forms, rules `unique`, `minItems`, `maxItems`; schema output is nested.
+- **2.15.0 (continued)**: `FormValidator.mask()`, the `mask` rule, `maskPattern()`, `unmaskValue()`, `parseRules()`, `FormValidator.auto()` / `data-fv` attributes / `data-fv-auto` script attribute.
 - **password add-on 1.0.0**: `passwordStrength()`, `pwned()`, `watchPasswordStrength()`, rules `pwscore` and `pwned` (`dist/formValidator.password.js`).
 - **element 1.0.0**: `<fv-field>`, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: `dist/formValidator.element.js`).
 - **2.13.0**: ASP.NET `data-val-*` (unobtrusive validation): `unobtrusive: true`, `FormValidator.unobtrusive.parse()` / `.auto()` / `.adapters`, `$.validator.unobtrusive` on the jQuery layer.

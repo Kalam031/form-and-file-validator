@@ -257,3 +257,19 @@ test('hostile rule names in the attribute do not pollute prototypes', () => {
     assert.deepEqual(FormValidator.fieldElement.parseRules('__proto__:x constructor:y required'), { required: true });
     assert.equal({}.x, undefined);
 });
+
+test('mask attribute: formats while typing and asks for a complete value', async () => {
+    const form = mount('<fv-field rules="required" mask="(999) 999-9999"><input name="phone"></fv-field><fv-field mask="99-99"><input name="code" value="1234"></fv-field>');
+    const input = form.elements.phone;
+    input.focus();
+    input.value = '5551234'; fire(input, 'input');
+    assert.equal(input.value, '(555) 123-4');
+    assert.equal(input.validationMessage, 'Please complete this field.');
+    input.value = '5551234567'; fire(input, 'input');
+    assert.equal(input.value, '(555) 123-4567');
+    assert.equal(input.validity.valid, true);
+    assert.equal(form.elements.code.value, '12-34', 'an existing value is formatted when the element starts');
+    assert.equal(form.elements.code.validity.valid, true);
+    form.querySelector('fv-field').setAttribute('mask', '99999');
+    assert.equal(input.value, '55512');
+});

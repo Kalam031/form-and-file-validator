@@ -52,6 +52,7 @@
         minItems: "Bitte fügen Sie mindestens {min} hinzu.",
         maxItems: "Bitte fügen Sie höchstens {max} hinzu.",
         requiredIf: "Dieses Feld ist erforderlich.",
+        mask: "Bitte vervollständigen Sie dieses Feld.",
         pwscore: "Bitte wählen Sie ein stärkeres Passwort.",
         pwned: "Dieses Passwort ist in einem Datenleck aufgetaucht. Bitte wählen Sie ein anderes.",
         dateAfter: "Bitte geben Sie ein späteres Datum ein.",

@@ -52,6 +52,7 @@
         minItems: "请至少添加 {min} 项。",
         maxItems: "最多只能添加 {max} 项。",
         requiredIf: "此字段为必填项。",
+        mask: "请填写完整。",
         pwscore: "请选择更强的密码。",
         pwned: "此密码曾出现在数据泄露中，请选择其他密码。",
         dateAfter: "请输入更晚的日期。",

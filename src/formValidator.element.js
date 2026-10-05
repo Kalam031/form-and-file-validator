@@ -20,7 +20,9 @@
  *
  * Note: like the native pseudo-classes, checkValidity() fires the `invalid` event, and a field that gets one shows its message (so does reportValidity() and a blocked submit).
  *
- * Attributes: rules, messages (JSON { rule: text }), server (URL), server-encoding ('form' default | 'json'), server-delay (ms, 300), native-bubble (keep the
+ * mask="(999) 999-9999" formats the input while typing (FormValidator.mask) and asks for a complete value.
+ *
+ * Attributes: rules, mask, messages (JSON { rule: text }), server (URL), server-encoding ('form' default | 'json'), server-delay (ms, 300), native-bubble (keep the
  * browser's own bubble instead of our inline message), control (CSS selector when the field is not the first input inside).
  * Properties and methods: rules, messages, control, controls, value, validity, validationMessage, willValidate, checkValidity(), reportValidity(), validate(), reset(),
  * setServerError(text). Event: `fv-validate` (bubbles) with detail { valid, rule, code, message, shown }.
@@ -46,6 +48,7 @@
 
     /** 'required email minlength:3 pattern:^a:b$' | '["required"]' | '{"minlength":3}' -> rules for checkValue, or null */
     function parseRules(text) {
+        if (typeof FV.parseRules === 'function' && !/^\s*[\[{]/.test(String(text))) return FV.parseRules(text);
         const s = String(text === null || text === undefined ? '' : text).trim();
         if (!s) return null;
         if (s.charAt(0) === '[' || s.charAt(0) === '{') {
@@ -81,7 +84,7 @@
         const Base = root.HTMLElement;
         class FvField extends Base {
             static get formAssociated() { return true; }
-            static get observedAttributes() { return ['rules', 'messages', 'server', 'control']; }
+            static get observedAttributes() { return ['rules', 'messages', 'server', 'control', 'mask']; }
 
             constructor() {
                 super();
@@ -126,9 +129,16 @@
                     });
                     this._mo.observe(this, { childList: true, subtree: true });
                 }
+                this._bindMask();
                 this._check(false);
             }
+            _bindMask() {
+                if (this._maskApi) { this._maskApi.destroy(); this._maskApi = null; }
+                const pat = this.getAttribute('mask'), c = this.control;
+                if (pat && c && typeof FV.mask === 'function' && c.tagName === 'INPUT') this._maskApi = FV.mask(c, pat);
+            }
             disconnectedCallback() {
+                if (this._maskApi) { this._maskApi.destroy(); this._maskApi = null; }
                 this._cleanups.forEach(f => f()); this._cleanups = [];
                 if (this._mo) { this._mo.disconnect(); this._mo = null; }
                 clearTimeout(this._timer);
@@ -139,11 +149,22 @@
             attributeChangedCallback(name, oldValue, value) {
                 if (oldValue === value || !this.isConnected) return;
                 if (name === 'server') { this._serverMsg = ''; }
+                if (name === 'mask' || name === 'control') this._bindMask();
                 this._check(this._shown);
             }
 
             // ---------------------------------------------------------------- public API
-            get rules() { return this._rules !== undefined ? this._rules : parseRules(this.getAttribute('rules')); }
+            get rules() {
+                const base = this._rules !== undefined ? this._rules : parseRules(this.getAttribute('rules'));
+                const m = this.getAttribute('mask');
+                if (!m) return base;
+                // mask="(999) 999-9999" also asks for a complete value
+                if (!base) return { mask: m };
+                if (Array.isArray(base)) return base.concat([{ type: 'mask', pattern: m }]);
+                if (typeof base === 'string') return [base, { type: 'mask', pattern: m }];
+                if (base.type) return [base, { type: 'mask', pattern: m }];
+                return Object.assign({}, base, { mask: m });
+            }
             set rules(v) { this._rules = v === null ? undefined : v; if (this.isConnected) this._check(this._shown); }
             get messages() {
                 if (this._messages !== undefined) return this._messages;

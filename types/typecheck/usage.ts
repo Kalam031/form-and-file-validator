@@ -378,3 +378,14 @@ import { FvFormController } from '../lit';
     const stop: () => void = FormValidator.watchPasswordStrength(document.createElement('input'), r => { const l: string = r.label; void l; });
     void [sc, stop];
 }
+
+// ---------------------------------------------------------------- masks, declarative
+{
+    const m = FormValidator.mask(document.createElement('input'), '(999) 999-9999', { onComplete: (v, raw) => void [v, raw] });
+    const done: boolean = m.complete;
+    const rx: RegExp = FormValidator.maskPattern('99');
+    const raw: string = FormValidator.unmaskValue('(1)', '(9)');
+    const rules = FormValidator.parseRules('required email');
+    const stop: () => void = FormValidator.auto({ validClass: 'ok' });
+    void [done, rx, raw, rules, stop];
+}

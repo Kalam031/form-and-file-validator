@@ -52,6 +52,7 @@
         minItems: "Añade al menos {min}.",
         maxItems: "Añade como máximo {max}.",
         requiredIf: "Este campo es obligatorio.",
+        mask: "Completa este campo.",
         pwscore: "Elige una contraseña más segura.",
         pwned: "Esta contraseña apareció en una filtración de datos. Elige otra.",
         dateAfter: "Introduce una fecha posterior.",

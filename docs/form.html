@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.19.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.20.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -453,6 +453,30 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 <li><strong>Styling and scripting</strong>: <code>.fv-error</code>, <code>fv-field[data-state=&quot;invalid&quot;]</code>, <code>[data-shown]</code>, <code>input:user-invalid</code>, and <code>fv-field:state(user-invalid)</code> where the browser has custom states. Event <code>fv-validate</code> (<code>detail: { valid, rule, code, message, shown }</code>), methods <code>validate()</code>, <code>reportValidity()</code>, <code>reset()</code>, <code>setServerError(text)</code>. Language packs and message overrides (<code>messages=&#39;{&quot;required&quot;:&quot;Fill me&quot;}&#39;</code>) work as everywhere.</li>
 <li>Like the native pseudo-classes, <code>checkValidity()</code> fires <code>invalid</code>, so a field that gets one shows its message.</li>
 <li>Another tag name: <code>FormValidator.fieldElement.define(&#39;my-field&#39;)</code>.</li>
+</ul>
+<h3 id="input-masks">Input masks</h3>
+<p><code>FormValidator.mask(input, pattern, options)</code> formats a text field while the user types: <code>9</code> a digit, <code>a</code> a letter (any alphabet), <code>*</code> a letter or digit, <code>\</code> makes the next character a literal.</p>
+<pre tabindex="0"><code class="language-js">const phone = FormValidator.mask(document.querySelector(&#39;#phone&#39;), &#39;(999) 999-9999&#39;, { onComplete: (value, raw) =&gt; console.log(raw) });
+phone.value;     // &#39;(555) 123-4567&#39;
+phone.raw;       // &#39;5551234567&#39;
+phone.complete;  // true
+phone.update(&#39;99-99&#39;);  phone.destroy();
+</code></pre>
+<p>It keeps the caret where the user is (also when typing in the middle), handles paste (formatted or not, with extra characters, over a selection), backspace over a literal, IME composition (nothing is touched until the composition ends) and very long pastes. <code>trailing: true</code> shows the literals before the next character is typed. Validate with the <strong><code>mask</code> rule</strong>: <code>{ mask: &#39;(999) 999-9999&#39; }</code> (a complete value; empty is left to <code>required</code>), read the typed characters with <code>FormValidator.unmaskValue(value, pattern)</code> and get the regular expression with <code>FormValidator.maskPattern(pattern)</code>. <code>&lt;fv-field mask=&quot;...&quot;&gt;</code> and <code>data-fv-mask=&quot;...&quot;</code> (below) do both.</p>
+<h3 id="declarative-forms-data-fv-for-cms-pages-and-plain-html">Declarative forms: data-fv, for CMS pages and plain HTML</h3>
+<p>No script of your own: put the rules in the markup and add one attribute to the script tag.</p>
+<pre tabindex="0"><code class="language-html">&lt;form data-fv data-fv-config=&#39;{&quot;errorSummary&quot;:true,&quot;validClass&quot;:&quot;is-valid&quot;}&#39;&gt;
+  &lt;input name=&quot;email&quot; data-fv=&quot;required email&quot; data-msg-required=&quot;Tell us your email&quot;&gt;
+  &lt;input name=&quot;zip&quot; data-fv=&quot;required digits minlength:5&quot; data-fv-mask=&quot;99999&quot;&gt;
+  &lt;input name=&quot;note&quot;&gt;                                       &lt;!-- no data-fv: not validated --&gt;
+  &lt;button&gt;Send&lt;/button&gt;
+&lt;/form&gt;
+&lt;script src=&quot;validator.min.js&quot; data-fv-auto&gt;&lt;/script&gt;      &lt;!-- or: FormValidator.auto() --&gt;
+</code></pre>
+<ul>
+<li><strong>Rules</strong> use the same text format as <code>&lt;fv-field rules&gt;</code>: names with optional parameters (<code>minlength:3</code>, <code>range:1,10</code>, <code>pattern:^a:b$</code>), or JSON (<code>data-fv=&#39;[&quot;required&quot;,{&quot;type&quot;:&quot;email&quot;}]&#39;</code>). <code>FormValidator.parseRules(text)</code> does the parsing.</li>
+<li><strong>Config</strong> for a form is JSON in <code>data-fv-config</code>; <code>FormValidator.auto(config)</code> takes a base config for all of them. <code>data-msg-&lt;rule&gt;</code> sets messages as everywhere.</li>
+<li><strong>Forms added later</strong> (AJAX, modals, partial views) are started by themselves; <code>auto()</code> returns a function that stops it. A form that already has a validator is left alone.</li>
 </ul>
 <h3 id="password-strength-and-breached-passwords">Password strength and breached passwords</h3>
 <p><code>FormValidator.passwordStrength(password, { userInputs })</code> is a fast, <strong>offline</strong> estimate for a strength meter or a minimum (about 1 KB of common passwords; nothing is downloaded or sent):</p>
@@ -1566,6 +1590,7 @@ npm test
 <ul>
 <li><strong>2.15.0</strong>: <code>requiredIf</code>, <code>dateAfter</code>, <code>dateBefore</code>, <code>atLeastOne</code>, <code>sumEquals</code>; <code>inst.state</code> / <code>getState()</code> / <code>onStateChange()</code>; <code>inst.validateStep()</code>; <code>FormValidator.explain()</code>.</li>
 <li><strong>2.14.0</strong>: field arrays and nested data: wildcard rule keys (<code>items[].qty</code>) and nested paths in <code>checkValues()</code> / <code>schema()</code> / forms, rules <code>unique</code>, <code>minItems</code>, <code>maxItems</code>; schema output is nested.</li>
+<li><strong>2.15.0 (continued)</strong>: <code>FormValidator.mask()</code>, the <code>mask</code> rule, <code>maskPattern()</code>, <code>unmaskValue()</code>, <code>parseRules()</code>, <code>FormValidator.auto()</code> / <code>data-fv</code> attributes / <code>data-fv-auto</code> script attribute.</li>
 <li><strong>password add-on 1.0.0</strong>: <code>passwordStrength()</code>, <code>pwned()</code>, <code>watchPasswordStrength()</code>, rules <code>pwscore</code> and <code>pwned</code> (<code>dist/formValidator.password.js</code>).</li>
 <li><strong>element 1.0.0</strong>: <code>&lt;fv-field&gt;</code>, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: <code>dist/formValidator.element.js</code>).</li>
 <li><strong>2.13.0</strong>: ASP.NET <code>data-val-*</code> (unobtrusive validation): <code>unobtrusive: true</code>, <code>FormValidator.unobtrusive.parse()</code> / <code>.auto()</code> / <code>.adapters</code>, <code>$.validator.unobtrusive</code> on the jQuery layer.</li>

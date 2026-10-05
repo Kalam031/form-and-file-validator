@@ -52,6 +52,7 @@
         minItems: "Dodaj co najmniej {min}.",
         maxItems: "Dodaj nie więcej niż {max}.",
         requiredIf: "To pole jest wymagane.",
+        mask: "Uzupełnij to pole.",
         pwscore: "Wybierz silniejsze hasło.",
         pwned: "To hasło pojawiło się w wycieku danych. Wybierz inne.",
         dateAfter: "Wprowadź późniejszą datę.",

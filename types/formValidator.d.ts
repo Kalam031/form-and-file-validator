@@ -151,6 +151,15 @@ export interface InitOptions {
     messages?: Record<string, string | Record<string, string> | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
 }
 
+export interface MaskHandle {
+    readonly value: string;
+    /** The typed characters without the mask's literals. */
+    readonly raw: string;
+    readonly complete: boolean;
+    update(pattern: string): void;
+    destroy(): void;
+}
+
 export interface PasswordStrength {
     /** 0 very weak, 1 weak, 2 fair, 3 good, 4 strong. */
     score: 0 | 1 | 2 | 3 | 4;
@@ -505,6 +514,16 @@ export interface FormValidatorStatic {
     readonly fieldElement?: FormValidatorFieldElement;
     /** ASP.NET MVC / Razor `data-val-*` support (a drop-in for jquery.validate.unobtrusive.js, no jQuery needed). */
     readonly unobtrusive: FormValidatorUnobtrusive;
+    /** Formats a text input while the user types: 9 digit, a letter, * letter or digit, \ escapes. Keeps the caret, handles paste, backspace over literals and IME composition. */
+    mask(input: HTMLInputElement | HTMLTextAreaElement, pattern: string, options?: { onComplete?: (value: string, raw: string) => void; trailing?: boolean }): MaskHandle;
+    /** The RegExp a complete masked value matches. */
+    maskPattern(pattern: string): RegExp;
+    /** The typed characters of a masked value: unmaskValue('(555) 123', '(999) 999-9999') is '555123'. */
+    unmaskValue(value: string, pattern: string): string;
+    /** 'required email minlength:3' or JSON -> rules (the format of data-fv and <fv-field rules>); null when empty or unreadable. */
+    parseRules(text: string | null | undefined): RulesForField | null;
+    /** Starts validators from data-fv attributes (now and for forms added later); add data-fv-auto to the script tag to run it by itself. Returns the stop function. */
+    auto(config?: Partial<FormConfig>): () => void;
     /** An offline estimate of how hard a password is to guess (add-on: bundle or formValidator.password.js). */
     passwordStrength(password: unknown, options?: { userInputs?: unknown[] }): PasswordStrength;
     /** How often a password appeared in known breaches (Have I Been Pwned, k-anonymity: only 5 hash characters are sent); 0 = never, null = could not check. */
