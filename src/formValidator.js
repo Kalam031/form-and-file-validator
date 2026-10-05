@@ -2346,6 +2346,202 @@
         return { bot: false, reason: null };
     }
 
+    // ------------------------------------------------------------------ JSON Schema: the same rules for OpenAPI, Ajv, JSON editors and back
+    function isNum0(v) { return typeof v === 'number' && isFinite(v) && v >= 0; }
+    const JS_FORMATS = { email: 'email', url: 'uri', uuid: 'uuid', ipv4: 'ipv4', ipv6: 'ipv6', domain: 'hostname', time: 'time' };
+    const JS_FORMAT_RULES = { email: 'email', uri: 'url', url: 'url', 'uri-reference': 'url', uuid: 'uuid', ipv4: 'ipv4', ipv6: 'ipv6', hostname: 'domain', time: 'time', date: 'date', 'date-time': 'date', idn_email: 'email' };
+    const JS_PATTERNS = { digits: '^[0-9]+$', alpha: '^\\p{L}+$', alphanumeric: '^[\\p{L}\\p{N}]+$', hexColor: '^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$', slug: '^[a-z0-9]+(?:-[a-z0-9]+)*$' };
+    const JS_PATTERN_RULES = {};
+    Object.keys(JS_PATTERNS).forEach(k => { JS_PATTERN_RULES[JS_PATTERNS[k]] = k; });
+    /** One rule list -> the JSON Schema keywords it can say; what it cannot say goes to `leftover` ({ type: param }). */
+    function ruleKeywords(list) {
+        const kw = {}, left = {};
+        let required = false;
+        list.forEach(r => {
+            const t = r.type;
+            if (t === 'required' && !isFn(r.when)) { required = true; return; }
+            if (JS_FORMATS[t]) { kw.format = JS_FORMATS[t]; return; }
+            if (t === 'minlength') { kw.minLength = Number(r.min); return; }
+            if (t === 'maxlength') { kw.maxLength = Number(r.max); return; }
+            if (t === 'rangelength') { kw.minLength = Number(r.min); kw.maxLength = Number(r.max); return; }
+            const num = ty => { if (kw.__num !== 'integer') kw.__num = ty; };   // integer wins over number
+            if (t === 'min') { kw.minimum = Number(r.min); num('number'); return; }
+            if (t === 'max') { kw.maximum = Number(r.max); num('number'); return; }
+            if (t === 'range') { kw.minimum = Number(r.min); kw.maximum = Number(r.max); num('number'); return; }
+            if (t === 'step') { kw.multipleOf = Number(r.step); num('number'); return; }
+            if (t === 'number') { num('number'); return; }
+            if (t === 'integer') { kw.__num = 'integer'; return; }
+            if (t === 'digits' || t === 'alpha' || t === 'alphanumeric' || t === 'hexColor' || t === 'slug') { kw.pattern = JS_PATTERNS[t]; return; }
+            if (t === 'pattern' && r.pattern !== undefined) { kw.pattern = r.pattern instanceof RegExp ? r.pattern.source : String(r.pattern); return; }
+            if (t === 'oneOf') { kw.enum = [].concat(r.values); return; }
+            if (t === 'notOneOf') { kw.not = { enum: [].concat(r.values) }; return; }
+            if (t === 'date' && (r.strict || r.format === 'yyyy-MM-dd' || r.format === 'yyyy-M-d')) { kw.format = 'date'; return; }
+            if (t === 'minItems') { kw.minItems = Number(r.min); return; }
+            if (t === 'maxItems') { kw.maxItems = Number(r.max); return; }
+            if (t === 'unique') { kw.__unique = true; return; }
+            const copy = Object.assign({}, r); delete copy.type;
+            const only = Object.keys(copy).length === 0;
+            (left[t] = left[t] || []).push(only ? true : copy);
+        });
+        return { kw, left, required };
+    }
+    /**
+     * The rules as a JSON Schema (draft 2020-12) object, for OpenAPI, Ajv, form builders and documentation:
+     *   FormValidator.toJsonSchema({ email: ['required', 'email'], age: { integer: true, range: [18, 99] }, 'items[].sku': 'required', items: { minItems: 1 } })
+     * Paths become nested objects, `items[].x` an array of objects, required fields go to `required`. Numbers are `type: 'number' | 'integer'` (a JSON body carries them as
+     * numbers), everything else `type: 'string'`. Rules JSON Schema cannot express (equalTo, requiredIf, pwcheck, mask ...) are kept in an `x-fv-rules` annotation, which
+     * validators ignore and fromJsonSchema() reads back. options: title, additionalProperties (false: unknown fields are an error).
+     */
+    function toJsonSchema(rules, options) {
+        const o = options || {};
+        const root0 = { type: 'object', properties: {} };
+        const keys = Object.keys(rules || {});
+        // wildcard / array rules first, so the container exists when its rows are added
+        const ordered = keys.slice().sort((a, b) => (a.indexOf('[') < 0 ? 0 : 1) - (b.indexOf('[') < 0 ? 0 : 1));
+        const ensureObject = (schema, name) => { if (!schema.properties) { schema.type = 'object'; schema.properties = {}; } return schema.properties[name] || (schema.properties[name] = {}); };
+        ordered.forEach(key => {
+            const toks = ruleTokens(key);
+            if (!toks) return;
+            const { kw, left, required } = ruleKeywords(normalizeRules(rules[key]));
+            // walk to the node of this key, creating objects and arrays on the way
+            let node = root0, parentRequired = null, leafName = null, arrayNode = null;
+            toks.forEach((t, i) => {
+                const last = i === toks.length - 1;
+                if (isWild(t)) {   // the row of an array: node is the array schema
+                    if (!node.items) { node.type = 'array'; node.items = last ? {} : { type: 'object', properties: {} }; }
+                    arrayNode = node;
+                    node = node.items;
+                    parentRequired = node;
+                    if (last) leafName = null;
+                    return;
+                }
+                if (typeof t === 'number') return;   // a fixed index: described like a row
+                if (!node.properties) { node.type = 'object'; node.properties = {}; }
+                if (!node.properties[t]) node.properties[t] = {};
+                if (last) { parentRequired = node; leafName = t; }
+                node = node.properties[t];
+            });
+            const isArrayKey = kw.minItems !== undefined || kw.maxItems !== undefined;
+            const type = kw.__num || (isArrayKey ? 'array' : (node.type || 'string'));
+            if (isArrayKey && !node.type) node.type = 'array';
+            if (!isArrayKey || kw.__num) node.type = type === 'array' ? node.type : type;
+            Object.keys(kw).forEach(k => { if (k.indexOf('__') !== 0) node[k] = kw[k]; });
+            let uniqueNote = false;
+            if (kw.__unique) { if (isWild(toks[toks.length - 1]) && arrayNode) arrayNode.uniqueItems = true; else uniqueNote = true; }   // a list of plain values: uniqueItems; a column of rows: an annotation
+            if (required && parentRequired && leafName) { parentRequired.required = (parentRequired.required || []).concat([leafName]); if (node.type === 'string' && node.minLength === undefined) node.minLength = 1; }
+            if (Object.keys(left).length || uniqueNote) { node['x-fv-rules'] = Object.assign({}, node['x-fv-rules'], left, uniqueNote ? { unique: true } : {}); }
+        });
+        if (o.title) root0.title = String(o.title);
+        if (o.additionalProperties === false) root0.additionalProperties = false;
+        root0.$schema = 'https://json-schema.org/draft/2020-12/schema';
+        return root0;
+    }
+    /**
+     * A JSON Schema (an OpenAPI schema object, a model's schema) as rules: FormValidator.fromJsonSchema(schema) -> { email: ['required', 'email'], 'items[].qty': ... }.
+     * Understood: properties (nested objects become 'a.b', arrays of objects 'a[].b'), required, string minLength / maxLength / pattern / format, number and integer with
+     * minimum / maximum / multipleOf, enum and const, array minItems / maxItems / uniqueItems, local $ref ($defs / definitions) and allOf; the x-fv-rules annotation of
+     * toJsonSchema(). anyOf / oneOf / not and remote $ref are reported to options.onUnsupported(path, keyword) and skipped.
+     */
+    function fromJsonSchema(schema, options) {
+        const o = options || {};
+        const out = {};
+        const unsupported = (path, kw) => { if (isFn(o.onUnsupported)) guard(o.onUnsupported, undefined, path, kw); };
+        const deref = (node, seen) => {
+            let n = node;
+            for (let i = 0; i < 16 && n && typeof n.$ref === 'string'; i++) {
+                const ref = n.$ref;
+                if (seen.indexOf(ref) >= 0 || ref.charAt(0) !== '#') { unsupported('', '$ref'); return {}; }
+                seen = seen.concat([ref]);
+                let target = schema;
+                ref.slice(1).split('/').filter(Boolean).forEach(seg => { target = target && typeof target === 'object' ? target[seg.replace(/~1/g, '/').replace(/~0/g, '~')] : undefined; });
+                if (!target || typeof target !== 'object') { unsupported('', '$ref'); return {}; }
+                n = Object.assign({}, target, Object.assign({}, n, { $ref: undefined }));
+                delete n.$ref;
+            }
+            return n || {};
+        };
+        const merge = (node, seen) => {   // allOf: the keywords of every part
+            let n = deref(node, seen);
+            if (Array.isArray(n.allOf)) {
+                const parts = n.allOf.map(p => merge(p, seen));
+                n = Object.assign({}, n); delete n.allOf;
+                parts.forEach(p => {
+                    Object.keys(p).forEach(k => {
+                        if (k === 'properties') n.properties = Object.assign({}, n.properties, p.properties);
+                        else if (k === 'required') n.required = (n.required || []).concat(p.required);
+                        else if (n[k] === undefined) n[k] = p[k];
+                    });
+                });
+            }
+            return n;
+        };
+        const nodeRules = (n, isRequired) => {
+            const list = [];
+            if (isRequired) list.push('required');
+            const ty = [].concat(n.type || []).filter(x => x !== 'null');
+            if (ty.indexOf('integer') >= 0) list.push('integer'); else if (ty.indexOf('number') >= 0) list.push('number');
+            if (typeof n.format === 'string' && JS_FORMAT_RULES[n.format]) list.push(JS_FORMAT_RULES[n.format]);
+            if (typeof n.pattern === 'string') list.push(JS_PATTERN_RULES[n.pattern] ? JS_PATTERN_RULES[n.pattern] : { type: 'pattern', pattern: n.pattern });
+            if (isNum0(n.minLength) && isNum0(n.maxLength)) list.push({ type: 'rangelength', min: n.minLength, max: n.maxLength });
+            else if (isNum0(n.minLength) && !(isRequired && n.minLength === 1)) list.push({ type: 'minlength', min: n.minLength });
+            else if (isNum0(n.maxLength)) list.push({ type: 'maxlength', max: n.maxLength });
+            if (typeof n.minimum === 'number' && typeof n.maximum === 'number') list.push({ type: 'range', min: n.minimum, max: n.maximum });
+            else if (typeof n.minimum === 'number') list.push({ type: 'min', min: n.minimum });
+            else if (typeof n.maximum === 'number') list.push({ type: 'max', max: n.maximum });
+            if (typeof n.exclusiveMinimum === 'number' || typeof n.exclusiveMaximum === 'number') unsupported('', 'exclusiveMinimum / exclusiveMaximum');
+            if (typeof n.multipleOf === 'number' && n.multipleOf > 0) list.push({ type: 'step', step: n.multipleOf });
+            if (Array.isArray(n.enum)) list.push({ type: 'oneOf', values: n.enum });
+            else if (n.const !== undefined) list.push({ type: 'oneOf', values: [n.const] });
+            if (n.not && Array.isArray(n.not.enum)) list.push({ type: 'notOneOf', values: n.not.enum });
+            if (n['x-fv-rules'] && typeof n['x-fv-rules'] === 'object') {
+                Object.keys(n['x-fv-rules']).forEach(k => {
+                    if (BAD_KEYS.indexOf(k) >= 0) return;
+                    [].concat(n['x-fv-rules'][k]).forEach(v => list.push(v === true ? { type: k } : Object.assign({ type: k }, v)));
+                });
+            }
+            return list;
+        };
+        const walk = (node0, path, isRequired, seen, depth) => {
+            if (depth > 12) return;
+            const n = merge(node0, seen);
+            ['anyOf', 'oneOf', 'not', 'if', 'then', 'else', 'patternProperties', 'dependentSchemas'].forEach(k => { if (n[k] !== undefined && !(k === 'not' && n.not && Array.isArray(n.not.enum))) unsupported(path.join('.'), k); });
+            const ty = [].concat(n.type || []);
+            if (n.properties && typeof n.properties === 'object') {
+                const req = Array.isArray(n.required) ? n.required : [];
+                Object.keys(n.properties).forEach(k => { if (BAD_KEYS.indexOf(k) < 0) walk(n.properties[k], path.concat([k]), req.indexOf(k) >= 0, seen, depth + 1); });
+                return;
+            }
+            if (ty.indexOf('array') >= 0 || n.items) {
+                const key = path.join('.');
+                const arr = [];
+                if (isNum0(n.minItems)) arr.push({ type: 'minItems', min: n.minItems });
+                if (isNum0(n.maxItems)) arr.push({ type: 'maxItems', max: n.maxItems });
+                if (isRequired && !arr.some(r => r.type === 'minItems')) arr.unshift({ type: 'minItems', min: 1 });
+                if (arr.length && key) out[key] = (out[key] || []).concat(arr);
+                const items = n.items && !Array.isArray(n.items) ? merge(n.items, seen) : null;
+                if (items) {
+                    const rowKey = path.slice(0, -1).concat([path[path.length - 1] + '[]']);
+                    if (items.properties) {
+                        const req = Array.isArray(items.required) ? items.required : [];
+                        Object.keys(items.properties).forEach(k => { if (BAD_KEYS.indexOf(k) < 0) walk(items.properties[k], rowKey.concat([k]), req.indexOf(k) >= 0, seen, depth + 1); });
+                    } else {
+                        const list = nodeRules(items, false);
+                        if (n.uniqueItems) list.push('unique');
+                        if (list.length) out[rowKey.join('.')] = (out[rowKey.join('.')] || []).concat(list);
+                    }
+                }
+                return;
+            }
+            const list = nodeRules(n, isRequired);
+            if (list.length && path.length) { const key = path.join('.'); out[key] = (out[key] || []).concat(list); }
+        };
+        if (schema && typeof schema === 'object') walk(schema, [], false, [], 0);
+        // 'a[].b' keys: the row marker belongs to the last array step of the path
+        const fixed = {};
+        Object.keys(out).forEach(k => { fixed[k.replace(/\.\[\]/g, '[]').replace(/\[\]\./g, '[].')] = out[k].length === 1 ? out[k][0] : out[k]; });
+        return fixed;
+    }
+
     /**
      * Why does this value pass or fail? One entry per rule, in the order they run:
      *   FormValidator.explain('ab', ['required', { type: 'minlength', min: 3 }, 'email'])
@@ -2867,6 +3063,8 @@
         unmaskValue,   // (value, pattern) -> the typed characters without the mask's literals
         parseRules,    // ('required email minlength:3') -> rules, the text format of data-fv and <fv-field rules>
         isBotSubmission, // (body, { honeypot, timestampField, minTimeMs }) -> { bot, reason }: the server side of antiBot
+        toJsonSchema,  // (rules, { title, additionalProperties }) -> a JSON Schema (2020-12); what it cannot say is kept in x-fv-rules
+        fromJsonSchema, // (schema, { onUnsupported }) -> rules, from an OpenAPI / JSON Schema object
         explain,       // (value, rules, options?) -> [{ rule, code, param, passed, message?, skipped? }]: why a value passes or fails, rule by rule
         registerRule,
         addMethod,

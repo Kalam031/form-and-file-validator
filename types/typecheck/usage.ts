@@ -410,3 +410,10 @@ import { FvFormController } from '../lit';
     task.then(r => { const s: number = r.status; void s; }).catch((e: unknown) => { if (e instanceof FileValidator.UploadError) { const c: string = e.code; void c; } });
     FileValidator.upload(new File([], 'b'), { presign: async f => ({ url: '/u/' + (f as File).name, method: 'PUT' }) });
 }
+
+// ---------------------------------------------------------------- JSON Schema
+{
+    const js: Record<string, any> = FormValidator.toJsonSchema({ a: 'required' }, { title: 'T', additionalProperties: false });
+    const rules = FormValidator.fromJsonSchema(js, { onUnsupported: (p, k) => void [p, k] });
+    void [js, rules];
+}

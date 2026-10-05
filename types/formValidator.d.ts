@@ -554,6 +554,10 @@ export interface FormValidatorStatic {
     watchPasswordStrength(input: HTMLInputElement, fn: (result: PasswordStrength) => void, options?: { userInputs?: unknown[] | (() => unknown[]) }): () => void;
     /** The server side of antiBot: { bot, reason } for a submitted body. */
     isBotSubmission(values: unknown, options?: { honeypot?: string | false; timestampField?: string; minTimeMs?: number; now?: number }): { bot: boolean; reason: 'honeypot' | 'too-fast' | null };
+    /** The rules as a JSON Schema (draft 2020-12); what it cannot say is kept in an `x-fv-rules` annotation. */
+    toJsonSchema(rules: Record<string, RulesForField>, options?: { title?: string; additionalProperties?: boolean }): Record<string, any>;
+    /** A JSON Schema / OpenAPI schema object as rules; skipped keywords go to onUnsupported. */
+    fromJsonSchema(schema: unknown, options?: { onUnsupported?: (path: string, keyword: string) => void }): Record<string, RulesForField>;
     /** Why a value passes or fails, rule by rule (no short circuit; skipped rules say why). */
     explain(value: unknown, rules: RulesForField, options?: ValueCheckOptions): ExplainEntry[];
     /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */

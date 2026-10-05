@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.22.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.23.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -557,6 +557,27 @@ const stop = inst.onStateChange(state =&gt; render(state));   // once per tick w
 //   { rule: &#39;email&#39;, code: &#39;email&#39;, passed: false, message: &#39;Please enter a valid email address.&#39; } ]
 </code></pre>
 <p>A rule that is skipped says why (<code>skipped: &#39;empty value: ...&#39;</code>, a <code>when</code> that said no, <code>unknown rule</code>, a rule that needs a form).</p>
+<h3 id="json-schema-and-openapi-the-same-rules-both-ways">JSON Schema and OpenAPI: the same rules, both ways</h3>
+<p><code>FormValidator.toJsonSchema(rules)</code> writes the rules as a JSON Schema (draft 2020-12), and <code>FormValidator.fromJsonSchema(schema)</code> reads one back, so the rules can live in your OpenAPI file, be checked by Ajv on the server, drive a form builder, or be generated from a backend model:</p>
+<pre tabindex="0"><code class="language-js">const schema = FormValidator.toJsonSchema({
+  nick:          { required: true, minlength: 3, maxlength: 12, pattern: &#39;^[a-z0-9]+$&#39; },
+  email:         [&#39;required&#39;, &#39;email&#39;],
+  age:           { integer: true, range: [18, 99] },
+  &#39;address.zip&#39;: { digits: true },
+  &#39;items[].sku&#39;: [&#39;required&#39;, &#39;slug&#39;],
+  items:         { minItems: 1, maxItems: 3 }
+}, { title: &#39;Order&#39; });
+// { type: &#39;object&#39;, properties: { nick: { type: &#39;string&#39;, minLength: 3, ... }, age: { type: &#39;integer&#39;, minimum: 18, maximum: 99 },
+//   address: { type: &#39;object&#39;, ... }, items: { type: &#39;array&#39;, minItems: 1, items: { type: &#39;object&#39;, required: [&#39;sku&#39;], ... } } }, required: [&#39;nick&#39;, &#39;email&#39;] }
+
+const rules = FormValidator.fromJsonSchema(openApiComponent, { onUnsupported: (path, keyword) =&gt; console.warn(path, keyword) });
+FormValidator.schema(rules).safeParse(body);
+</code></pre>
+<ul>
+<li><strong>Mapped both ways</strong>: <code>required</code>, <code>email</code> / <code>url</code> / <code>uuid</code> / <code>ipv4</code> / <code>ipv6</code> / <code>domain</code> / <code>time</code> / <code>date</code> (<code>format</code>), <code>minlength</code> / <code>maxlength</code> / <code>rangelength</code>, <code>pattern</code> (and <code>digits</code>, <code>alpha</code>, <code>alphanumeric</code>, <code>slug</code>, <code>hexColor</code> as patterns), <code>min</code> / <code>max</code> / <code>range</code> / <code>step</code> (<code>minimum</code>, <code>maximum</code>, <code>multipleOf</code>), <code>number</code> / <code>integer</code> (<code>type</code>, so JSON numbers validate), <code>oneOf</code> / <code>notOneOf</code> (<code>enum</code>, <code>not.enum</code>), <code>minItems</code> / <code>maxItems</code>, nested paths (<code>a.b</code>) and rows (<code>items[].x</code>) as objects and arrays of objects; for a list of plain values, <code>unique</code> is <code>uniqueItems</code>.</li>
+<li><strong>What JSON Schema cannot say</strong> (<code>equalTo</code>, <code>requiredIf</code>, <code>dateAfter</code>, <code>pwcheck</code>, <code>mask</code>, <code>unique</code> on a column of rows, your own rules) is kept in an <strong><code>x-fv-rules</code></strong> annotation that validators ignore and <code>fromJsonSchema</code> reads back: rules, schema, rules, schema is stable.</li>
+<li><code>fromJsonSchema</code> follows local <code>$ref</code> (<code>$defs</code>, <code>definitions</code>), merges <code>allOf</code>, and reports what it skips (<code>anyOf</code> / <code>oneOf</code>, <code>not</code>, <code>if</code>, <code>patternProperties</code>, remote refs, <code>exclusiveMinimum</code>) to <code>onUnsupported</code>; it never throws and ignores hostile keys. Checked against Ajv with the same payloads. Part of the core build.</li>
+</ul>
 <h3 id="smaller-builds-the-core-and-your-own-subset">Smaller builds: the core and your own subset</h3>
 <p>Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a <code>&lt;form&gt;</code>. Two ways to ship less:</p>
 <p><strong><code>form-and-file-validator/core</code></strong> (about 12 KB gzip against 27 KB for the form engine, 73 KB for the whole bundle): the DOM-free part with every rule that needs no form.</p>
@@ -1605,6 +1626,7 @@ npm test
 <ul>
 <li><strong>2.15.0</strong>: <code>requiredIf</code>, <code>dateAfter</code>, <code>dateBefore</code>, <code>atLeastOne</code>, <code>sumEquals</code>; <code>inst.state</code> / <code>getState()</code> / <code>onStateChange()</code>; <code>inst.validateStep()</code>; <code>FormValidator.explain()</code>.</li>
 <li><strong>2.14.0</strong>: field arrays and nested data: wildcard rule keys (<code>items[].qty</code>) and nested paths in <code>checkValues()</code> / <code>schema()</code> / forms, rules <code>unique</code>, <code>minItems</code>, <code>maxItems</code>; schema output is nested.</li>
+<li><strong>2.15.0 (continued)</strong>: <code>toJsonSchema()</code> / <code>fromJsonSchema()</code>.</li>
 <li><strong>2.15.0 (continued)</strong>: <code>antiBot</code>, <code>idempotencyKey</code>, <code>disableOnSubmit</code>, <code>draft</code>, <code>leaveWarning</code>, <code>FormValidator.isBotSubmission()</code>.</li>
 <li><strong>2.15.0 (continued)</strong>: <code>FormValidator.mask()</code>, the <code>mask</code> rule, <code>maskPattern()</code>, <code>unmaskValue()</code>, <code>parseRules()</code>, <code>FormValidator.auto()</code> / <code>data-fv</code> attributes / <code>data-fv-auto</code> script attribute.</li>
 <li><strong>password add-on 1.0.0</strong>: <code>passwordStrength()</code>, <code>pwned()</code>, <code>watchPasswordStrength()</code>, rules <code>pwscore</code> and <code>pwned</code> (<code>dist/formValidator.password.js</code>).</li>

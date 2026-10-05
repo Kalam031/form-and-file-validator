@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.23.0
+- **JSON Schema and OpenAPI**: `FormValidator.toJsonSchema(rules)` writes the rules as a JSON Schema (2020-12: types, formats, limits, patterns, enums, nested objects, arrays of rows, `required`); `FormValidator.fromJsonSchema(schema)` reads one back (local `$ref`, `allOf`, reports what it cannot map). What JSON Schema cannot say is kept in an `x-fv-rules` annotation, so the round trip is stable. Verified against Ajv with the same payloads; part of the core build.
+
 ## 3.22.0
 - **Upload add-on** (`FileValidator.upload()`, `dist/fileValidator.upload.js` 1.0.0, in the bundle): send a validated file with real progress (XMLHttpRequest in browsers, fetch in Node), `abort()`, retries with backoff (5xx, 408, 429, network, `Retry-After`), a `validate` check first, **direct-to-storage uploads** (presigned PUT and presigned POST policies for S3, GCS, Azure, R2) and **resumable uploads over tus 1.0.0** (chunks, `pause()` / `resume()`, resume after a closed tab through a fingerprint in `localStorage`, an upload the server forgot starts over). Tested against a small server of our own and the official `@tus/server`, and in Chromium, Firefox and WebKit.
 

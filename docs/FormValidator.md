@@ -331,6 +331,30 @@ FormValidator.explain('ab', ['required', { type: 'minlength', min: 3 }, 'email']
 
 A rule that is skipped says why (`skipped: 'empty value: ...'`, a `when` that said no, `unknown rule`, a rule that needs a form).
 
+### JSON Schema and OpenAPI: the same rules, both ways
+
+`FormValidator.toJsonSchema(rules)` writes the rules as a JSON Schema (draft 2020-12), and `FormValidator.fromJsonSchema(schema)` reads one back, so the rules can live in your OpenAPI file, be checked by Ajv on the server, drive a form builder, or be generated from a backend model:
+
+```js
+const schema = FormValidator.toJsonSchema({
+  nick:          { required: true, minlength: 3, maxlength: 12, pattern: '^[a-z0-9]+$' },
+  email:         ['required', 'email'],
+  age:           { integer: true, range: [18, 99] },
+  'address.zip': { digits: true },
+  'items[].sku': ['required', 'slug'],
+  items:         { minItems: 1, maxItems: 3 }
+}, { title: 'Order' });
+// { type: 'object', properties: { nick: { type: 'string', minLength: 3, ... }, age: { type: 'integer', minimum: 18, maximum: 99 },
+//   address: { type: 'object', ... }, items: { type: 'array', minItems: 1, items: { type: 'object', required: ['sku'], ... } } }, required: ['nick', 'email'] }
+
+const rules = FormValidator.fromJsonSchema(openApiComponent, { onUnsupported: (path, keyword) => console.warn(path, keyword) });
+FormValidator.schema(rules).safeParse(body);
+```
+
+- **Mapped both ways**: `required`, `email` / `url` / `uuid` / `ipv4` / `ipv6` / `domain` / `time` / `date` (`format`), `minlength` / `maxlength` / `rangelength`, `pattern` (and `digits`, `alpha`, `alphanumeric`, `slug`, `hexColor` as patterns), `min` / `max` / `range` / `step` (`minimum`, `maximum`, `multipleOf`), `number` / `integer` (`type`, so JSON numbers validate), `oneOf` / `notOneOf` (`enum`, `not.enum`), `minItems` / `maxItems`, nested paths (`a.b`) and rows (`items[].x`) as objects and arrays of objects; for a list of plain values, `unique` is `uniqueItems`.
+- **What JSON Schema cannot say** (`equalTo`, `requiredIf`, `dateAfter`, `pwcheck`, `mask`, `unique` on a column of rows, your own rules) is kept in an **`x-fv-rules`** annotation that validators ignore and `fromJsonSchema` reads back: rules, schema, rules, schema is stable.
+- `fromJsonSchema` follows local `$ref` (`$defs`, `definitions`), merges `allOf`, and reports what it skips (`anyOf` / `oneOf`, `not`, `if`, `patternProperties`, remote refs, `exclusiveMinimum`) to `onUnsupported`; it never throws and ignores hostile keys. Checked against Ajv with the same payloads. Part of the core build.
+
 ### Smaller builds: the core and your own subset
 
 Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a `<form>`. Two ways to ship less:
@@ -1059,6 +1083,7 @@ The newest entries (each source file also keeps its own changelog in its header;
 
 - **2.15.0**: `requiredIf`, `dateAfter`, `dateBefore`, `atLeastOne`, `sumEquals`; `inst.state` / `getState()` / `onStateChange()`; `inst.validateStep()`; `FormValidator.explain()`.
 - **2.14.0**: field arrays and nested data: wildcard rule keys (`items[].qty`) and nested paths in `checkValues()` / `schema()` / forms, rules `unique`, `minItems`, `maxItems`; schema output is nested.
+- **2.15.0 (continued)**: `toJsonSchema()` / `fromJsonSchema()`.
 - **2.15.0 (continued)**: `antiBot`, `idempotencyKey`, `disableOnSubmit`, `draft`, `leaveWarning`, `FormValidator.isBotSubmission()`.
 - **2.15.0 (continued)**: `FormValidator.mask()`, the `mask` rule, `maskPattern()`, `unmaskValue()`, `parseRules()`, `FormValidator.auto()` / `data-fv` attributes / `data-fv-auto` script attribute.
 - **password add-on 1.0.0**: `passwordStrength()`, `pwned()`, `watchPasswordStrength()`, rules `pwscore` and `pwned` (`dist/formValidator.password.js`).
