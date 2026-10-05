@@ -1,7 +1,9 @@
 /*!
- * FileValidator v2.9.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.10.0 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.10.0 SVG scan hardened: <!DOCTYPE>/<!ENTITY> (XXE, entity bombs), external href / xlink:href (remote <use>, <image>), CSS @import and url(http...),
+ *          xml-stylesheet, and javascript: hidden by character references or whitespace are now DANGEROUS_CONTENT. #id, data:image and <a href=https> stay allowed.
  *   2.9.0  readMetadata() and stripMetadata(): see what a JPEG, PNG or WebP gives away (EXIF, GPS position, XMP, IPTC, comments) and remove it without
  *          re-encoding the picture; the EXIF orientation is kept so phone photos stay upright. Pure byte work: browser and Node.
  *   2.7.1  Fix: a fractional byte range (a small `maxScanMB` such as 0.0001) made Node 20 abort the whole process inside Blob.slice();
@@ -330,6 +332,37 @@
 
     const units = { B: 'B', KB: 'KB', MB: 'MB', GB: 'GB' };     // FileValidator.units: a language pack changes these
     const phrases = {};                                          // FileValidator.phrases: English fragment -> translation
+
+    /**
+     * True when SVG text can run code or reach outside the file: scripts, event handlers, javascript: URLs, foreignObject,
+     * <!DOCTYPE>/<!ENTITY> (XXE, entity bombs), external href/xlink:href (remote <use>, <image>, <feImage>), CSS @import and url(http...).
+     * Same-document references (#id) and embedded raster images (data:image/png|jpeg|gif|webp) stay allowed; <a href="http(s)://"> links are plain navigation.
+     * Every check is a linear scan (no nested quantifiers), so hostile files cannot stall it.
+     */
+    function svgIsUnsafe(raw) {
+        // decode numeric character references first so "&#106;avascript:" cannot hide the scheme
+        const txt = raw.replace(/&#x([0-9a-f]{1,6});?/gi, (m, h) => String.fromCodePoint(Math.min(parseInt(h, 16), 0x10ffff)))
+            .replace(/&#(\d{1,7});?/g, (m, d) => String.fromCodePoint(Math.min(+d, 0x10ffff)));
+        if (/<script[\s>\/]|[\s"'\/]on\w+\s*=|<foreignObject|<!DOCTYPE|<!ENTITY|<\?xml-stylesheet/i.test(txt)) return true;
+        if (/j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t\s*:/i.test(txt)) return true;
+        if (/@import|url\(\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(txt)) return true;
+        for (let i = txt.indexOf('<'); i >= 0;) {   // walk the tags with indexOf: one pass, no backtracking
+            const j = txt.indexOf('>', i);
+            if (j < 0) break;
+            const tag = txt.slice(i + 1, j), sp = tag.search(/[\s\/]/), name = (sp < 0 ? tag : tag.slice(0, sp)).toLowerCase();
+            const attrRe = /(?:^|[\s"'])(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+            let a;
+            while ((a = attrRe.exec(tag))) {
+                const v = (a[1] !== undefined ? a[1] : a[2] !== undefined ? a[2] : a[3]).trim();
+                if (v === '' || v.charAt(0) === '#') continue;
+                if (/^data:image\/(?:png|jpe?g|gif|webp)[;,]/i.test(v)) continue;
+                if (name === 'a' && /^(?:https?:|mailto:|tel:)/i.test(v)) continue;
+                return true;
+            }
+            i = txt.indexOf('<', j);
+        }
+        return false;
+    }
 
     /** A fragment of a message ("macros", "it holds {n} files"). Translated through FileValidator.phrases, then filled. */
     function phrase(text, values) { return fill(phrases[text] || text, values); }
@@ -1185,7 +1218,7 @@
         // ---- SVG can carry scripts
         if (ext === '.svg' && cfg.scanSvg !== false && file.size > 0 && file.size <= 5 * 1048576 && typeof file.text === 'function') {
             const txt = await file.text();
-            if (/<script[\s>]|\son\w+\s*=|javascript:|<foreignObject/i.test(txt)) {
+            if (svgIsUnsafe(txt)) {
                 add('DANGEROUS_CONTENT', { detected: phrase('scripts') });
                 return finish(details, cfg);
             }
@@ -1450,7 +1483,7 @@
     }
 
     return {
-        version: '2.9.0',
+        version: '2.10.0',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         isValid,         // async (files | <input> | selector, config) -> true / false
         guard,           // (input, config, { onSubmit, messageElement }) : check the file input when its form is submitted, direct or AJAX

@@ -303,6 +303,11 @@ export interface FormValidatorStatic {
      * Same engine and messages as checkValues(): no file, checkbox-count or remote rules.
      */
     schema<const R extends Record<string, RulesForField>>(rules: R, options?: ValueCheckOptions): FormSchema<R>;
+    /**
+     * Flat form fields -> nested object: `a.b[0].c`, `a[b]`, `tags[]`, repeated names become arrays. Accepts a form, FormData, URLSearchParams, entries or a plain object.
+     * `coerce: true` turns "42", "3.5", "true", "false" into numbers and booleans. Unsafe keys (`__proto__`, indexes above 999, over 20 levels) are dropped.
+     */
+    parseFormData(input: HTMLFormElement | FormData | URLSearchParams | Iterable<readonly [string, unknown]> | Record<string, unknown> | null | undefined, options?: { coerce?: boolean }): Record<string, any>;
     readonly ValidationError: new (issues: ReadonlyArray<SchemaIssue>) => ValidationError;
     /** Set up one form (returns its instance) or several (returns an array). */
     init(options: InitOptions & { formId: Array<string | HTMLFormElement> }): FormInstance[];
@@ -334,6 +339,8 @@ export interface FormValidatorStatic {
     readonly defaults: FormConfig;
     /** How remote rules talk to the server (default GET). */
     readonly remoteDefaults: { method: 'GET' | 'POST'; encoding: 'json' | 'form' };
+    /** Names of every registered rule, built in and custom. */
+    ruleNames(): string[];
     getRule(name: string): { fn: Function; runOnEmpty: boolean; remote: boolean } | null;
     /** Only in the one-file bundle. */
     readonly bundled?: boolean;

@@ -1,4 +1,4 @@
-# FormValidator v2.9.0 — Documentation
+# FormValidator v2.10.0 — Documentation
 
 ## Overview
 
@@ -185,6 +185,22 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 ```
 
 No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: `trim`, `values` (the other fields), `messages` (per rule type).
+
+### parseFormData: flat form fields to a nested object
+
+`FormValidator.parseFormData(input, options?)` turns a `<form>`, `FormData`, `URLSearchParams`, a list of `[name, value]` pairs or a plain object into the nested object your schema or API expects. Use it in a server action, a Next.js route or the browser.
+
+```js
+FormValidator.parseFormData(new FormData(form));
+// name="user.email", name="items[0].qty", name="items[1].qty", name="tags[]" (twice), name="color" (checkboxes, twice)
+// -> { user: { email }, items: [{ qty }, { qty }], tags: [..], color: ['red', 'blue'] }
+
+FormValidator.parseFormData(formData, { coerce: true }); // "42" -> 42, "3.5" -> 3.5, "true" -> true; "01234" and "+4915" stay text
+```
+
+- `a.b`, `a[b]` and `a[0]` nest; `a[]` appends; the same name twice makes an array. A later nested key replaces an earlier plain value.
+- `File` values pass through untouched.
+- Safe on untrusted input: `__proto__`, `constructor`, `prototype`, indexes above 999, more than 20 levels and malformed keys are dropped.
 
 ### Schema: one definition for any library (Standard Schema)
 
@@ -688,6 +704,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.10.0**: `FormValidator.parseFormData()`, `FormValidator.ruleNames()`, a ReDoS fuzz test for every rule.
 - **2.9.0**: `FormValidator.schema(rules)`: the rules as a Standard Schema with `parse`, `safeParse` and typed values and errors.
 - **2.8.0**: 19 new rules (`integer`, `uuid`, `hexColor`, `slug`, `ipv4`, `ipv6`, `iban`, `time`, `domain`, `base64`, `mac`, `latitude`, `longitude`, `startsWith`, `endsWith`, `contains`, `notOneOf`, `minWords`, `maxWords`), also in the .NET package and all language packs.
 - **2.7.0**: named date formats (`format`, `strict`), `checkValue()` / `checkValues()` without a DOM, a `url` rule that is the same in every browser, Unicode-aware `pwcheck`, plain-decimal `min` / `max` / `range` / `step`.

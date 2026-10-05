@@ -1,7 +1,9 @@
 /*!
- * FormValidator v2.9.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.10.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.10.0 FormValidator.parseFormData(formData, { coerce }): flat fields (a.b[0].c, tags[], repeated names) -> the nested object a schema expects, safe against __proto__ keys and huge indexes.
+ *          FormValidator.ruleNames(). A fuzz test (tests/redos.test.js) now guards every rule against catastrophic regex backtracking.
  *   2.9.0  FormValidator.schema(rules): the rules of an object as a Standard Schema (parse, safeParse, ~standard.validate, typed values and errors in TypeScript).
  *   2.8.0  19 new rules: integer, uuid, hexColor, slug, ipv4, ipv6, iban, time, domain, base64, mac, latitude, longitude, startsWith, endsWith, contains, notOneOf, minWords, maxWords
  *          (ASCII-exact, the same answers in .NET; messages in every language pack).
@@ -1364,8 +1366,78 @@
         return api;
     }
 
+    // ------------------------------------------------------------------ parseFormData: flat form fields -> nested object
+    const BAD_KEYS = ['__proto__', 'constructor', 'prototype'];
+    const MAX_INDEX = 999, MAX_DEPTH = 20;
+    /** "a.b[0].c" -> ['a','b',0,'c'];  "tags[]" -> ['tags','']  ('' = append);  "a[b]" -> ['a','b']. null when the key is unusable or unsafe. */
+    function pathTokens(key) {
+        const out = [], re = /([^.[\]]+)|\[([^\]]*)\]/g;
+        let m, last = 0;
+        while ((m = re.exec(key))) {
+            const dotted = key.charAt(m.index - 1) === '.' && m.index === last + 1 && out.length > 0;
+            if (m.index !== last && !dotted) return null;   // stray "]" or "." where a name should start
+            last = re.lastIndex;
+            let name = m[1] !== undefined ? m[1] : m[2];
+            if (m[1] === undefined && out.length === 0) return null;   // key cannot start with [
+            if (m[1] === undefined && /^[0-9]+$/.test(name)) { if (+name > MAX_INDEX) return null; name = +name; }
+            else if (m[1] === undefined && name === '') name = '';
+            else if (BAD_KEYS.indexOf(name) >= 0) return null;
+            out.push(name);
+        }
+        return out.length && out.length <= MAX_DEPTH && last === key.length ? out : null;
+    }
+    const NUMERIC_TEXT = /^-?(?:0|[1-9][0-9]{0,14})(?:\.[0-9]{1,15})?$/;
+    function coerceText(v) {
+        if (typeof v !== 'string') return v;
+        if (v === 'true') return true;
+        if (v === 'false') return false;
+        return NUMERIC_TEXT.test(v) ? Number(v) : v;
+    }
+    /**
+     * Turns the flat fields of a <form>, FormData, URLSearchParams, an entry list or a plain { 'a.b[0]': value } object into the nested object your schema expects.
+     *   name="user.email"  -> { user: { email } }      name="items[0].qty" -> { items: [{ qty }] }      name="tags[]" -> { tags: [...] }
+     *   the same name twice (checkbox groups, multiple selects) -> an array         keys like __proto__ or items[100000] are dropped
+     * Options: { coerce: true } turns "42", "3.5", "true", "false" into numbers and booleans (text such as "007" stays text, so zip codes survive).
+     */
+    function parseFormData(input, options) {
+        const o = options || {};
+        let entries;
+        if (input && typeof input.elements === 'object' && typeof FormData === 'function') entries = Array.from(new FormData(input).entries());
+        else if (Array.isArray(input)) entries = input;
+        else if (input && typeof input.entries === 'function') entries = Array.from(input.entries());
+        else if (input && typeof input[Symbol.iterator] === 'function') entries = Array.from(input);
+        else if (input && typeof input === 'object') entries = Object.keys(input).map(k => [k, input[k]]);
+        else entries = [];
+        const root = {};
+        for (const pair of entries) {
+            const tokens = pathTokens(String(pair[0]));
+            if (!tokens) continue;
+            const value = o.coerce ? coerceText(pair[1]) : pair[1];
+            let node = root;
+            for (let i = 0; i < tokens.length; i++) {
+                const t = tokens[i], isLast = i === tokens.length - 1;
+                if (Array.isArray(node) && t === '') { if (isLast) node.push(value); else { const c = typeof tokens[i + 1] === 'number' || tokens[i + 1] === '' ? [] : {}; node.push(c); node = c; } continue; }
+                if (isLast) {
+                    if (!Object.prototype.hasOwnProperty.call(node, t)) node[t] = value;
+                    else if (Array.isArray(node[t])) node[t].push(value);
+                    else node[t] = [node[t], value];
+                    continue;
+                }
+                const next = tokens[i + 1];
+                let child = Object.prototype.hasOwnProperty.call(node, t) ? node[t] : undefined;
+                if (child === null || typeof child !== 'object' || (typeof next === 'number' || next === '' ? !Array.isArray(child) : Array.isArray(child))) {
+                    child = typeof next === 'number' || next === '' ? [] : {};
+                    node[t] = child;
+                }
+                node = child;
+            }
+        }
+        return root;
+    }
+
     return {
         init,
+        parseFormData, // (formData | form | entries | object, { coerce? }) -> nested object: 'a.b[0].c' -> { a: { b: [{ c }] } }
         schema,        // (rules, options?) -> Standard Schema with parse / safeParse / check
         ValidationError,
         validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
@@ -1379,9 +1451,10 @@
         format,
         setDefaults: obj => Object.assign(DEFAULTS, obj),
         getRule: name => validators[name] || null,
+        ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.9.0'
+        version: '2.10.0'
     };
 });

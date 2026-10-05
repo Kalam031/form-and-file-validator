@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.7.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.8.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -53,7 +53,7 @@
 &lt;script src=&quot;dist/fileValidator.widget.js&quot;&gt;&lt;/script&gt;   &lt;!-- optional: the upload widget --&gt;
 </code></pre>
 <p>Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code>.</p>
-<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.9.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.4.0.</p>
+<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.10.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.4.0.</p>
 <h2 id="quick-start">Quick start</h2>
 <p>Call <code>validateFiles</code> with the selected files and a config. It always resolves, and never throws on odd input.</p>
 <pre tabindex="0"><code class="language-js">const input = document.querySelector(&#39;#upload&#39;);
@@ -312,7 +312,7 @@ if (await g.validate()) { /* ... */ }
 <tr>
 <td><code>scanSvg</code></td>
 <td><code>true</code></td>
-<td>Set <code>false</code> to skip the SVG script check</td>
+<td>Set <code>false</code> to skip the SVG safety check (scripts, event handlers, <code>javascript:</code>, <code>foreignObject</code>, <code>&lt;!DOCTYPE&gt;</code> / <code>&lt;!ENTITY&gt;</code>, external <code>href</code> / <code>xlink:href</code>, CSS <code>@import</code> and <code>url(http...)</code>; <code>#id</code>, <code>data:image/...</code> and <code>&lt;a href=&quot;https://...&quot;&gt;</code> are fine)</td>
 </tr>
 </tbody></table></div>
 <p><strong>Folders and documents</strong></p>

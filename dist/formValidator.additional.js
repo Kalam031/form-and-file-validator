@@ -1003,7 +1003,14 @@ $.validator.addMethod( "stateUS", function( value, element, options ) {
 }, "Please specify a valid state." );
 
 $.validator.addMethod( "strippedminlength", function( value, element, param ) {
-	return $( value ).text().length >= param;
+	// DOMParser builds an inert document (the original $( value ) would run <img onerror=...> from user text); without it, strip tags by hand
+	var text;
+	if ( typeof DOMParser === "function" ) {
+		text = new DOMParser().parseFromString( String( value ), "text/html" ).body.textContent;
+	} else {
+		text = String( value ).replace( /<[^>]*>/g, "" );
+	}
+	return text.length >= param;
 }, $.validator.format( "Please enter at least {0} characters." ) );
 
 $.validator.addMethod( "url2", function( value, element ) {

@@ -30,7 +30,7 @@ FileValidator decides whether selected files are safe and acceptable before you 
 
 Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: `<script src="dist/validator.min.js"></script>`.
 
-With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.9.0). The optional upload widget (`fileValidator.widget.js`) is version 1.4.0.
+With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.10.0). The optional upload widget (`fileValidator.widget.js`) is version 1.4.0.
 
 ## Quick start
 
@@ -171,7 +171,7 @@ All options are optional. Numbers may be given as numeric strings (`'5'`), and l
 | `imageDecode` | `true` | Set `false` to skip decoding the image (faster on huge photos) |
 | `imageTimeoutMs` | `10000` | Give up decoding after this long |
 | `readImageSize` | built in | `async (file) => ({ width, height })` to supply your own reader, for example in Node |
-| `scanSvg` | `true` | Set `false` to skip the SVG script check |
+| `scanSvg` | `true` | Set `false` to skip the SVG safety check (scripts, event handlers, `javascript:`, `foreignObject`, `<!DOCTYPE>` / `<!ENTITY>`, external `href` / `xlink:href`, CSS `@import` and `url(http...)`; `#id`, `data:image/...` and `<a href="https://...">` are fine) |
 
 **Folders and documents**
 

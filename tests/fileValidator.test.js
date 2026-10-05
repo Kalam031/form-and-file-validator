@@ -181,6 +181,40 @@ test('tiny or short files do not crash the sniffer', async () => {
     await bad([file('a.png', [1], 'image/png')], {}, 'SIGNATURE_MISMATCH');
 });
 
+test('SVG hardening: XXE, entities, external references, CSS imports and disguised javascript: are blocked', async () => {
+    const NS = 'xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"';
+    for (const evil of [
+        '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg ' + NS + '><text>&x;</text></svg>',
+        '<!DOCTYPE svg><svg ' + NS + '/>',
+        '<svg ' + NS + '><use xlink:href="https://evil.example/a.svg#x"/></svg>',
+        '<svg ' + NS + '><use href="//evil.example/a.svg#x"/></svg>',
+        '<svg ' + NS + '><image href="http://tracker.example/p.png"/></svg>',
+        "<svg " + NS + "><image xlink:href='http://tracker.example/p.png'/></svg>",
+        '<svg ' + NS + '><style>@import url(https://evil.example/a.css);</style></svg>',
+        '<svg ' + NS + '><rect style="fill:url(http://evil.example/x)"/></svg>',
+        '<svg ' + NS + '><a href="&#106;avascript:alert(1)"><text>x</text></a></svg>',
+        '<svg ' + NS + '><a href="java&#x73;cript:alert(1)"><text>x</text></a></svg>',
+        '<svg ' + NS + '><a href="  java\tscript:alert(1)"><text>x</text></a></svg>',
+        '<?xml-stylesheet href="x.css"?><svg ' + NS + '/>',
+        '<svg ' + NS + '><rect/onload="x()"/></svg>'
+    ]) await bad([text('a.svg', evil, 'image/svg+xml')], {}, 'DANGEROUS_CONTENT');
+    for (const fine of [
+        '<svg ' + NS + '><defs><linearGradient id="g"/></defs><rect fill="url(#g)"/><use href="#g"/><use xlink:href="#g"/></svg>',
+        '<svg ' + NS + '><image href="data:image/png;base64,iVBORw0KGgo="/></svg>',
+        '<svg ' + NS + '><a href="https://example.com/docs"><text>docs</text></a></svg>'
+    ]) await ok([text('a.svg', fine, 'image/svg+xml')], {});
+    await ok([text('a.svg', '<!DOCTYPE svg><svg/>', 'image/svg+xml')], { scanSvg: false });
+});
+
+test('SVG scan stays fast on hostile input (no catastrophic backtracking)', async () => {
+    const hostile = ['<' + 'a'.repeat(200000), '<a ' + 'href='.repeat(40000), '<a href="' + ' '.repeat(200000), '<'.repeat(200000), 'j' + ' '.repeat(200000) + 'x'];
+    for (const body of hostile) {
+        const t0 = Date.now();
+        await ok([text('a.svg', '<svg xmlns="http://www.w3.org/2000/svg">' + '</svg><!--' + body + '-->', 'image/svg+xml')], { scanSvg: true }).catch(() => {});
+        assert.ok(Date.now() - t0 < 1500, 'took ' + (Date.now() - t0) + ' ms');
+    }
+});
+
 test('SVG: allowed when clean, blocked when it carries script', async () => {
     await ok([text('a.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect/></svg>', 'image/svg+xml')], {});
     for (const evil of [

@@ -1,12 +1,14 @@
-/*! FormValidator 2.9.0 + FileValidator 2.9.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.10.0 + FileValidator 2.10.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
     mods["fileValidator"] = function (module, exports, require, define) {
 /*!
- * FileValidator v2.9.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.10.0 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.10.0 SVG scan hardened: <!DOCTYPE>/<!ENTITY> (XXE, entity bombs), external href / xlink:href (remote <use>, <image>), CSS @import and url(http...),
+ *          xml-stylesheet, and javascript: hidden by character references or whitespace are now DANGEROUS_CONTENT. #id, data:image and <a href=https> stay allowed.
  *   2.9.0  readMetadata() and stripMetadata(): see what a JPEG, PNG or WebP gives away (EXIF, GPS position, XMP, IPTC, comments) and remove it without
  *          re-encoding the picture; the EXIF orientation is kept so phone photos stay upright. Pure byte work: browser and Node.
  *   2.7.1  Fix: a fractional byte range (a small `maxScanMB` such as 0.0001) made Node 20 abort the whole process inside Blob.slice();
@@ -335,6 +337,37 @@ const api = (function (root) {
 
     const units = { B: 'B', KB: 'KB', MB: 'MB', GB: 'GB' };     // FileValidator.units: a language pack changes these
     const phrases = {};                                          // FileValidator.phrases: English fragment -> translation
+
+    /**
+     * True when SVG text can run code or reach outside the file: scripts, event handlers, javascript: URLs, foreignObject,
+     * <!DOCTYPE>/<!ENTITY> (XXE, entity bombs), external href/xlink:href (remote <use>, <image>, <feImage>), CSS @import and url(http...).
+     * Same-document references (#id) and embedded raster images (data:image/png|jpeg|gif|webp) stay allowed; <a href="http(s)://"> links are plain navigation.
+     * Every check is a linear scan (no nested quantifiers), so hostile files cannot stall it.
+     */
+    function svgIsUnsafe(raw) {
+        // decode numeric character references first so "&#106;avascript:" cannot hide the scheme
+        const txt = raw.replace(/&#x([0-9a-f]{1,6});?/gi, (m, h) => String.fromCodePoint(Math.min(parseInt(h, 16), 0x10ffff)))
+            .replace(/&#(\d{1,7});?/g, (m, d) => String.fromCodePoint(Math.min(+d, 0x10ffff)));
+        if (/<script[\s>\/]|[\s"'\/]on\w+\s*=|<foreignObject|<!DOCTYPE|<!ENTITY|<\?xml-stylesheet/i.test(txt)) return true;
+        if (/j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t\s*:/i.test(txt)) return true;
+        if (/@import|url\(\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(txt)) return true;
+        for (let i = txt.indexOf('<'); i >= 0;) {   // walk the tags with indexOf: one pass, no backtracking
+            const j = txt.indexOf('>', i);
+            if (j < 0) break;
+            const tag = txt.slice(i + 1, j), sp = tag.search(/[\s\/]/), name = (sp < 0 ? tag : tag.slice(0, sp)).toLowerCase();
+            const attrRe = /(?:^|[\s"'])(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+            let a;
+            while ((a = attrRe.exec(tag))) {
+                const v = (a[1] !== undefined ? a[1] : a[2] !== undefined ? a[2] : a[3]).trim();
+                if (v === '' || v.charAt(0) === '#') continue;
+                if (/^data:image\/(?:png|jpe?g|gif|webp)[;,]/i.test(v)) continue;
+                if (name === 'a' && /^(?:https?:|mailto:|tel:)/i.test(v)) continue;
+                return true;
+            }
+            i = txt.indexOf('<', j);
+        }
+        return false;
+    }
 
     /** A fragment of a message ("macros", "it holds {n} files"). Translated through FileValidator.phrases, then filled. */
     function phrase(text, values) { return fill(phrases[text] || text, values); }
@@ -1190,7 +1223,7 @@ const api = (function (root) {
         // ---- SVG can carry scripts
         if (ext === '.svg' && cfg.scanSvg !== false && file.size > 0 && file.size <= 5 * 1048576 && typeof file.text === 'function') {
             const txt = await file.text();
-            if (/<script[\s>]|\son\w+\s*=|javascript:|<foreignObject/i.test(txt)) {
+            if (svgIsUnsafe(txt)) {
                 add('DANGEROUS_CONTENT', { detected: phrase('scripts') });
                 return finish(details, cfg);
             }
@@ -1455,7 +1488,7 @@ const api = (function (root) {
     }
 
     return {
-        version: '2.9.0',
+        version: '2.10.0',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         isValid,         // async (files | <input> | selector, config) -> true / false
         guard,           // (input, config, { onSubmit, messageElement }) : check the file input when its form is submitted, direct or AJAX
@@ -2072,9 +2105,11 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.9.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.10.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.10.0 FormValidator.parseFormData(formData, { coerce }): flat fields (a.b[0].c, tags[], repeated names) -> the nested object a schema expects, safe against __proto__ keys and huge indexes.
+ *          FormValidator.ruleNames(). A fuzz test (tests/redos.test.js) now guards every rule against catastrophic regex backtracking.
  *   2.9.0  FormValidator.schema(rules): the rules of an object as a Standard Schema (parse, safeParse, ~standard.validate, typed values and errors in TypeScript).
  *   2.8.0  19 new rules: integer, uuid, hexColor, slug, ipv4, ipv6, iban, time, domain, base64, mac, latitude, longitude, startsWith, endsWith, contains, notOneOf, minWords, maxWords
  *          (ASCII-exact, the same answers in .NET; messages in every language pack).
@@ -3437,8 +3472,78 @@ const api = (function (root) {
         return api;
     }
 
+    // ------------------------------------------------------------------ parseFormData: flat form fields -> nested object
+    const BAD_KEYS = ['__proto__', 'constructor', 'prototype'];
+    const MAX_INDEX = 999, MAX_DEPTH = 20;
+    /** "a.b[0].c" -> ['a','b',0,'c'];  "tags[]" -> ['tags','']  ('' = append);  "a[b]" -> ['a','b']. null when the key is unusable or unsafe. */
+    function pathTokens(key) {
+        const out = [], re = /([^.[\]]+)|\[([^\]]*)\]/g;
+        let m, last = 0;
+        while ((m = re.exec(key))) {
+            const dotted = key.charAt(m.index - 1) === '.' && m.index === last + 1 && out.length > 0;
+            if (m.index !== last && !dotted) return null;   // stray "]" or "." where a name should start
+            last = re.lastIndex;
+            let name = m[1] !== undefined ? m[1] : m[2];
+            if (m[1] === undefined && out.length === 0) return null;   // key cannot start with [
+            if (m[1] === undefined && /^[0-9]+$/.test(name)) { if (+name > MAX_INDEX) return null; name = +name; }
+            else if (m[1] === undefined && name === '') name = '';
+            else if (BAD_KEYS.indexOf(name) >= 0) return null;
+            out.push(name);
+        }
+        return out.length && out.length <= MAX_DEPTH && last === key.length ? out : null;
+    }
+    const NUMERIC_TEXT = /^-?(?:0|[1-9][0-9]{0,14})(?:\.[0-9]{1,15})?$/;
+    function coerceText(v) {
+        if (typeof v !== 'string') return v;
+        if (v === 'true') return true;
+        if (v === 'false') return false;
+        return NUMERIC_TEXT.test(v) ? Number(v) : v;
+    }
+    /**
+     * Turns the flat fields of a <form>, FormData, URLSearchParams, an entry list or a plain { 'a.b[0]': value } object into the nested object your schema expects.
+     *   name="user.email"  -> { user: { email } }      name="items[0].qty" -> { items: [{ qty }] }      name="tags[]" -> { tags: [...] }
+     *   the same name twice (checkbox groups, multiple selects) -> an array         keys like __proto__ or items[100000] are dropped
+     * Options: { coerce: true } turns "42", "3.5", "true", "false" into numbers and booleans (text such as "007" stays text, so zip codes survive).
+     */
+    function parseFormData(input, options) {
+        const o = options || {};
+        let entries;
+        if (input && typeof input.elements === 'object' && typeof FormData === 'function') entries = Array.from(new FormData(input).entries());
+        else if (Array.isArray(input)) entries = input;
+        else if (input && typeof input.entries === 'function') entries = Array.from(input.entries());
+        else if (input && typeof input[Symbol.iterator] === 'function') entries = Array.from(input);
+        else if (input && typeof input === 'object') entries = Object.keys(input).map(k => [k, input[k]]);
+        else entries = [];
+        const root = {};
+        for (const pair of entries) {
+            const tokens = pathTokens(String(pair[0]));
+            if (!tokens) continue;
+            const value = o.coerce ? coerceText(pair[1]) : pair[1];
+            let node = root;
+            for (let i = 0; i < tokens.length; i++) {
+                const t = tokens[i], isLast = i === tokens.length - 1;
+                if (Array.isArray(node) && t === '') { if (isLast) node.push(value); else { const c = typeof tokens[i + 1] === 'number' || tokens[i + 1] === '' ? [] : {}; node.push(c); node = c; } continue; }
+                if (isLast) {
+                    if (!Object.prototype.hasOwnProperty.call(node, t)) node[t] = value;
+                    else if (Array.isArray(node[t])) node[t].push(value);
+                    else node[t] = [node[t], value];
+                    continue;
+                }
+                const next = tokens[i + 1];
+                let child = Object.prototype.hasOwnProperty.call(node, t) ? node[t] : undefined;
+                if (child === null || typeof child !== 'object' || (typeof next === 'number' || next === '' ? !Array.isArray(child) : Array.isArray(child))) {
+                    child = typeof next === 'number' || next === '' ? [] : {};
+                    node[t] = child;
+                }
+                node = child;
+            }
+        }
+        return root;
+    }
+
     return {
         init,
+        parseFormData, // (formData | form | entries | object, { coerce? }) -> nested object: 'a.b[0].c' -> { a: { b: [{ c }] } }
         schema,        // (rules, options?) -> Standard Schema with parse / safeParse / check
         ValidationError,
         validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
@@ -3452,10 +3557,11 @@ const api = (function (root) {
         format,
         setDefaults: obj => Object.assign(DEFAULTS, obj),
         getRule: name => validators[name] || null,
+        ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.9.0'
+        version: '2.10.0'
     };
 });
 
@@ -5257,7 +5363,14 @@ $.validator.addMethod( "stateUS", function( value, element, options ) {
 }, "Please specify a valid state." );
 
 $.validator.addMethod( "strippedminlength", function( value, element, param ) {
-	return $( value ).text().length >= param;
+	// DOMParser builds an inert document (the original $( value ) would run <img onerror=...> from user text); without it, strip tags by hand
+	var text;
+	if ( typeof DOMParser === "function" ) {
+		text = new DOMParser().parseFromString( String( value ), "text/html" ).body.textContent;
+	} else {
+		text = String( value ).replace( /<[^>]*>/g, "" );
+	}
+	return text.length >= param;
 }, $.validator.format( "Please enter at least {0} characters." ) );
 
 $.validator.addMethod( "url2", function( value, element ) {
@@ -5510,7 +5623,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.9.0","fileValidator.widget":"1.4.0","formValidator":"2.9.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.10.0","fileValidator.widget":"1.4.0","formValidator":"2.10.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;

@@ -43,7 +43,7 @@ test('every method name of the original plugin exists in the bundle, with a mess
 });
 
 test('all methods answer like the original plugin on a wide set of probe values', () => {
-    const names = Object.keys(original.jQuery.validator.methods).filter(n => !['remote', 'required', 'equalTo', 'accept', 'require_from_group', 'skip_or_fill_minimum'].includes(n));
+    const names = Object.keys(original.jQuery.validator.methods).filter(n => !['remote', 'required', 'equalTo', 'accept', 'require_from_group', 'skip_or_fill_minimum', 'strippedminlength'].includes(n));   // strippedminlength differs on purpose, see its own test
     const diffs = [];
     let compared = 0;
     for (const name of names) {
@@ -63,6 +63,17 @@ test('all methods answer like the original plugin on a wide set of probe values'
     }
     assert.ok(compared > 5000, 'compared ' + compared);
     assert.deepEqual(diffs.slice(0, 20), []);
+});
+
+test('strippedminlength counts the text of markup without running it (the original passed user text to $() and fired <img onerror>)', () => {
+    const $ = ours.jQuery, v = $('#f').validate(), el = ours.document.getElementById('a');
+    const m = (val, p) => $.validator.methods.strippedminlength.call(v, val, el, p);
+    ours.__pwned = false;
+    assert.equal(m('<p>ab</p><b>c</b>', 3), true);
+    assert.equal(m('<p>ab</p>', 3), false);
+    assert.equal(m('plain text', 3), true);
+    assert.equal(m('<img src="x" onerror="window.__pwned=true">', 1), false);
+    assert.equal(ours.__pwned, false);
 });
 
 test('spot checks: real numbers pass, near misses fail', () => {

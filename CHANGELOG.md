@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.8.0
+- **ReDoS guarantee** (FormValidator 2.10.0): a fuzz test in CI feeds 50,000-character hostile strings to every built-in rule and every jQuery-layer method (country and bank checks included) and fails if one takes longer than 250 ms. New rules are covered automatically through the new `FormValidator.ruleNames()`.
+- **SVG hardening** (FileValidator 2.10.0): the SVG scan now also rejects `<!DOCTYPE>` / `<!ENTITY>` (XXE, entity bombs), external `href` / `xlink:href` (remote `<use>`, `<image>`, tracking pixels), CSS `@import` and `url(http...)`, `xml-stylesheet`, and `javascript:` hidden by character references or whitespace. `#id` references, `data:image` pictures and `<a href="https://...">` links stay allowed. It is a linear scan, tested on hostile input.
+- **`FormValidator.parseFormData(formData, { coerce })`**: flat fields (`user.email`, `items[0].qty`, `tags[]`, repeated names) become the nested object a schema expects; `File` values pass through; `__proto__` keys and huge indexes are dropped.
+- Security fix: the jQuery-layer `strippedminlength` method passed user text to `$()`, which could run `<img onerror>`; it now reads the text in an inert document.
+
 ## 3.7.0
 - **Standard Schema** (FormValidator 2.9.0): `FormValidator.schema(rules)` turns the rules of an object into one schema that React Hook Form, TanStack Form, Hono, tRPC and every other Standard Schema consumer accepts, with no resolver or adapter of ours. `parse()`, `safeParse()`, `check()` and `['~standard'].validate()` use the same engine, messages and language packs as `checkValues()`.
 - **Typed rules**: TypeScript infers the values and the errors from the rules: `InferInput`, `InferOutput`, `InferErrors`. Fields with a `required` rule are required keys, the others optional, and a misspelt field name in `result.errors` does not compile. Checked against the official `@standard-schema/spec` types.

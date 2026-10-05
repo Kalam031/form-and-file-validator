@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.7.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.8.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v290-documentation">FormValidator v2.9.0 — Documentation</h1>
+<h1 id="formvalidator-v2100-documentation">FormValidator v2.10.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -428,6 +428,19 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 // { valid, errors: { pw2: &#39;Values do not match.&#39; }, details: { pw2: { rule: &#39;equalTo&#39;, message: &#39;...&#39; } } }
 </code></pre>
 <p>No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: <code>trim</code>, <code>values</code> (the other fields), <code>messages</code> (per rule type).</p>
+<h3 id="parseformdata-flat-form-fields-to-a-nested-object">parseFormData: flat form fields to a nested object</h3>
+<p><code>FormValidator.parseFormData(input, options?)</code> turns a <code>&lt;form&gt;</code>, <code>FormData</code>, <code>URLSearchParams</code>, a list of <code>[name, value]</code> pairs or a plain object into the nested object your schema or API expects. Use it in a server action, a Next.js route or the browser.</p>
+<pre tabindex="0"><code class="language-js">FormValidator.parseFormData(new FormData(form));
+// name=&quot;user.email&quot;, name=&quot;items[0].qty&quot;, name=&quot;items[1].qty&quot;, name=&quot;tags[]&quot; (twice), name=&quot;color&quot; (checkboxes, twice)
+// -&gt; { user: { email }, items: [{ qty }, { qty }], tags: [..], color: [&#39;red&#39;, &#39;blue&#39;] }
+
+FormValidator.parseFormData(formData, { coerce: true }); // &quot;42&quot; -&gt; 42, &quot;3.5&quot; -&gt; 3.5, &quot;true&quot; -&gt; true; &quot;01234&quot; and &quot;+4915&quot; stay text
+</code></pre>
+<ul>
+<li><code>a.b</code>, <code>a[b]</code> and <code>a[0]</code> nest; <code>a[]</code> appends; the same name twice makes an array. A later nested key replaces an earlier plain value.</li>
+<li><code>File</code> values pass through untouched.</li>
+<li>Safe on untrusted input: <code>__proto__</code>, <code>constructor</code>, <code>prototype</code>, indexes above 999, more than 20 levels and malformed keys are dropped.</li>
+</ul>
 <h3 id="schema-one-definition-for-any-library-standard-schema">Schema: one definition for any library (Standard Schema)</h3>
 <p><code>FormValidator.schema(rules)</code> turns the rules of an object into <strong>one schema</strong> that follows the <a href="https://standardschema.dev">Standard Schema</a> specification, the interface that React Hook Form, TanStack Form, Hono, tRPC and others read. You write the rules once; no resolver package of ours, no adapter of yours.</p>
 <pre tabindex="0"><code class="language-js">const signup = FormValidator.schema({
@@ -1232,6 +1245,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.10.0</strong>: <code>FormValidator.parseFormData()</code>, <code>FormValidator.ruleNames()</code>, a ReDoS fuzz test for every rule.</li>
 <li><strong>2.9.0</strong>: <code>FormValidator.schema(rules)</code>: the rules as a Standard Schema with <code>parse</code>, <code>safeParse</code> and typed values and errors.</li>
 <li><strong>2.8.0</strong>: 19 new rules (<code>integer</code>, <code>uuid</code>, <code>hexColor</code>, <code>slug</code>, <code>ipv4</code>, <code>ipv6</code>, <code>iban</code>, <code>time</code>, <code>domain</code>, <code>base64</code>, <code>mac</code>, <code>latitude</code>, <code>longitude</code>, <code>startsWith</code>, <code>endsWith</code>, <code>contains</code>, <code>notOneOf</code>, <code>minWords</code>, <code>maxWords</code>), also in the .NET package and all language packs.</li>
 <li><strong>2.7.0</strong>: named date formats (<code>format</code>, <code>strict</code>), <code>checkValue()</code> / <code>checkValues()</code> without a DOM, a <code>url</code> rule that is the same in every browser, Unicode-aware <code>pwcheck</code>, plain-decimal <code>min</code> / <code>max</code> / <code>range</code> / <code>step</code>.</li>
