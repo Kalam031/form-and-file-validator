@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.24.0
+- **Five more languages**: Bengali (`bn`), Indonesian (`id`), Vietnamese (`vi`), Korean (`ko`) and Swedish (`sv`): every form message, every file message, the upload widget text and the plural forms (Swedish one / other, the others have none). 18 packs now ship. They are machine-quality translations, marked as such in the file header and in docs/Languages.md; corrections from native speakers are welcome.
+
 ## 3.23.0
 - **JSON Schema and OpenAPI**: `FormValidator.toJsonSchema(rules)` writes the rules as a JSON Schema (2020-12: types, formats, limits, patterns, enums, nested objects, arrays of rows, `required`); `FormValidator.fromJsonSchema(schema)` reads one back (local `$ref`, `allOf`, reports what it cannot map). What JSON Schema cannot say is kept in an `x-fv-rules` annotation, so the round trip is stable. Verified against Ajv with the same payloads; part of the core build.
 

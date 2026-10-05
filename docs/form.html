@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.23.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.24.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -506,7 +506,7 @@ FormValidator.watchPasswordStrength(input, r =&gt; { meter.value = r.score; hint
 rules: { password: { pwscore: { min: 3, userFields: [&#39;email&#39;, &#39;name&#39;] } } }   // those fields&#39; values do not count as secret
 </code></pre>
 <ul>
-<li><strong><code>pwscore</code></strong> needs at least that score (default 3, &quot;good&quot;); messages in all 13 language packs.</li>
+<li><strong><code>pwscore</code></strong> needs at least that score (default 3, &quot;good&quot;); messages in all 18 language packs.</li>
 <li><strong><code>pwned</code></strong> asks Have I Been Pwned&#39;s range API whether the password appeared in a known breach. <strong>Only the first 5 characters of the SHA-1 hash are sent</strong> (k-anonymity), never the password, and the request asks for padded answers. It is asynchronous: a form waits for it on submit and skips it while typing; <code>checkValue</code> cannot run it (use <code>await FormValidator.pwned(password)</code> on a server: it answers the count, <code>0</code>, or <code>null</code> when it could not check). Options: <code>maxCount</code> (allowed times seen, default 0), <code>timeout</code> (5000 ms), <code>failOpen</code> (default <code>true</code>: when the service cannot be reached the user is not blocked; <code>false</code> blocks), <code>url</code> for your own mirror.</li>
 <li>Passwords are never trimmed by any of these rules, in <code>checkValue</code> and <code>schema()</code> too.</li>
 </ul>
@@ -541,7 +541,7 @@ rules: { password: { pwscore: { min: 3, userFields: [&#39;email&#39;, &#39;name&
 <td>This value plus the listed fields add up to <code>total</code> (empty counts as 0).</td>
 </tr>
 </tbody></table></div>
-<p>On a form, a field with such a rule is checked again when one of the fields it looks at changes. Messages exist in all 13 language packs (<code>requiredIf</code> says &quot;required&quot;).</p>
+<p>On a form, a field with such a rule is checked again when one of the fields it looks at changes. Messages exist in all 18 language packs (<code>requiredIf</code> says &quot;required&quot;).</p>
 <p><strong><code>inst.state</code></strong> (or <code>inst.getState()</code>): what a UI needs without keeping its own bookkeeping.</p>
 <pre tabindex="0"><code class="language-js">inst.state;
 // { valid, errorCount, dirty, pristine, touched, validating, submitCount, submitted,
@@ -680,7 +680,7 @@ r.data;     // { title, user: { email }, items: [{ sku, qty }, ...] }    trimmed
 </code></pre>
 <ul>
 <li><strong>Path keys</strong>: <code>user.email</code>, <code>items[0].qty</code>, <code>items.0.qty</code>; wildcards for every row: <code>items[].qty</code>, <code>items.*.qty</code>, <code>items[*].qty</code>. A wildcard over a missing or empty array checks nothing (use <code>minItems</code> for &quot;at least one row&quot;); a plain path through missing data is a blank value.</li>
-<li><strong>Row rules</strong>: <code>unique</code> (<code>ignoreCase: true</code> optional) fails every row that repeats a value in its column, empty values are not compared, values are compared trimmed; it also works for a list of plain values (<code>&#39;tags[]&#39;: &#39;unique&#39;</code>). <code>minItems</code> / <code>maxItems</code> check the array at that path. Messages exist in all 13 language packs.</li>
+<li><strong>Row rules</strong>: <code>unique</code> (<code>ignoreCase: true</code> optional) fails every row that repeats a value in its column, empty values are not compared, values are compared trimmed; it also works for a list of plain values (<code>&#39;tags[]&#39;: &#39;unique&#39;</code>). <code>minItems</code> / <code>maxItems</code> check the array at that path. Messages exist in all 18 language packs.</li>
 <li><strong>equalTo / notEqualTo</strong> inside a row look at the same row first (<code>&#39;rows[].confirm&#39;: { equalTo: &#39;pw&#39; }</code> compares with <code>rows[i].pw</code>), then at an absolute path.</li>
 <li>A key that really is a field name in your data (<code>&#39;a.b&#39;</code>, PHP&#39;s <code>&#39;items[]&#39;</code>) still wins over path reading; keys such as <code>__proto__</code> are ignored.</li>
 <li><strong>On a form</strong>: <code>rules: { &#39;items[].sku&#39;: [&#39;required&#39;, &#39;unique&#39;], &#39;items[].qty&#39;: &#39;digits&#39; }</code> applies to every field named <code>items[0].sku</code>, <code>items[1].sku</code>... (or <code>items.0.sku</code>), including rows added later; removed rows stop counting; <code>unique</code> compares with the other rows live. Whole-array rules (<code>minItems</code>) are for data: run the schema on <code>parseFormData(new FormData(form))</code>.</li>
@@ -970,7 +970,7 @@ if (!result.success) result.errors.email;       // string | undefined, a misspel
 &lt;input name=&quot;age&quot; data-msg=&quot;Please check this field&quot;&gt;      &lt;!-- used for any rule of this field --&gt;
 </code></pre>
 <p>Combine it with <code>config.autoRules: true</code> to get rules and messages from the HTML alone. The attribute name is the rule name in lower case, or with dashes for camelCase rules (<code>data-msg-mindate</code> or <code>data-msg-min-date</code>). Placeholders such as <code>{min}</code> work in these messages too, and the text is always set as plain text.</p>
-<p><strong>Language packs.</strong> 13 ready-made languages (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja) translate these messages, the FileValidator messages, the upload widget and the jQuery messages in one call: load <code>dist/locales/de.min.js</code>, then <code>FVLocales.use(&#39;de&#39;)</code> (or <code>FVLocales.auto()</code> for the visitor&#39;s browser language). See <a href="languages.html">Languages.md</a>. Error messages carry <code>dir=&quot;auto&quot;</code>, so right-to-left text reads correctly inside a left-to-right page.</p>
+<p><strong>Language packs.</strong> 18 ready-made languages (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, bn, id, vi, ko, sv) translate these messages, the FileValidator messages, the upload widget and the jQuery messages in one call: load <code>dist/locales/de.min.js</code>, then <code>FVLocales.use(&#39;de&#39;)</code> (or <code>FVLocales.auto()</code> for the visitor&#39;s browser language). See <a href="languages.html">Languages.md</a>. Error messages carry <code>dir=&quot;auto&quot;</code>, so right-to-left text reads correctly inside a left-to-right page.</p>
 <p><strong>Translating everything once, by hand</strong></p>
 <pre tabindex="0"><code class="language-js">Object.assign(FormValidator.messages, {
   required: &#39;Pflichtfeld&#39;,
@@ -1035,7 +1035,7 @@ FormValidator.init({ formId: &#39;signup&#39;, rules, config: { errorSummary: { 
 <li><strong>It follows the form</strong>: when the user fixes a field its line disappears, when none are left the box hides. It is rebuilt with fresh nodes (and only when something changed) so screen readers announce what is new, not the whole list again.</li>
 <li><strong>Focus</strong>: by default the summary takes the focus; <code>focus: &#39;field&#39;</code> keeps the classic move to the first invalid field.</li>
 <li><strong>When</strong>: after a failed submit or <code>validate({ submit: true })</code>. Calling <code>inst.showSummary(true)</code> shows it on demand.</li>
-<li>Messages are put in as text, never HTML. The title is translated (<code>FormValidator.messages.errorSummary</code>, all 13 language packs) unless you pass <code>title</code>.</li>
+<li>Messages are put in as text, never HTML. The title is translated (<code>FormValidator.messages.errorSummary</code>, all 18 language packs) unless you pass <code>title</code>.</li>
 </ul>
 <h3 id="autoattributes-autofill-and-the-right-keyboard">autoAttributes: autofill and the right keyboard</h3>
 <p>Browsers fill forms and phones choose a keyboard from <code>type</code>, <code>inputmode</code> and <code>autocomplete</code>. Most forms get them wrong (<code>type=&quot;number&quot;</code> for a postcode, <code>autocomplete=&quot;off&quot;</code> on a login). <code>autoAttributes: true</code> sets them from your rules and the field names, and never replaces an attribute you wrote:</p>

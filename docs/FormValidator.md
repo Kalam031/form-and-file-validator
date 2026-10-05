@@ -290,7 +290,7 @@ rules: { password: { pwcheck: { minLength: 8 }, pwscore: 3, pwned: true } }
 rules: { password: { pwscore: { min: 3, userFields: ['email', 'name'] } } }   // those fields' values do not count as secret
 ```
 
-- **`pwscore`** needs at least that score (default 3, "good"); messages in all 13 language packs.
+- **`pwscore`** needs at least that score (default 3, "good"); messages in all 18 language packs.
 - **`pwned`** asks Have I Been Pwned's range API whether the password appeared in a known breach. **Only the first 5 characters of the SHA-1 hash are sent** (k-anonymity), never the password, and the request asks for padded answers. It is asynchronous: a form waits for it on submit and skips it while typing; `checkValue` cannot run it (use `await FormValidator.pwned(password)` on a server: it answers the count, `0`, or `null` when it could not check). Options: `maxCount` (allowed times seen, default 0), `timeout` (5000 ms), `failOpen` (default `true`: when the service cannot be reached the user is not blocked; `false` blocks), `url` for your own mirror.
 - Passwords are never trimmed by any of these rules, in `checkValue` and `schema()` too.
 
@@ -305,7 +305,7 @@ rules: { password: { pwscore: { min: 3, userFields: ['email', 'name'] } } }   //
 | `atLeastOne` | `{ atLeastOne: ['phone', 'email'] }` | This field or one of the listed fields is filled in. |
 | `sumEquals` | `{ sumEquals: { fields: ['p2', 'p3'], total: 100 } }` | This value plus the listed fields add up to `total` (empty counts as 0). |
 
-On a form, a field with such a rule is checked again when one of the fields it looks at changes. Messages exist in all 13 language packs (`requiredIf` says "required").
+On a form, a field with such a rule is checked again when one of the fields it looks at changes. Messages exist in all 18 language packs (`requiredIf` says "required").
 
 **`inst.state`** (or `inst.getState()`): what a UI needs without keeping its own bookkeeping.
 
@@ -494,7 +494,7 @@ r.data;     // { title, user: { email }, items: [{ sku, qty }, ...] }    trimmed
 ```
 
 - **Path keys**: `user.email`, `items[0].qty`, `items.0.qty`; wildcards for every row: `items[].qty`, `items.*.qty`, `items[*].qty`. A wildcard over a missing or empty array checks nothing (use `minItems` for "at least one row"); a plain path through missing data is a blank value.
-- **Row rules**: `unique` (`ignoreCase: true` optional) fails every row that repeats a value in its column, empty values are not compared, values are compared trimmed; it also works for a list of plain values (`'tags[]': 'unique'`). `minItems` / `maxItems` check the array at that path. Messages exist in all 13 language packs.
+- **Row rules**: `unique` (`ignoreCase: true` optional) fails every row that repeats a value in its column, empty values are not compared, values are compared trimmed; it also works for a list of plain values (`'tags[]': 'unique'`). `minItems` / `maxItems` check the array at that path. Messages exist in all 18 language packs.
 - **equalTo / notEqualTo** inside a row look at the same row first (`'rows[].confirm': { equalTo: 'pw' }` compares with `rows[i].pw`), then at an absolute path.
 - A key that really is a field name in your data (`'a.b'`, PHP's `'items[]'`) still wins over path reading; keys such as `__proto__` are ignored.
 - **On a form**: `rules: { 'items[].sku': ['required', 'unique'], 'items[].qty': 'digits' }` applies to every field named `items[0].sku`, `items[1].sku`... (or `items.0.sku`), including rows added later; removed rows stop counting; `unique` compares with the other rows live. Whole-array rules (`minItems`) are for data: run the schema on `parseFormData(new FormData(form))`.
@@ -649,7 +649,7 @@ rules: {
 
 Combine it with `config.autoRules: true` to get rules and messages from the HTML alone. The attribute name is the rule name in lower case, or with dashes for camelCase rules (`data-msg-mindate` or `data-msg-min-date`). Placeholders such as `{min}` work in these messages too, and the text is always set as plain text.
 
-**Language packs.** 13 ready-made languages (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja) translate these messages, the FileValidator messages, the upload widget and the jQuery messages in one call: load `dist/locales/de.min.js`, then `FVLocales.use('de')` (or `FVLocales.auto()` for the visitor's browser language). See [Languages.md](Languages.md). Error messages carry `dir="auto"`, so right-to-left text reads correctly inside a left-to-right page.
+**Language packs.** 18 ready-made languages (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, bn, id, vi, ko, sv) translate these messages, the FileValidator messages, the upload widget and the jQuery messages in one call: load `dist/locales/de.min.js`, then `FVLocales.use('de')` (or `FVLocales.auto()` for the visitor's browser language). See [Languages.md](Languages.md). Error messages carry `dir="auto"`, so right-to-left text reads correctly inside a left-to-right page.
 
 **Translating everything once, by hand**
 
@@ -720,7 +720,7 @@ FormValidator.init({ formId: 'signup', rules, config: { errorSummary: { title: '
 - **It follows the form**: when the user fixes a field its line disappears, when none are left the box hides. It is rebuilt with fresh nodes (and only when something changed) so screen readers announce what is new, not the whole list again.
 - **Focus**: by default the summary takes the focus; `focus: 'field'` keeps the classic move to the first invalid field.
 - **When**: after a failed submit or `validate({ submit: true })`. Calling `inst.showSummary(true)` shows it on demand.
-- Messages are put in as text, never HTML. The title is translated (`FormValidator.messages.errorSummary`, all 13 language packs) unless you pass `title`.
+- Messages are put in as text, never HTML. The title is translated (`FormValidator.messages.errorSummary`, all 18 language packs) unless you pass `title`.
 
 ### autoAttributes: autofill and the right keyboard
 

@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.23.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.24.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -86,7 +86,7 @@
 </thead>
 <tbody><tr>
 <td><code>dist/</code></td>
-<td>Everything you load or ship: the bundle, each part, <code>locales/</code> (13 languages), <code>integrations/</code> (React, Vue, Alpine), <code>server.js</code>, <code>SRI.json</code>. Do not edit.</td>
+<td>Everything you load or ship: the bundle, each part, <code>locales/</code> (18 languages), <code>integrations/</code> (React, Vue, Alpine), <code>server.js</code>, <code>SRI.json</code>. Do not edit.</td>
 </tr>
 <tr>
 <td><code>src/</code></td>
@@ -384,7 +384,7 @@ npm run test:browser # real Chrome, Edge, Firefox and WebKit (needs: npx playwri
 npm run site         # rebuild docs/*.html from the Markdown docs
 </code></pre>
 <h2 id="languages">Languages</h2>
-<p>13 language packs ship in <code>dist/locales/</code> (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja). One script per language, loaded after the bundle:</p>
+<p>18 language packs ship in <code>dist/locales/</code> (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, bn, id, vi, ko, sv). One script per language, loaded after the bundle:</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;dist/locales/de.min.js&quot;&gt;&lt;/script&gt;   &lt;!-- or dist/locales/all.min.js --&gt;
 &lt;script&gt;
@@ -394,17 +394,17 @@ npm run site         # rebuild docs/*.html from the Markdown docs
 &lt;/script&gt;
 </code></pre>
 <p>In a module project: <code>import { locales } from &#39;form-and-file-validator&#39;; import &#39;form-and-file-validator/locales/de.js&#39;; locales.use(&#39;de&#39;);</code>.
-Add your own with <code>FVLocales.register(&#39;sv&#39;, { name: &#39;Svenska&#39;, form: { required: &#39;...&#39; } })</code>; anything missing stays English, and <code>FVLocales.keys()</code> lists every text a full pack needs.
+Add your own with <code>FVLocales.register(&#39;fi&#39;, { name: &#39;Suomi&#39;, form: { required: &#39;...&#39; } })</code>; anything missing stays English, and <code>FVLocales.keys()</code> lists every text a full pack needs.
 The packs are machine-quality translations: please have a native speaker check them before shipping to end users.</p>
 <h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
 <p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
-<pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.23.0/dist/validator.min.js&quot;
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.24.0/dist/validator.min.js&quot;
         integrity=&quot;sha384-+wAEjerSLNQBhzrwL92Ol++d0rCvzF9KtzLv8jOds30d5NjoEVJsHiB4sY+u6ygc&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.23.0/dist/locales/de.min.js&quot;
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.24.0/dist/locales/de.min.js&quot;
         integrity=&quot;sha384-mmSW5mVYaC+rhElftx/0QVwLyq0VSIOLlmUzwkOjvzKCUJXHIEaGTfS0K0bB96ln&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;
 </code></pre>
-<p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.23.0; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or <code>locales/all.min.js</code>.</p>
+<p>Hashes for every file are in <code>dist/SRI.json</code> (they are for version 3.24.0; new releases get new hashes). Available languages: <code>locales/&lt;code&gt;.min.js</code> for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, bn, id, vi, ko, sv, or <code>locales/all.min.js</code>.</p>
 <h2 id="contributing">Contributing</h2>
 <p>Anyone can contribute: fork, change <code>src/</code>, open a pull request. See <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>. Only reviewed pull requests reach <code>main</code>.</p>
 <h2 id="server-react-vue-alpine">Server, React, Vue, Alpine</h2>

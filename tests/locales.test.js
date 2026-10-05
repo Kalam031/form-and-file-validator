@@ -16,8 +16,8 @@ const en = { form: Object.assign({}, FormValidator.messages), file: Object.assig
 
 test.afterEach(() => locales.use('en'));
 
-test('13 packs ship and register', () => {
-    assert.ok(codes.length >= 13, codes.join());
+test('18 packs ship and register', () => {
+    assert.ok(codes.length >= 18, codes.join());
     const listed = locales.list().map(l => l.code);
     codes.forEach(c => assert.ok(listed.includes(c), c));
     assert.strictEqual(locales.list().find(l => l.code === 'ar').dir, 'rtl');
@@ -73,9 +73,9 @@ test('plural forms follow the language (ru, ar, en)', () => {
 });
 
 test('partial packs fall back to English', () => {
-    locales.register('sv', { name: 'Svenska', form: { required: 'Fältet är obligatoriskt.' } });
-    locales.use('sv');
-    assert.strictEqual(FormValidator.messages.required, 'Fältet är obligatoriskt.');
+    locales.register('fi', { name: 'Suomi', form: { required: 'Kenttä on pakollinen.' } });
+    locales.use('fi');
+    assert.strictEqual(FormValidator.messages.required, 'Kenttä on pakollinen.');
     assert.strictEqual(FormValidator.messages.email, en.form.email);
 });
 
@@ -132,4 +132,24 @@ test('jQuery layer messages follow the language, including {0}/{1} parameter mes
     assert.strictEqual($.validator.messages.maxlength(5), 'Please enter no more than 5 characters.');
     delete globalThis.jQuery;
     Object.keys(saved).forEach(k => { if (saved[k] === undefined) delete globalThis[k]; else globalThis[k] = saved[k]; });
+});
+
+test('the newest packs: Bengali, Indonesian, Vietnamese, Korean, Swedish translate messages, plurals and units', () => {
+    const want = { bn: ['এই ঘরটি পূরণ করা আবশ্যক।', '{n}টি ফাইল যোগ হয়েছে।'], id: ['Kolom ini wajib diisi.', '{n} berkas ditambahkan.'], vi: ['Trường này là bắt buộc.', 'Đã thêm {n} tệp.'], ko: ['이 항목은 필수입니다.', '파일 {n}개를 추가했습니다.'], sv: ['Det här fältet är obligatoriskt.', null] };
+    for (const [code, [required, added]] of Object.entries(want)) {
+        locales.use(code);
+        assert.strictEqual(FormValidator.messages.required, required, code);
+        assert.strictEqual(FormValidator.checkValue('', 'required').message, required, code);
+        assert.ok(FileValidator.defaultMessages.SIZE_TOO_LARGE.includes('{size}') && FileValidator.defaultMessages.SIZE_TOO_LARGE.includes('{max}'), code);
+        const two = FileValidator.phraseN('status.added', 2, {}, { other: 'EN {n}' });
+        assert.ok(two.includes('2'), code + ': ' + two);
+        if (added) assert.strictEqual(FileValidator.phraseN('status.added', 1, {}, { other: 'EN {n}' }), added.replace('{n}', '1'), code);
+    }
+    locales.use('sv');
+    assert.strictEqual(FileValidator.phraseN('status.added', 1, {}, { other: 'EN {n}' }), '1 fil tillagd.');
+    assert.strictEqual(FileValidator.phraseN('status.added', 3, {}, { other: 'EN {n}' }), '3 filer tillagda.');
+    assert.strictEqual(FormValidator.checkValue('ab', { minlength: 3 }).message, 'Ange minst 3 tecken.');
+    locales.use('ko');
+    assert.strictEqual(FormValidator.checkValue('ab', { minlength: 3 }).message, '3자 이상 입력하세요.');
+    locales.use('en');
 });

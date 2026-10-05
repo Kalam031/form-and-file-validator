@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.23.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.24.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -31,7 +31,7 @@
   <main id="content">
 <h1 id="languages">Languages</h1>
 <p>Every text the library shows can be translated: FormValidator messages, FileValidator messages, file sizes (<code>MB</code>, <code>Mo</code>…), the sentences of the upload widget (with plural rules) and the jQuery Validation messages.</p>
-<p>13 packs ship: <strong>de, fr, es, pt, it, nl, tr, ru, pl, ar (right to left), hi, zh, ja</strong>. English is built in.</p>
+<p>18 packs ship: <strong>de, fr, es, pt, it, nl, tr, ru, pl, ar (right to left), hi, zh, ja, bn, id, vi, ko, sv</strong>. English is built in. The newest five (Bengali, Indonesian, Vietnamese, Korean, Swedish) are machine-quality translations that a native speaker should review: pull requests with corrections are welcome.</p>
 <blockquote>
 <p>The packs are machine-quality translations. Please have a native speaker read them before you show them to customers, and send corrections as a pull request (<code>src/locales/&lt;code&gt;.js</code>).</p>
 </blockquote>
@@ -57,13 +57,13 @@ require(&#39;form-and-file-validator/locales/de.js&#39;);
 locales.use(&#39;de&#39;);                       // or a language per request: locales.use(req.language) before validate()
 </code></pre>
 <h2 id="your-own-language">Your own language</h2>
-<pre tabindex="0"><code class="language-js">FVLocales.register(&#39;sv&#39;, {
-  name: &#39;Svenska&#39;,
-  form: { required: &#39;Fältet är obligatoriskt.&#39; },      // only what you have; the rest stays English
-  file: { EMPTY_FILE: &#39;Filen är tom.&#39; },
+<pre tabindex="0"><code class="language-js">FVLocales.register(&#39;fi&#39;, {
+  name: &#39;Suomi&#39;,
+  form: { required: &#39;Kenttä on pakollinen.&#39; },      // only what you have; the rest stays English
+  file: { EMPTY_FILE: &#39;Tiedosto on tyhjä.&#39; },
   units: { B: &#39;B&#39;, KB: &#39;kB&#39;, MB: &#39;MB&#39;, GB: &#39;GB&#39; }
 });
-FVLocales.use(&#39;sv&#39;);
+FVLocales.use(&#39;fi&#39;);
 console.log(FVLocales.keys());          // every key a complete pack needs: { form: [...], file: [...], phrases: [...] }
 </code></pre>
 <p>A pack is <code>{ name, dir: &#39;ltr&#39; | &#39;rtl&#39;, form, file, phrases, units, jquery }</code>.</p>

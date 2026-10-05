@@ -2,7 +2,7 @@
 
 Every text the library shows can be translated: FormValidator messages, FileValidator messages, file sizes (`MB`, `Mo`…), the sentences of the upload widget (with plural rules) and the jQuery Validation messages.
 
-13 packs ship: **de, fr, es, pt, it, nl, tr, ru, pl, ar (right to left), hi, zh, ja**. English is built in.
+18 packs ship: **de, fr, es, pt, it, nl, tr, ru, pl, ar (right to left), hi, zh, ja, bn, id, vi, ko, sv**. English is built in. The newest five (Bengali, Indonesian, Vietnamese, Korean, Swedish) are machine-quality translations that a native speaker should review: pull requests with corrections are welcome.
 
 > The packs are machine-quality translations. Please have a native speaker read them before you show them to customers, and send corrections as a pull request (`src/locales/<code>.js`).
 
@@ -40,13 +40,13 @@ locales.use('de');                       // or a language per request: locales.u
 ## Your own language
 
 ```js
-FVLocales.register('sv', {
-  name: 'Svenska',
-  form: { required: 'Fältet är obligatoriskt.' },      // only what you have; the rest stays English
-  file: { EMPTY_FILE: 'Filen är tom.' },
+FVLocales.register('fi', {
+  name: 'Suomi',
+  form: { required: 'Kenttä on pakollinen.' },      // only what you have; the rest stays English
+  file: { EMPTY_FILE: 'Tiedosto on tyhjä.' },
   units: { B: 'B', KB: 'kB', MB: 'MB', GB: 'GB' }
 });
-FVLocales.use('sv');
+FVLocales.use('fi');
 console.log(FVLocales.keys());          // every key a complete pack needs: { form: [...], file: [...], phrases: [...] }
 ```
 

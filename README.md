@@ -34,7 +34,7 @@ It holds FormValidator, FileValidator, the upload widget, the jQuery Validation 
 
 | Folder | What is in it |
 | --- | --- |
-| `dist/` | Everything you load or ship: the bundle, each part, `locales/` (13 languages), `integrations/` (React, Vue, Alpine), `server.js`, `SRI.json`. Do not edit. |
+| `dist/` | Everything you load or ship: the bundle, each part, `locales/` (18 languages), `integrations/` (React, Vue, Alpine), `server.js`, `SRI.json`. Do not edit. |
 | `src/` | The source files (four parts, the language registry, `locales/`, `integrations/`, `server.js`). Edit these, then run `npm run build`. |
 | `docs/` | Documentation as Markdown, and the same pages as a static site with a live playground (`docs/index.html`, GitHub Pages). |
 | `types/` | TypeScript typings. |
@@ -282,7 +282,7 @@ npm run site         # rebuild docs/*.html from the Markdown docs
 
 ## Languages
 
-13 language packs ship in `dist/locales/` (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja). One script per language, loaded after the bundle:
+18 language packs ship in `dist/locales/` (de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, bn, id, vi, ko, sv). One script per language, loaded after the bundle:
 
 ```html
 <script src="dist/validator.min.js"></script>
@@ -295,7 +295,7 @@ npm run site         # rebuild docs/*.html from the Markdown docs
 ```
 
 In a module project: `import { locales } from 'form-and-file-validator'; import 'form-and-file-validator/locales/de.js'; locales.use('de');`.
-Add your own with `FVLocales.register('sv', { name: 'Svenska', form: { required: '...' } })`; anything missing stays English, and `FVLocales.keys()` lists every text a full pack needs.
+Add your own with `FVLocales.register('fi', { name: 'Suomi', form: { required: '...' } })`; anything missing stays English, and `FVLocales.keys()` lists every text a full pack needs.
 The packs are machine-quality translations: please have a native speaker check them before shipping to end users.
 
 ## Use from a CDN (jsDelivr)
@@ -303,14 +303,14 @@ The packs are machine-quality translations: please have a native speaker check t
 Always pin the exact version and keep the `integrity` attribute, so the file your visitors load can never change:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.23.0/dist/validator.min.js"
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.24.0/dist/validator.min.js"
         integrity="sha384-+wAEjerSLNQBhzrwL92Ol++d0rCvzF9KtzLv8jOds30d5NjoEVJsHiB4sY+u6ygc" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.23.0/dist/locales/de.min.js"
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.24.0/dist/locales/de.min.js"
         integrity="sha384-mmSW5mVYaC+rhElftx/0QVwLyq0VSIOLlmUzwkOjvzKCUJXHIEaGTfS0K0bB96ln" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>
 ```
 
-Hashes for every file are in `dist/SRI.json` (they are for version 3.23.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
+Hashes for every file are in `dist/SRI.json` (they are for version 3.24.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, bn, id, vi, ko, sv, or `locales/all.min.js`.
 
 ## Contributing
 
