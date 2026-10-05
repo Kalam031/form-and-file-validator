@@ -61,6 +61,7 @@
         file: "ملف غير صالح.",
         remote: "يرجى تصحيح هذا الحقل.",
         badInput: "يرجى إدخال قيمة صالحة.",
+        errorSummary: "يرجى تصحيح ما يلي:",
         custom: "قيمة غير صالحة."
     },
     file: {
@@ -200,6 +201,7 @@
         file: "Ungültige Datei.",
         remote: "Bitte korrigieren Sie dieses Feld.",
         badInput: "Bitte geben Sie einen gültigen Wert ein.",
+        errorSummary: "Bitte korrigieren Sie Folgendes:",
         custom: "Ungültiger Wert."
     },
     file: {
@@ -339,6 +341,7 @@
         file: "Archivo no válido.",
         remote: "Corrige este campo.",
         badInput: "Introduce un valor válido.",
+        errorSummary: "Corrige lo siguiente:",
         custom: "Valor no válido."
     },
     file: {
@@ -478,6 +481,7 @@
         file: "Fichier invalide.",
         remote: "Veuillez corriger ce champ.",
         badInput: "Veuillez saisir une valeur valide.",
+        errorSummary: "Veuillez corriger les points suivants :",
         custom: "Valeur invalide."
     },
     file: {
@@ -617,6 +621,7 @@
         file: "अमान्य फ़ाइल।",
         remote: "कृपया इस फ़ील्ड को सुधारें।",
         badInput: "कृपया एक मान्य मान दर्ज करें।",
+        errorSummary: "कृपया निम्नलिखित को ठीक करें:",
         custom: "अमान्य मान।"
     },
     file: {
@@ -756,6 +761,7 @@
         file: "File non valido.",
         remote: "Correggi questo campo.",
         badInput: "Inserisci un valore valido.",
+        errorSummary: "Correggi quanto segue:",
         custom: "Valore non valido."
     },
     file: {
@@ -895,6 +901,7 @@
         file: "無効なファイルです。",
         remote: "この項目を修正してください。",
         badInput: "有効な値を入力してください。",
+        errorSummary: "次の項目を修正してください：",
         custom: "無効な値です。"
     },
     file: {
@@ -1034,6 +1041,7 @@
         file: "Ongeldig bestand.",
         remote: "Corrigeer dit veld.",
         badInput: "Voer een geldige waarde in.",
+        errorSummary: "Corrigeer het volgende:",
         custom: "Ongeldige waarde."
     },
     file: {
@@ -1173,6 +1181,7 @@
         file: "Nieprawidłowy plik.",
         remote: "Popraw to pole.",
         badInput: "Wprowadź prawidłową wartość.",
+        errorSummary: "Popraw następujące pola:",
         custom: "Nieprawidłowa wartość."
     },
     file: {
@@ -1312,6 +1321,7 @@
         file: "Arquivo inválido.",
         remote: "Corrija este campo.",
         badInput: "Insira um valor válido.",
+        errorSummary: "Corrija o seguinte:",
         custom: "Valor inválido."
     },
     file: {
@@ -1451,6 +1461,7 @@
         file: "Недопустимый файл.",
         remote: "Исправьте это поле.",
         badInput: "Введите допустимое значение.",
+        errorSummary: "Исправьте следующее:",
         custom: "Недопустимое значение."
     },
     file: {
@@ -1590,6 +1601,7 @@
         file: "Geçersiz dosya.",
         remote: "Lütfen bu alanı düzeltin.",
         badInput: "Lütfen geçerli bir değer girin.",
+        errorSummary: "Lütfen şunları düzeltin:",
         custom: "Geçersiz değer."
     },
     file: {
@@ -1729,6 +1741,7 @@
         file: "文件无效。",
         remote: "请修正此字段。",
         badInput: "请输入有效的值。",
+        errorSummary: "请修正以下问题：",
         custom: "值无效。"
     },
     file: {

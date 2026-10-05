@@ -34,6 +34,8 @@ Two more improvements came from walking through the widget as a keyboard and scr
 
 ## 2. What the libraries do
 
+**Error summary (`errorSummary`).** One focusable list of all problems with links to the fields, rebuilt with fresh nodes so screen readers announce changes; it is part of the axe audit above. Use it on forms with more than a few fields.
+
 **FormValidator (and the jQuery layer)**
 
 | Behaviour | Detail |

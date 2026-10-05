@@ -1,4 +1,4 @@
-/*! FormValidator 2.11.0 + FileValidator 2.10.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.12.0 + FileValidator 2.10.0 + upload widget 1.4.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
@@ -2105,9 +2105,11 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.11.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.12.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.12.0 validateOn presets ('smart' | 'blur' | 'input' | 'submit' | 'all'; an 'input' entry now works) + validClass reward while typing. Stable error codes (data-code, code in getErrors / checkValue /
+ *          schema issues, rule.code). errorSummary: accessible list of problems with links and focus. autoAttributes (type / inputmode / autocomplete / aria-required) + inst.lint().
  *   2.11.0 FormValidator.serverErrors(body): problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API, express-validator, Ajv in one shape; inst.setServerErrors();
  *          setErrors() matches items.0.qty to items[0].qty. precognition(url, values) / inst.validateOnServer() / inst.watchServer(): ask the real endpoint (Laravel Precognition protocol).
  *          FormValidator.action(rules, serverFn): one function for React 19 useActionState, Server Actions and FormData handlers.
@@ -2223,6 +2225,7 @@ const api = (function (root) {
         file: 'Invalid file.',
         remote: 'Please fix this field.',
         badInput: 'Please enter a valid value.',
+        errorSummary: 'Please fix the following:',
         custom: 'Invalid value.'
     };
 
@@ -2232,7 +2235,7 @@ const api = (function (root) {
         focusInvalid: true,               // focus + scroll to the first invalid field on submit
         validateHidden: false,            // also validate fields that are not rendered / type=hidden
         ignore: null,                     // CSS selector of fields to skip
-        validateOn: ['change'],           // events that validate a not-yet-invalid field ('blur', 'change', 'input')
+        validateOn: ['change'],           // when a not-yet-invalid field is checked: a preset ('smart' = after the user leaves an edited field, then live while it is invalid; 'blur'; 'input'; 'submit'; 'all') or a list of events ('blur', 'change', 'input')
         debounce: 150,                    // ms, for 'input' revalidation
         errorElement: 'div',
         errorClass: 'text-danger error',  // class(es) for the message element
@@ -2256,7 +2259,11 @@ const api = (function (root) {
         resolveMessage: null,             // (rule, env, dynamicMessage) => string | falsy : take over message selection
         pendingClass: 'fv-pending',       // class (and aria-busy) on a field while a server/async check runs; '' to disable
         focusCleanup: false,              // clear a field's error when it receives focus
-        classRules: null                  // { className: rules } applied to fields that carry the class
+        classRules: null,                 // { className: rules } applied to fields that carry the class
+        validClass: '',                   // class for a field that was checked and holds a valid value ('is-valid'); while typing it appears as soon as the value becomes valid, an error never does
+        rewardOnInput: true,              // false: validClass only after a real check, not while typing
+        errorSummary: false,              // true | selector | element | { container, title, focus: 'summary' | 'field', withLabel, headingLevel, className }: an accessible list of all problems with links to the fields
+        autoAttributes: false             // true | { type, inputmode, autocomplete, ariaRequired, lint }: set type / inputmode / autocomplete / aria-required from the rules and field names, and warn about autocomplete="off" and type="number" misuse
     };
 
     const GROUP_CONTAINERS = '.answer, .btn-group, .option-group, .choice-group, .checkbox-group';
@@ -2772,11 +2779,14 @@ const api = (function (root) {
     // ------------------------------------------------------------------ instance
     const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 
+    const VALIDATE_ON_PRESETS = { smart: ['change'], 'default': ['change'], change: ['change'], blur: ['blur'], input: ['input'], submit: [], all: ['change', 'blur', 'input'] };
+
     /** Options of the wrong type fall back to the defaults: a bad config must not crash the page when an error is shown. */
     function sanitizeConfig(cfg) {
         if (typeof cfg.errorElement !== 'string' || !/^[a-zA-Z][a-zA-Z0-9-]*$/.test(cfg.errorElement)) cfg.errorElement = DEFAULTS.errorElement;
-        ['errorClass', 'invalidClass', 'pendingClass'].forEach(k => { if (typeof cfg[k] !== 'string') cfg[k] = k === 'errorClass' ? DEFAULTS.errorClass : ''; });
-        cfg.validateOn = Array.isArray(cfg.validateOn) ? cfg.validateOn.filter(e => typeof e === 'string') : DEFAULTS.validateOn.slice();
+        ['errorClass', 'invalidClass', 'pendingClass', 'validClass'].forEach(k => { if (typeof cfg[k] !== 'string') cfg[k] = k === 'errorClass' ? DEFAULTS.errorClass : ''; });
+        const preset = typeof cfg.validateOn === 'string' ? VALIDATE_ON_PRESETS[cfg.validateOn.toLowerCase()] : null;
+        cfg.validateOn = preset ? preset.slice() : Array.isArray(cfg.validateOn) ? cfg.validateOn.filter(e => typeof e === 'string') : DEFAULTS.validateOn.slice();
         if (typeof cfg.debounce !== 'number' || !isFinite(cfg.debounce) || cfg.debounce < 0) cfg.debounce = DEFAULTS.debounce;
         ['ignore', 'skipSubmitter'].forEach(k => {
             if (typeof cfg[k] !== 'string' || !cfg[k].trim()) { cfg[k] = null; return; }
@@ -2790,6 +2800,7 @@ const api = (function (root) {
     function createInstance(form, opts) {
         const userConfig = isObj(opts.config) ? opts.config : {};
         const cfg = sanitizeConfig(Object.assign({}, DEFAULTS, userConfig));
+        if (typeof userConfig.validateOn === 'string' && userConfig.validateOn.toLowerCase() === 'blur' && !('skipEmptyUntilSubmit' in userConfig)) cfg.skipEmptyUntilSubmit = true;   // 'blur' does not nag fields the user only tabbed through
         cfg.passwordStrength = Object.assign({}, DEFAULTS.passwordStrength, isObj(userConfig.passwordStrength) ? userConfig.passwordStrength : null);
         const rawMessages = Object.assign({}, isObj(userConfig.messages) ? userConfig.messages : null, isObj(opts.messages) ? opts.messages : null);
         cfg.messages = {};                 // by rule type
@@ -2977,8 +2988,9 @@ const api = (function (root) {
 
         function removeError(unit) {
             const rec = inst._errors.get(unit.key);
-            if (rec) { rec.el.remove(); inst._errors.delete(unit.key); }
+            if (rec) { rec.el.remove(); inst._errors.delete(unit.key); refreshSummary(); }
             unit.fields.forEach(f => {
+                if (cfg.validClass) cfg.validClass.split(/\s+/).forEach(c => c && f.classList.remove(c));
                 if (isFn(cfg.unhighlight)) guard(cfg.unhighlight, undefined, f, unit);
                 if (cfg.invalidClass) cfg.invalidClass.split(/\s+/).forEach(c => c && f.classList.remove(c));
                 f.removeAttribute('aria-invalid');
@@ -2989,9 +3001,10 @@ const api = (function (root) {
             });
         }
 
-        function showError(unit, message) {
+        function showError(unit, message, code) {
             removeError(unit);
             const err = root.document.createElement(cfg.errorElement);
+            err.setAttribute('data-code', code || 'custom');
             err.className = cfg.errorClass;
             err.id = 'fv-error-' + (++uid);
             err.setAttribute('data-error-for', unit.fields[0].name);
@@ -3001,7 +3014,8 @@ const api = (function (root) {
             if (err.tagName === 'LABEL' && unit.fields[0].id) err.setAttribute('for', unit.fields[0].id);
             err.textContent = message;
             place(err, unit);
-            inst._errors.set(unit.key, { el: err, message, unit });
+            inst._errors.set(unit.key, { el: err, message, unit, code: code || 'custom' });
+            refreshSummary();
             unit.fields.forEach(f => {
                 if (isFn(cfg.highlight)) guard(cfg.highlight, undefined, f, unit);
                 if (cfg.invalidClass) cfg.invalidClass.split(/\s+/).forEach(c => c && f.classList.add(c));
@@ -3011,6 +3025,8 @@ const api = (function (root) {
         }
 
         // ---- validation
+        /** The stable code of a failed rule: its type ('required', 'email', 'minlength' ...) unless the rule carries its own `code` ('coupon.expired'). */
+        const codeOf = rule => (typeof rule.code === 'string' && rule.code ? rule.code : rule.type);
         const valueFor = (rule, env) => { if (!isFn(rule.normalizer)) return env.value; const v = guard(function () { return rule.normalizer.call(env.field, env.value, env.field); }, env.value); return typeof v === 'string' ? v : String(v); };
 
         function setPending(unit, on) {
@@ -3031,7 +3047,7 @@ const api = (function (root) {
             if (!isActive(unit)) { removeError(unit); return true; }
             const env = readEnv(unit);
 
-            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput); return false; }
+            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); return false; }
 
             let pending = false;
             try {
@@ -3051,9 +3067,10 @@ const api = (function (root) {
                     if (inst._tokens.get(unit.key) !== token) return !inst._errors.has(unit.key); // a newer run owns the state
 
                     const r = normalizeResult(res);
-                    if (!r.valid) { showError(unit, resolveMessage(rule, env, r.message)); return false; }
+                    if (!r.valid) { showError(unit, resolveMessage(rule, env, r.message), codeOf(rule)); return false; }
                 }
                 removeError(unit);
+                if (!env.empty) markValid(unit, true);
                 if (isFn(cfg.onFieldValid)) guard(cfg.onFieldValid, undefined, unit.fields[0], unit);
                 return true;
             } finally {
@@ -3072,7 +3089,7 @@ const api = (function (root) {
 
             if (!isActive(unit)) { removeError(unit); return true; }
             const env = readEnv(unit);
-            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput); return false; }
+            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); return false; }
 
             for (const rule of rules) {
                 const def = validators[rule.type];
@@ -3089,14 +3106,15 @@ const api = (function (root) {
                     res.then(late => {
                         if (inst._tokens.get(unit.key) !== token) return;
                         const lr = normalizeResult(late);
-                        if (!lr.valid) showError(unit, resolveMessage(rule, env, lr.message));
+                        if (!lr.valid) showError(unit, resolveMessage(rule, env, lr.message), codeOf(rule));
                     }).catch(() => { /* a failed async check stays "pending" in sync mode */ });
                     continue;
                 }
                 const r = normalizeResult(res);
-                if (!r.valid) { showError(unit, resolveMessage(rule, env, r.message)); return false; }
+                if (!r.valid) { showError(unit, resolveMessage(rule, env, r.message), codeOf(rule)); return false; }
             }
             removeError(unit);
+            if (!env.empty) markValid(unit, true);
             if (isFn(cfg.onFieldValid)) guard(cfg.onFieldValid, undefined, unit.fields[0], unit);
             return true;
         }
@@ -3106,8 +3124,10 @@ const api = (function (root) {
             const ok = results.every(Boolean);
             if (!ok) {
                 invalid.sort((a, b) => (a.fields[0].compareDocumentPosition(b.fields[0]) & 4) ? -1 : 1);
-                const list = invalid.map(u => ({ name: u.fields[0].name, field: u.fields[0], message: inst._errors.get(u.key).message }));
-                if (cfg.focusInvalid && invalid[0] && (!o || o.focus !== false)) { // after the list: focus handlers may clear errors
+                const list = invalid.map(u => ({ name: u.fields[0].name, field: u.fields[0], message: inst._errors.get(u.key).message, code: inst._errors.get(u.key).code }));
+                const summaryFocus = !!summaryCfg && summaryCfg.focus === 'summary' && (!o || o.focus !== false) && cfg.focusInvalid;
+                if (summaryCfg && (o && (o.submit || o.summary) || inst._submitted)) renderSummary(summaryFocus);
+                if (cfg.focusInvalid && invalid[0] && !summaryFocus && (!o || o.focus !== false)) { // after the list: focus handlers may clear errors
                     const f = invalid[0].fields[0];
                     try { f.focus({ preventScroll: true }); f.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
                     catch (e) { /* not focusable */ }
@@ -3116,6 +3136,7 @@ const api = (function (root) {
                 emit('fv:invalid', { errors: list });
             } else {
                 if (isFn(cfg.onSuccess)) guard(cfg.onSuccess, undefined);
+                if (summaryEl) renderSummary(false);
                 emit('fv:valid', {});
             }
             return ok;
@@ -3200,7 +3221,15 @@ const api = (function (root) {
                 if (type === 'input' && cfg.liveInput === false) return;
                 const hasErr = inst._errors.has(unit.key);
                 const afterSubmit = inst._submitted && cfg.validateAfterSubmit;
-                if (!hasErr && !afterSubmit && (!cfg.validateOn.includes(type) || type === 'input')) return;
+                if (type === 'input' && !hasErr && !afterSubmit && !cfg.validateOn.includes('input')) {
+                    // reward early: a valid value earns the valid class while typing; an error is never shown until the user leaves the field
+                    if (cfg.validClass && cfg.rewardOnInput !== false) {
+                        clearTimeout(inst._timers.get(unit.key));
+                        inst._timers.set(unit.key, setTimeout(() => { const ok = peekValid(unit); if (ok === true) markValid(unit, true); else markValid(unit, false); }, cfg.debounce || 0));
+                    }
+                    return;
+                }
+                if (!hasErr && !afterSubmit && !cfg.validateOn.includes(type)) return;
                 if (!hasErr && cfg.skipEmptyUntilSubmit && !inst._submitted && readEnv(unit).empty) return;
                 clearTimeout(inst._timers.get(unit.key));
                 const run = () => validateUnit(unit, { event: type });
@@ -3251,6 +3280,218 @@ const api = (function (root) {
             }, true);
 
             listen(form, 'reset', () => setTimeout(() => inst.resetForm(), 0));
+            if (autoCfg) {
+                runAutoAttributes();
+                listen(form, 'focusin', e => { if (e.target && e.target.name) applyAutoAttributes([e.target]); });   // fields added later
+            }
+        }
+
+        // ---- valid state: a class on fields that were checked and hold a valid value (reward early)
+        function markValid(unit, on) {
+            if (!cfg.validClass) return;
+            unit.fields.forEach(f => cfg.validClass.split(/\s+/).forEach(c => { if (c) f.classList[on ? 'add' : 'remove'](c); }));
+        }
+        /** Checks a field without showing anything: true (valid and not empty), false (invalid), null (empty, or it needs a server / async rule, so no answer yet). */
+        function peekValid(unit) {
+            const rules = rulesFor(unit);
+            if (!rules.length || !isActive(unit)) return null;
+            const env = readEnv(unit);
+            if (env.badInput) return false;
+            if (env.empty) return null;
+            for (const rule of rules) {
+                const def = validators[rule.type];
+                if (!def || (isFn(rule.when) && !guard(rule.when, true, env.value, env))) continue;
+                if (def.remote) return null;
+                let res;
+                try { res = def.fn(valueFor(rule, env), rule, env); } catch (e) { return false; }
+                if (res && isFn(res.then)) return null;
+                if (!normalizeResult(res).valid) return false;
+            }
+            return true;
+        }
+
+        // ---- error summary: one accessible list of every problem, with links to the fields
+        const summaryCfg = (() => {
+            const s = cfg.errorSummary;
+            if (!s) return null;
+            const o = typeof s === 'string' || (s && s.nodeType === 1) ? { container: s } : (isObj(s) ? s : {});
+            return {
+                container: o.container === undefined ? null : o.container,
+                title: typeof o.title === 'string' ? o.title : null,
+                focus: o.focus === 'field' || o.focus === false ? 'field' : 'summary',
+                withLabel: o.withLabel !== false,
+                headingLevel: [1, 2, 3, 4, 5, 6].includes(o.headingLevel) ? o.headingLevel : 2,
+                className: typeof o.className === 'string' ? o.className : 'fv-summary'
+            };
+        })();
+        let summaryEl = null, summaryOwned = false, summarySig = '';
+        function summaryContainer() {
+            if (!summaryCfg) return null;
+            if (summaryEl && summaryEl.isConnected !== false) return summaryEl;
+            const c = summaryCfg.container;
+            let el = null;
+            if (typeof c === 'string') el = root.document.querySelector(c);
+            else if (c && c.nodeType === 1) el = c;
+            if (!el) {
+                el = root.document.createElement('div');
+                form.insertBefore(el, form.firstChild);
+                summaryOwned = true;
+            }
+            if (!el.classList.contains(summaryCfg.className)) el.classList.add(summaryCfg.className);
+            el.setAttribute('tabindex', '-1');
+            summaryEl = el;
+            return el;
+        }
+        function labelOf(unit) {
+            const f = unit.fields[0];
+            // text of a node without the messages we placed and without form controls that sit inside a wrapping <label>
+            const plain = node => {
+                if (!node) return '';
+                const c = node.cloneNode(true);
+                Array.from(c.querySelectorAll('[data-error-for], input, select, textarea, button, .fv-summary')).forEach(x => x.remove());
+                return c.textContent || '';
+            };
+            let text = '';
+            const ref = f.getAttribute('aria-labelledby');
+            if (ref) text = ref.split(/\s+/).map(id => plain(root.document.getElementById(id))).join(' ');
+            if (!text.trim() && unit.fields.length > 1) { const fs = f.closest('fieldset'); const lg = fs && fs.querySelector('legend'); if (lg) text = plain(lg); }
+            if (!text.trim() && f.labels && f.labels.length) text = Array.from(f.labels).map(plain).join(' ');
+            if (!text.trim() && f.id) { const l = form.querySelector('label[for="' + esc(f.id) + '"]'); if (l) text = plain(l); }
+            if (!text.trim()) text = f.getAttribute('aria-label') || '';
+            return text.replace(/\s+/g, ' ').replace(/[*:]\s*$/, '').trim();
+        }
+        function focusField(unit) {
+            const f = unit.fields.find(x => !x.disabled) || unit.fields[0];
+            try { f.focus({ preventScroll: true }); f.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* not focusable */ }
+        }
+        /** Rebuilds the summary from the errors that are showing now. focus: move keyboard focus to it (after a failed submit). */
+        function renderSummary(focus) {
+            if (!summaryCfg) return;
+            const list = Array.from(inst._errors.values()).filter(r => r.unit.fields[0].isConnected !== false);
+            const el = list.length || summaryEl ? summaryContainer() : null;
+            if (!el) return;
+            list.sort((a, b) => (a.unit.fields[0].compareDocumentPosition(b.unit.fields[0]) & 4) ? -1 : 1);
+            const title = summaryCfg.title || cfg.messages.errorSummary || DEFAULT_MESSAGES.errorSummary;
+            const sig = JSON.stringify([title, list.map(r => [r.message, r.unit.fields[0].name])]);
+            if (!focus && sig === summarySig && !el.hidden) return;   // nothing changed: do not rebuild (and re-announce) the list
+            summarySig = sig;
+            while (el.firstChild) el.removeChild(el.firstChild);   // fresh nodes every time: screen readers announce new content
+            if (!list.length) { el.hidden = true; summarySig = ''; return; }
+            const D = root.document;
+            const h = D.createElement('h' + summaryCfg.headingLevel);
+            h.id = 'fv-summary-title-' + (++uid);
+            h.textContent = title;
+            const ul = D.createElement('ul');
+            list.forEach(r => {
+                const f = r.unit.fields[0];
+                if (!f.id) f.id = 'fv-field-' + (++uid);
+                const li = D.createElement('li'), a = D.createElement('a');
+                a.setAttribute('href', '#' + f.id);
+                const label = summaryCfg.withLabel ? labelOf(r.unit) : '';
+                a.textContent = label && r.message.toLowerCase().indexOf(label.toLowerCase()) < 0 ? label + ': ' + r.message : r.message;
+                a.setAttribute('dir', 'auto');
+                a.addEventListener('click', e => { e.preventDefault(); focusField(r.unit); });
+                li.appendChild(a); ul.appendChild(li);
+            });
+            el.appendChild(h); el.appendChild(ul);
+            el.setAttribute('aria-labelledby', h.id);
+            el.hidden = false;
+            if (focus) { try { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* not focusable */ } }
+        }
+        let summaryTimer = null;
+        const refreshSummary = () => {   // errors come and go one by one: rebuild once per tick, without stealing focus
+            if (!summaryCfg || summaryTimer) return;
+            summaryTimer = setTimeout(() => { summaryTimer = null; if (summaryEl && !summaryEl.hidden) renderSummary(false); }, 0);
+        };
+
+        // ---- autoAttributes: type, inputmode, autocomplete and aria-required from the rules and the field names, and a lint for what browsers get wrong
+        const autoCfg = (() => {
+            const a = cfg.autoAttributes;
+            if (!a) return null;
+            const o = isObj(a) ? a : {};
+            return { type: o.type !== false, inputmode: o.inputmode !== false, autocomplete: o.autocomplete !== false, ariaRequired: o.ariaRequired !== false, lint: o.lint !== false };
+        })();
+        inst.attributeChanges = [];
+        inst.lintIssues = [];
+        const attrDone = new WeakMap();   // field -> the rule types it was last set up for
+        function applyAutoAttributes(fields) {
+            if (!autoCfg) return [];
+            const changes = [];
+            const byName = new Map();
+            (fields || Array.from(form.elements)).forEach(el => {
+                if (!el.name || !/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+                if (attrDone.get(el) === (inst.rules[el.name] || []).map(r => r.type).join()) return;
+                if (!byName.has(el.name)) byName.set(el.name, []);
+                byName.get(el.name).push(el);
+            });
+            const passwords = Array.from(form.elements).filter(e => e.type === 'password').length;
+            byName.forEach((els, name) => {
+                const rules = inst.rules[name] || [];
+                const types = rules.map(r => r.type);
+                const first = els[0];
+                els.forEach(e => attrDone.set(e, types.join()));
+                const set = (el, attr, value) => { if (el.hasAttribute(attr) && attr !== 'type') return false; if (attr === 'type' && !(el.getAttribute('type') === null || el.getAttribute('type') === '' || el.getAttribute('type') === 'text')) return false; el.setAttribute(attr, value); changes.push({ field: el, name, attribute: attr, value }); return true; };
+                if (autoCfg.ariaRequired && types.includes('required') && !rules.some(r => r.type === 'required' && isFn(r.when))) els.forEach(e => set(e, 'aria-required', 'true'));
+                if (first.tagName === 'TEXTAREA') return;
+                if (first.type === 'checkbox' || first.type === 'radio' || first.type === 'file' || first.type === 'hidden') return;
+                const key = (name + ' ' + (first.id || '')).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+                let type = null, inputmode = null, token = null;
+                if (types.includes('email')) { type = 'email'; inputmode = 'email'; token = /user|login/.test(key) ? 'username' : 'email'; }
+                else if (types.includes('url')) { type = 'url'; inputmode = 'url'; token = 'url'; }
+                else if (types.includes('phone')) { type = 'tel'; inputmode = 'tel'; token = 'tel'; }
+                else if (types.includes('creditcard')) { inputmode = 'numeric'; token = 'cc-number'; }
+                else if (types.includes('digits')) inputmode = 'numeric';
+                else if (types.includes('number')) inputmode = 'decimal';
+                if (first.type === 'password') {
+                    const isNew = types.includes('pwcheck') || rules.some(r => r.type === 'equalTo') || passwords > 1 || /new|confirm|repeat|retype|verify|signup|register|create/.test(key);
+                    token = isNew ? 'new-password' : 'current-password';
+                }
+                if (!token) {
+                    const rx = [
+                        [/\b(otp|one time|verification code|sms code|2fa|mfa|totp)\b/, 'one-time-code', 'numeric'],
+                        [/\b(e ?mail)\b/, 'email'], [/\b(user ?name|userid|user id|login)\b/, 'username'],
+                        [/\b(first ?name|fname|given ?name|forename)\b/, 'given-name'], [/\b(last ?name|lname|surname|family ?name)\b/, 'family-name'],
+                        [/\b(full ?name|name)\b$/, 'name'], [/\b(mobile|phone|tel|telephone)\b/, 'tel', 'tel'],
+                        [/\b(zip|zip ?code|postal|postal ?code|postcode)\b/, 'postal-code'], [/\b(address ?2|address ?line ?2|apt|suite)\b/, 'address-line2'],
+                        [/\b(address ?1|address ?line ?1)\b/, 'address-line1'], [/\b(street|address)\b/, 'street-address'],
+                        [/\b(city|town)\b/, 'address-level2'], [/\b(state|province|region)\b/, 'address-level1'], [/\b(country)\b/, 'country-name'],
+                        [/\b(company|organi[sz]ation|org)\b/, 'organization'], [/\b(birth ?day|birthday|bday|dob|date of birth)\b/, 'bday'],
+                        [/\b(card ?number|cc ?num|cc ?number|card ?no)\b/, 'cc-number', 'numeric'], [/\b(cvc|cvv|csc|security code)\b/, 'cc-csc', 'numeric'],
+                        [/\b(cc ?exp|card ?expiry|expiry|exp date)\b/, 'cc-exp', 'numeric']
+                    ];
+                    const hit = rx.find(r => r[0].test(key));
+                    if (hit) { token = hit[1]; if (!inputmode && hit[2]) inputmode = hit[2]; }
+                }
+                if (autoCfg.type && type && /^(INPUT)$/.test(first.tagName)) set(first, 'type', type);
+                if (autoCfg.inputmode && inputmode && first.tagName === 'INPUT' && first.type !== 'number') set(first, 'inputmode', inputmode);
+                if (autoCfg.autocomplete && token && !first.hasAttribute('autocomplete')) els.forEach(e => set(e, 'autocomplete', token));
+            });
+            inst.attributeChanges = inst.attributeChanges.concat(changes);
+            return changes;
+        }
+        function lintForm() {
+            const issues = [];
+            const rulesOf = n => (inst.rules[n] || []).map(r => r.type);
+            Array.from(form.elements).forEach(el => {
+                if (!el.name || !/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+                const ac = (el.getAttribute('autocomplete') || '').trim().toLowerCase();
+                const key = (el.name + ' ' + (el.id || '')).toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+                const known = el.type === 'password' || /\b(e ?mail|user ?name|login|first ?name|last ?name|full ?name|phone|tel|zip|postal|postcode|address|city|card ?number|cvc|cvv)\b/.test(key);
+                if ((ac === 'off' || ac === 'false') && known) issues.push({ field: el, name: el.name, code: 'autocomplete-off', message: 'autocomplete="off" on "' + el.name + '": browsers and password managers ignore it for logins and addresses, and it blocks the autofill people rely on.', fix: 'Remove it, or use a specific value such as autocomplete="' + (el.type === 'password' ? 'current-password' : 'email') + '".' });
+                if (el.type === 'password' && !ac) issues.push({ field: el, name: el.name, code: 'password-autocomplete', message: 'The password field "' + el.name + '" has no autocomplete value.', fix: 'Use autocomplete="current-password" for logins and "new-password" for sign-up or change-password forms (autoAttributes does this).' });
+                const digitish = /\b(otp|one time|code|pin|zip|postal|postcode|phone|tel|card|cvc|cvv|iban|account|ssn|id)\b/.test(key) || ['digits', 'phone', 'creditcard'].some(t => rulesOf(el.name).includes(t));
+                if (el.type === 'number' && digitish) issues.push({ field: el, name: el.name, code: 'type-number', message: '"' + el.name + '" looks like an identifier, not a quantity, but uses type="number": leading zeros are lost, the mouse wheel changes the value, and "e" is accepted.', fix: 'Use type="text" with inputmode="numeric" (autoAttributes does this for digits rules).' });
+            });
+            inst.lintIssues = issues;
+            return issues;
+        }
+        function runAutoAttributes() {
+            if (!autoCfg) return;
+            applyAutoAttributes();
+            if (autoCfg.lint) {
+                const issues = lintForm();
+                if (issues.length && root.console && console.warn) console.warn('FormValidator autoAttributes: ' + issues.length + ' thing(s) to fix in the form markup:\n' + issues.map(i => ' - [' + i.code + '] ' + i.message + ' ' + i.fix).join('\n'));
+            }
         }
 
         Object.assign(inst, {
@@ -3350,8 +3591,14 @@ const api = (function (root) {
             units: unitsFor,
             allUnits,
             readValue: unit => readEnv(unit),
-            getErrors: () => Array.from(inst._errors.values()).map(r => ({ name: r.unit.fields[0].name, field: r.unit.fields[0], fields: r.unit.fields, message: r.message, el: r.el })),
-            setError: (name, message) => { const u = unitsFor(name)[0]; if (u) showError(u, message); return !!u; },
+            getErrors: () => Array.from(inst._errors.values()).map(r => ({ name: r.unit.fields[0].name, field: r.unit.fields[0], fields: r.unit.fields, message: r.message, code: r.code, rule: r.code, el: r.el })),
+            setError: (name, message, code) => { const u = unitsFor(name)[0]; if (u) showError(u, message, code || 'server'); return !!u; },
+            /** The problems with this form's markup that browsers and password managers trip over (autocomplete="off" on logins, type="number" for codes ...). */
+            lint: () => lintForm(),
+            /** Applies autoAttributes to fields that were added after init (it also happens when such a field gets focus). */
+            refreshAttributes: () => applyAutoAttributes(),
+            /** Rebuilds the error summary (errorSummary option) from the errors that show now; focus: true moves keyboard focus to it. */
+            showSummary: focus => { if (summaryCfg) renderSummary(!!focus); return summaryEl; },
             clearError: name => unitsFor(name).forEach(removeError),
             resetForm: () => { inst.clearErrors(); inst._submitted = false; inst._tokens.clear(); },
             isSubmitted: () => inst._submitted,
@@ -3367,6 +3614,8 @@ const api = (function (root) {
                 if (inst._deferred) inst._deferred.clear();
                 inst._aborters.forEach(a => a.abort());
                 inst.clearErrors();
+                if (summaryTimer) { clearTimeout(summaryTimer); summaryTimer = null; }
+                if (summaryEl) { while (summaryEl.firstChild) summaryEl.removeChild(summaryEl.firstChild); if (summaryOwned) summaryEl.remove(); else summaryEl.hidden = true; summaryEl = null; }
                 if (cfg.novalidate) form.noValidate = !!inst._hadNoValidate;
                 delete form._fvInstance; delete form._manualValidate;
             },
@@ -3459,10 +3708,10 @@ const api = (function (root) {
             const r = normalizeResult(res);
             if (!r.valid) {
                 const custom = typeof rule.message === 'string' ? rule.message : (o.messages && o.messages[rule.type]) || r.message || DEFAULT_MESSAGES[rule.type] || 'Invalid value.';
-                return { valid: false, rule: rule.type, message: format(fmt(custom, rule), paramsOf(rule)) };
+                return { valid: false, rule: rule.type, code: typeof rule.code === 'string' && rule.code ? rule.code : rule.type, message: format(fmt(custom, rule), paramsOf(rule)) };
             }
         }
-        return { valid: true, rule: null, message: '' };
+        return { valid: true, rule: null, code: null, message: '' };
     }
 
     /**
@@ -3474,7 +3723,7 @@ const api = (function (root) {
         const o = options || {}, errors = {}, details = {};
         Object.keys(schema || {}).forEach(name => {
             const r = checkValue(data ? data[name] : undefined, schema[name], Object.assign({}, o, { values: Object.assign({}, data, o.values) }));
-            if (!r.valid) { errors[name] = r.message; details[name] = { rule: r.rule, message: r.message }; }
+            if (!r.valid) { errors[name] = r.message; details[name] = { rule: r.rule, code: r.code, message: r.message }; }
         });
         return { valid: Object.keys(errors).length === 0, errors, details };
     }
@@ -3513,7 +3762,7 @@ const api = (function (root) {
             fields.forEach(f => { if (data[f] == null) data[f] = ''; });     // a field that is not there is blank (equalTo may point at it)
             const res = checkValues(data, rules, o);
             if (!res.valid) {
-                return { issues: fields.filter(f => f in res.errors).map(f => ({ message: res.errors[f], path: [f], rule: res.details[f].rule })) };
+                return { issues: fields.filter(f => f in res.errors).map(f => ({ message: res.errors[f], path: [f], rule: res.details[f].rule, code: res.details[f].code })) };
             }
             const value = {};
             fields.forEach(f => { const raw = input[f] == null ? '' : String(input[f]); value[f] = keepsRaw[f] || o.trim === false ? raw : raw.trim(); });
@@ -3902,7 +4151,7 @@ const api = (function (root) {
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.11.0'
+        version: '2.12.0'
     };
 });
 
@@ -5964,7 +6213,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.10.0","fileValidator.widget":"1.4.0","formValidator":"2.11.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.10.0","fileValidator.widget":"1.4.0","formValidator":"2.12.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;

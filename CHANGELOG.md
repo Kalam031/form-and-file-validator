@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.10.0
+- **Reward early, punish late** (FormValidator 2.12.0): `validateOn` takes presets (`'smart'` is the default behaviour, `'blur'` never nags fields that were only tabbed through, `'input'`, `'submit'`, `'all'`), and `validClass: 'is-valid'` marks a field valid as soon as its value is, while typing; an error is still shown only after the user leaves the field. An `'input'` entry in a `validateOn` list used to be ignored for fields without an error; it now works.
+- **Stable error codes**: every message has a code that survives translation: the rule type, `badInput`, `server`, or a rule's own `code`. In `data-code`, `getErrors()`, `onError`, `checkValue()`, `checkValues().details` and schema issues.
+- **Accessible error summary**: `errorSummary: true` (or a container) lists every problem with a link to its field, takes focus after a failed submit, follows the form as errors are fixed, and is part of the axe audit. The title is translated in all 13 language packs.
+- **autoAttributes**: sets `type`, `inputmode`, `autocomplete` and `aria-required` from the rules and field names (never overriding yours; never `type="number"` for digits), and `inst.lint()` / one console warning flags `autocomplete="off"` on logins, password fields without `autocomplete`, and `type="number"` for codes and phone numbers.
+
 ## 3.9.0
 - **Server errors in one reader** (FormValidator 2.11.0): `FormValidator.serverErrors(body)` understands problem+json, ASP.NET Core ValidationProblemDetails and classic ModelState, Laravel / Rails, Django REST framework (nested and list serializers, `non_field_errors`), FastAPI / Pydantic, Zod, Standard Schema issues, express-validator, JSON:API and Ajv, and answers `{ errors, all, form }` with one key style (`items[0].qty`). `inst.setServerErrors(body)` shows it on the fields; `setErrors()` now matches `items.0.qty` to the input `items[0].qty`.
 - **Precognition**: `FormValidator.precognition(url, values, { only })`, `inst.validateOnServer(url)` and `inst.watchServer(url)` ask your real endpoint "would this pass?" (Laravel Precognition protocol: `Precognition` headers, 204 / 422) without saving anything; stale requests are cancelled and a broken endpoint never shows a false error.

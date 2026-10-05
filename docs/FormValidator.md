@@ -1,4 +1,4 @@
-# FormValidator v2.11.0 — Documentation
+# FormValidator v2.12.0 — Documentation
 
 ## Overview
 
@@ -345,7 +345,11 @@ Options inside `config`:
 | `focusInvalid` | `true` | Focus and scroll to the first invalid field after a failed submit |
 | `validateHidden` | `false` | Also check fields that are hidden, `type="hidden"`, or not rendered |
 | `ignore` | `null` | CSS selector of fields to skip |
-| `validateOn` | `['change']` | Events that check a field that has no error yet: `'change'`, `'blur'`, `'input'` |
+| `validateOn` | `'smart'` (= `['change']`) | When a field with no error yet is checked: a preset (`'smart'`, `'blur'`, `'input'`, `'submit'`, `'all'`) or a list of `'change'`, `'blur'`, `'input'`. See Live validation |
+| `validClass` | `''` | Class for a field that holds a valid value (`'is-valid'`); appears while typing, an error never does |
+| `rewardOnInput` | `true` | `false`: `validClass` only after a real check |
+| `errorSummary` | `false` | `true`, a selector, an element or `{ container, title, focus, withLabel, headingLevel, className }`: the accessible list of all problems |
+| `autoAttributes` | `false` | `true` or `{ type, inputmode, autocomplete, ariaRequired, lint }`: set autofill and keyboard attributes, lint the markup |
 | `debounce` | `150` | Milliseconds to wait while typing before re-checking a field that has an error |
 | `errorElement` | `'div'` | Tag used for the message |
 | `errorClass` | `'text-danger error'` | Class of the message element |
@@ -450,7 +454,65 @@ Disabled fields, hidden fields (`hidden` attribute or `display: none`, including
 
 Style the messages with your own CSS; the library adds no stylesheet.
 
+### Stable error codes
+
+Every message has a code that does not change when you translate or reword it: the rule type (`required`, `email`, `minlength`, `equalTo` ...), `badInput` for letters typed into a number field, and `server` for messages from `setError` / `setServerErrors`. Give a rule its own code with `code`:
+
+```js
+rules: { coupon: [{ type: 'pattern', pattern: '^[A-Z0-9]+$', code: 'coupon.format', message: 'Use capital letters and digits.' }] }
+```
+
+Where you find it: `data-code` on the message element (for tests and analytics), `code` and `rule` in `getErrors()` and in the list given to `onError`, `code` in `checkValue()`, `checkValues().details` and the issues of `schema()`. `setError(name, message, code)` takes one too.
+
+### Accessible error summary
+
+`errorSummary` adds the pattern GOV.UK and the WCAG techniques recommend for long forms: after a failed submit, focus moves to one list of every problem, each a link to its field.
+
+```js
+FormValidator.init({ formId: 'signup', rules, config: { errorSummary: true } });                  // builds the box at the top of the form
+FormValidator.init({ formId: 'signup', rules, config: { errorSummary: '#problems' } });          // or fills your own container
+FormValidator.init({ formId: 'signup', rules, config: { errorSummary: { title: 'Please fix these', headingLevel: 3, focus: 'field', withLabel: false } } });
+```
+
+- **Markup**: a focusable container (`tabindex="-1"`, `aria-labelledby` its heading), a heading, a list of links. Each link goes to the field, which gets an `id` if it has none; a radio or checkbox group goes to its first input. The field's label is put in front of the message (`Email: This field is required.`) so the list makes sense out of context (`withLabel: false` to turn that off).
+- **It follows the form**: when the user fixes a field its line disappears, when none are left the box hides. It is rebuilt with fresh nodes (and only when something changed) so screen readers announce what is new, not the whole list again.
+- **Focus**: by default the summary takes the focus; `focus: 'field'` keeps the classic move to the first invalid field.
+- **When**: after a failed submit or `validate({ submit: true })`. Calling `inst.showSummary(true)` shows it on demand.
+- Messages are put in as text, never HTML. The title is translated (`FormValidator.messages.errorSummary`, all 13 language packs) unless you pass `title`.
+
+### autoAttributes: autofill and the right keyboard
+
+Browsers fill forms and phones choose a keyboard from `type`, `inputmode` and `autocomplete`. Most forms get them wrong (`type="number"` for a postcode, `autocomplete="off"` on a login). `autoAttributes: true` sets them from your rules and the field names, and never replaces an attribute you wrote:
+
+| You have | It sets |
+| --- | --- |
+| `email` rule | `type="email"`, `inputmode="email"`, `autocomplete="email"` (`username` when the name says login or user) |
+| `url`, `phone` rules | `type="url"` / `type="tel"`, matching `inputmode` and `autocomplete` |
+| `digits` rule | `inputmode="numeric"` (never `type="number"`: it drops leading zeros and reacts to the mouse wheel) |
+| `number` rule | `inputmode="decimal"` |
+| `creditcard` rule, or a name like `card_number`, `cvc` | `inputmode="numeric"`, `autocomplete="cc-number"` / `cc-csc` |
+| password field | `new-password` when it has a `pwcheck` or `equalTo` rule, there is more than one password field, or the name says new / confirm / signup; otherwise `current-password` |
+| names such as `first_name`, `lastName`, `zip`, `city`, `otp`, `country` | `given-name`, `family-name`, `postal-code`, `address-level2`, `one-time-code` (+ numeric keypad), `country-name` ... |
+| a `required` rule | `aria-required="true"` (not `required`: the browser would show its own bubbles) |
+
+`type` is only changed on a field that has none or `text`. Turn parts off with `autoAttributes: { type: false, ariaRequired: false }`. Fields added later are set up when they first get focus (or call `inst.refreshAttributes()`); `inst.attributeChanges` lists what was set.
+
+**Lint.** With `autoAttributes` on, one `console.warn` lists markup problems: `autocomplete="off"` on logins, emails and addresses (browsers and password managers ignore it and it blocks autofill), a password field without `autocomplete`, and `type="number"` on codes, zip codes, phone and card numbers. `inst.lint()` returns them as `{ field, name, code, message, fix }`; `autoAttributes: { lint: false }` silences the warning.
+
 ## Live validation and dynamic forms
+
+**Reward early, punish late (`validateOn`).** Research on form UX is consistent: show success as soon as it is true, show errors only when the user has moved on. That is the default (`'smart'`): nothing is said while a field is typed into, the check runs when the user leaves an edited field, and a field that already shows an error is re-checked as they type, so the message disappears the moment it is fixed. Choose another timing with a preset, or a list of events:
+
+| `validateOn` | Behaviour |
+| --- | --- |
+| `'smart'` (default, same as `['change']`) | Check after the user leaves an edited field or picks an option; live fixing of fields in error. |
+| `'blur'` | Check on every blur, but never nag a field the user only tabbed through (empty fields wait for the first submit). |
+| `'input'` | Check while typing (after `debounce`). The most aggressive; fine for usernames, pointless for emails. |
+| `'submit'` | Nothing until the first submit; afterwards fields in error are fixed live. |
+| `'all'` | `change`, `blur` and `input`. |
+| `['change', 'input']` | Your own list. (An `'input'` entry works now: in 2.11 and before it was ignored for fields without an error.) |
+
+Set `validClass: 'is-valid'` to reward early: a field gets the class as soon as its value is valid, **while typing**, and an error is still never shown on input. A field that turns invalid while typing just loses the class and gets its message when the user leaves it. `rewardOnInput: false` adds the class only after a real check. Empty fields are never marked valid, and `resetForm()` clears the class.
 
 **While the user types**
 
@@ -777,6 +839,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.12.0**: `validateOn` presets (`'smart'`, `'blur'`, `'input'`, `'submit'`, `'all'`; an `'input'` entry now works) and `validClass` (reward early, punish late); stable error codes (`data-code`, `code` in `getErrors()`, `checkValue`, schema issues, a rule's own `code`); `errorSummary` (accessible list with links and focus); `autoAttributes` and `inst.lint()`.
 - **2.11.0**: `FormValidator.serverErrors()` (any backend's validation answer), `precognition()` / `validateOnServer()` / `watchServer()`, `action()` for React 19 and Server Actions, `setServerErrors()`; `setErrors()` matches `items.0.qty` to `items[0].qty`.
 - **2.10.0**: `FormValidator.parseFormData()`, `FormValidator.ruleNames()`, a ReDoS fuzz test for every rule.
 - **2.9.0**: `FormValidator.schema(rules)`: the rules as a Standard Schema with `parse`, `safeParse` and typed values and errors.

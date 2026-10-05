@@ -60,6 +60,7 @@
         file: "文件无效。",
         remote: "请修正此字段。",
         badInput: "请输入有效的值。",
+        errorSummary: "请修正以下问题：",
         custom: "值无效。"
     },
     file: {

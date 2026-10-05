@@ -60,6 +60,7 @@
         file: "Archivo no válido.",
         remote: "Corrige este campo.",
         badInput: "Introduce un valor válido.",
+        errorSummary: "Corrige lo siguiente:",
         custom: "Valor no válido."
     },
     file: {

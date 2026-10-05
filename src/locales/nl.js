@@ -60,6 +60,7 @@
         file: "Ongeldig bestand.",
         remote: "Corrigeer dit veld.",
         badInput: "Voer een geldige waarde in.",
+        errorSummary: "Corrigeer het volgende:",
         custom: "Ongeldige waarde."
     },
     file: {

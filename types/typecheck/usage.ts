@@ -268,3 +268,19 @@ void verdict;
     });
     void [first, msgs, missed, stop];
 }
+
+// ---------------------------------------------------------------- validateOn presets, error codes, summary, autoAttributes
+{
+    const i2 = FormValidator.init({
+        formId: 'x',
+        rules: { email: [{ type: 'email', code: 'mail.bad' }] },
+        config: { validateOn: 'blur', validClass: 'is-valid', errorSummary: { title: 'Fix these', headingLevel: 3, focus: 'field' }, autoAttributes: { lint: false } }
+    });
+    FormValidator.init({ formId: 'y', rules: {}, config: { validateOn: ['change', 'input'], errorSummary: true, autoAttributes: true } });
+    const codes: Array<string | undefined> = i2.getErrors().map(e => e.code);
+    const lint = i2.lint().map(l => l.code);
+    const box: HTMLElement | null = i2.showSummary(true);
+    i2.setError('email', 'Taken', 'email.taken');
+    const c: string | null = FormValidator.checkValue('x', ['email']).code;
+    void [codes, lint, box, c];
+}

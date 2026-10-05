@@ -22,6 +22,8 @@ export type RuleResult = boolean | string | undefined | null | { valid: boolean;
 export type MessageSource = string | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string);
 
 export interface RuleObject {
+    /** Your own stable code for this rule's failure ('coupon.expired'); written to data-code, getErrors() and issues. Default: the rule type. */
+    code?: string;
     type: RuleName | (string & {});
     /** Text with {min}, {max}, {0}, {1} placeholders, or a function. Wins over every other message source. */
     message?: MessageSource;
@@ -97,7 +99,16 @@ export interface FormConfig {
     focusCleanup?: boolean;
     validateHidden?: boolean;
     ignore?: string | null;
-    validateOn?: Array<'change' | 'blur' | 'input'>;
+    /** When a not-yet-invalid field is checked. Presets: 'smart' (default: after the user leaves an edited field, then live while it is invalid), 'blur' (does not nag fields only tabbed through), 'input', 'submit', 'all'; or a list of events. */
+    validateOn?: 'smart' | 'default' | 'change' | 'blur' | 'input' | 'submit' | 'all' | Array<'change' | 'blur' | 'input'>;
+    /** Class for a field that was checked and holds a valid value ('is-valid'). While typing it appears as soon as the value becomes valid; an error never does. */
+    validClass?: string;
+    /** false: validClass only after a real check, not while typing. */
+    rewardOnInput?: boolean;
+    /** An accessible list of all problems with links to the fields, focused after a failed submit. true builds one at the top of the form; or pass a container (selector / element) or options. */
+    errorSummary?: boolean | string | HTMLElement | { container?: string | HTMLElement; title?: string; focus?: 'summary' | 'field'; withLabel?: boolean; headingLevel?: 1 | 2 | 3 | 4 | 5 | 6; className?: string };
+    /** Sets type / inputmode / autocomplete / aria-required from the rules and field names (never overriding what you wrote) and warns about autocomplete="off" and type="number" misuse. */
+    autoAttributes?: boolean | { type?: boolean; inputmode?: boolean; autocomplete?: boolean; ariaRequired?: boolean; lint?: boolean };
     debounce?: number;
     errorElement?: string;
     errorClass?: string;
@@ -138,8 +149,14 @@ export interface InitOptions {
     messages?: Record<string, string | Record<string, string> | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
 }
 
+export interface LintIssue { field: HTMLElement; name: string; code: 'autocomplete-off' | 'password-autocomplete' | 'type-number'; message: string; fix: string }
+export interface AttributeChange { field: HTMLElement; name: string; attribute: string; value: string }
+
 export interface FieldError {
     name: string;
+    /** Stable code of the failed rule: 'required', 'email', 'minlength' ..., a rule's own `code`, 'badInput' or 'server'. */
+    code?: string;
+    rule?: string;
     field: HTMLElement;
     fields: HTMLElement[];
     message: string;
@@ -185,7 +202,17 @@ export interface FormInstance {
     validateOnServer(url: string | (PrecognitionOptions & { url: string }), options?: PrecognitionOptions): Promise<PrecognitionResult & { missed?: string[] }>;
     /** Live server checks: a field the browser rules accept is checked on the server when the user leaves it. Returns a function that stops it. */
     watchServer(url: string | (PrecognitionOptions & { url: string; delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }), options?: PrecognitionOptions & { delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }): () => void;
-    setError(name: string, message: string): boolean;
+    /** Shows a message on a field. `code` (default 'server') is written to the message's data-code and to getErrors(). */
+    setError(name: string, message: string, code?: string): boolean;
+    /** What in this form's markup browsers and password managers trip over (autocomplete="off" on logins, type="number" for codes ...). */
+    lint(): LintIssue[];
+    /** Applies autoAttributes to fields added after init (it also happens when such a field gets focus). Returns what it set. */
+    refreshAttributes(): AttributeChange[];
+    /** What autoAttributes has set so far, and the lint findings of the last run. */
+    readonly attributeChanges: AttributeChange[];
+    readonly lintIssues: LintIssue[];
+    /** Rebuilds the error summary from the errors that show now (focus: true moves keyboard focus to it). Returns its element, or null when errorSummary is off. */
+    showSummary(focus?: boolean): HTMLElement | null;
     clearError(name: string): void;
     clearErrors(): void;
     resetForm(): void;
@@ -205,6 +232,8 @@ export interface ValueCheckResult {
     valid: boolean;
     /** The type of the first rule that failed (null when valid). */
     rule: string | null;
+    /** Stable code: the rule's own `code`, else its type; null when valid. */
+    code: string | null;
     message: string;
 }
 
@@ -222,7 +251,7 @@ export interface ValueCheckOptions {
 export interface ValuesCheckResult {
     valid: boolean;
     errors: Record<string, string>;
-    details: Record<string, { rule: string | null; message: string }>;
+    details: Record<string, { rule: string | null; code: string | null; message: string }>;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -253,6 +282,8 @@ export interface SchemaIssue extends StandardSchemaV1.Issue {
     readonly path: ReadonlyArray<string>;
     /** The rule that failed, for example 'email'. */
     readonly rule?: string;
+    /** Stable code: the rule's `code`, else its type. */
+    readonly code?: string;
 }
 
 /** What `schema.parse()` throws. */

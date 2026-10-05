@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.9.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.10.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -66,6 +66,7 @@
 <p><strong>Right-to-left languages.</strong> Error messages and widget messages carry <code>dir=&quot;auto&quot;</code>, and the Arabic language pack switches the page with <code>FVLocales.use(&#39;ar&#39;, { document: true })</code> (<code>lang</code> and <code>dir=&quot;rtl&quot;</code>). The playground test checks this in all four browsers.</p>
 <p><strong>What is still not checked automatically:</strong> how a message actually sounds in a screen reader, whether the order of announcements is sensible, and touch-target size. Those are in the manual script. Colour contrast of your own pages is yours: the libraries add no CSS.</p>
 <h2 id="2-what-the-libraries-do">2. What the libraries do</h2>
+<p><strong>Error summary (<code>errorSummary</code>).</strong> One focusable list of all problems with links to the fields, rebuilt with fresh nodes so screen readers announce changes; it is part of the axe audit above. Use it on forms with more than a few fields.</p>
 <p><strong>FormValidator (and the jQuery layer)</strong></p>
 <div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
 <thead>

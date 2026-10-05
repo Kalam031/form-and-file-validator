@@ -127,3 +127,22 @@ test('upload widget: a wrapper that is not a label gets keyboard access (tabinde
     await audit('a keyboard-operable dropzone');
     z.destroy();
 });
+
+test('error summary: no axe violations with every field in error, links point at real ids, and after fixing', async () => {
+    const f = form(FIELDS);
+    const inst = FormValidator.init({ formId: 'f', rules: {
+        name: ['required'], email: ['required', 'email'], pw: [{ type: 'pwcheck', minLength: 8 }, 'required'],
+        country: ['required'], plan: ['required'], terms: ['required'], doc: ['required']
+    }, config: { errorSummary: true } });
+    await inst.validate({ focus: false, submit: true });
+    const box = f.querySelector('.fv-summary');
+    assert.ok(box && !box.hidden);
+    await audit('the form with the error summary');
+    const links = Array.from(box.querySelectorAll('a'));
+    assert.equal(links.length, 7);
+    links.forEach(a => assert.ok(document.getElementById(a.getAttribute('href').slice(1)), a.getAttribute('href') + ' exists'));
+    assert.equal(box.getAttribute('aria-labelledby'), box.querySelector('h2').id);
+    inst.clearErrors(); await settle(10);
+    await audit('the form after the errors are cleared');
+    assert.equal(box.hidden, true);
+});

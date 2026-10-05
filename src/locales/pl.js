@@ -60,6 +60,7 @@
         file: "Nieprawidłowy plik.",
         remote: "Popraw to pole.",
         badInput: "Wprowadź prawidłową wartość.",
+        errorSummary: "Popraw następujące pola:",
         custom: "Nieprawidłowa wartość."
     },
     file: {

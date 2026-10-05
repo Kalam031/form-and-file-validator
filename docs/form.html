@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.9.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.10.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v2110-documentation">FormValidator v2.11.0 — Documentation</h1>
+<h1 id="formvalidator-v2120-documentation">FormValidator v2.12.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -599,8 +599,28 @@ if (!result.success) result.errors.email;       // string | undefined, a misspel
 </tr>
 <tr>
 <td><code>validateOn</code></td>
-<td><code>[&#39;change&#39;]</code></td>
-<td>Events that check a field that has no error yet: <code>&#39;change&#39;</code>, <code>&#39;blur&#39;</code>, <code>&#39;input&#39;</code></td>
+<td><code>&#39;smart&#39;</code> (= <code>[&#39;change&#39;]</code>)</td>
+<td>When a field with no error yet is checked: a preset (<code>&#39;smart&#39;</code>, <code>&#39;blur&#39;</code>, <code>&#39;input&#39;</code>, <code>&#39;submit&#39;</code>, <code>&#39;all&#39;</code>) or a list of <code>&#39;change&#39;</code>, <code>&#39;blur&#39;</code>, <code>&#39;input&#39;</code>. See Live validation</td>
+</tr>
+<tr>
+<td><code>validClass</code></td>
+<td><code>&#39;&#39;</code></td>
+<td>Class for a field that holds a valid value (<code>&#39;is-valid&#39;</code>); appears while typing, an error never does</td>
+</tr>
+<tr>
+<td><code>rewardOnInput</code></td>
+<td><code>true</code></td>
+<td><code>false</code>: <code>validClass</code> only after a real check</td>
+</tr>
+<tr>
+<td><code>errorSummary</code></td>
+<td><code>false</code></td>
+<td><code>true</code>, a selector, an element or <code>{ container, title, focus, withLabel, headingLevel, className }</code>: the accessible list of all problems</td>
+</tr>
+<tr>
+<td><code>autoAttributes</code></td>
+<td><code>false</code></td>
+<td><code>true</code> or <code>{ type, inputmode, autocomplete, ariaRequired, lint }</code>: set autofill and keyboard attributes, lint the markup</td>
 </tr>
 <tr>
 <td><code>debounce</code></td>
@@ -791,7 +811,103 @@ if (!result.success) result.errors.email;       // string | undefined, a misspel
 <p><strong>Which fields are checked</strong></p>
 <p>Disabled fields, hidden fields (<code>hidden</code> attribute or <code>display: none</code>, including inside a hidden parent), <code>type=&quot;hidden&quot;</code> inputs and fields matching <code>ignore</code> are skipped, and any stale message on them is removed. Set <code>validateHidden: true</code> to check them anyway. Fields with the same <code>name</code> (like <code>items[]</code>) are each checked on their own.</p>
 <p>Style the messages with your own CSS; the library adds no stylesheet.</p>
+<h3 id="stable-error-codes">Stable error codes</h3>
+<p>Every message has a code that does not change when you translate or reword it: the rule type (<code>required</code>, <code>email</code>, <code>minlength</code>, <code>equalTo</code> ...), <code>badInput</code> for letters typed into a number field, and <code>server</code> for messages from <code>setError</code> / <code>setServerErrors</code>. Give a rule its own code with <code>code</code>:</p>
+<pre tabindex="0"><code class="language-js">rules: { coupon: [{ type: &#39;pattern&#39;, pattern: &#39;^[A-Z0-9]+$&#39;, code: &#39;coupon.format&#39;, message: &#39;Use capital letters and digits.&#39; }] }
+</code></pre>
+<p>Where you find it: <code>data-code</code> on the message element (for tests and analytics), <code>code</code> and <code>rule</code> in <code>getErrors()</code> and in the list given to <code>onError</code>, <code>code</code> in <code>checkValue()</code>, <code>checkValues().details</code> and the issues of <code>schema()</code>. <code>setError(name, message, code)</code> takes one too.</p>
+<h3 id="accessible-error-summary">Accessible error summary</h3>
+<p><code>errorSummary</code> adds the pattern GOV.UK and the WCAG techniques recommend for long forms: after a failed submit, focus moves to one list of every problem, each a link to its field.</p>
+<pre tabindex="0"><code class="language-js">FormValidator.init({ formId: &#39;signup&#39;, rules, config: { errorSummary: true } });                  // builds the box at the top of the form
+FormValidator.init({ formId: &#39;signup&#39;, rules, config: { errorSummary: &#39;#problems&#39; } });          // or fills your own container
+FormValidator.init({ formId: &#39;signup&#39;, rules, config: { errorSummary: { title: &#39;Please fix these&#39;, headingLevel: 3, focus: &#39;field&#39;, withLabel: false } } });
+</code></pre>
+<ul>
+<li><strong>Markup</strong>: a focusable container (<code>tabindex=&quot;-1&quot;</code>, <code>aria-labelledby</code> its heading), a heading, a list of links. Each link goes to the field, which gets an <code>id</code> if it has none; a radio or checkbox group goes to its first input. The field&#39;s label is put in front of the message (<code>Email: This field is required.</code>) so the list makes sense out of context (<code>withLabel: false</code> to turn that off).</li>
+<li><strong>It follows the form</strong>: when the user fixes a field its line disappears, when none are left the box hides. It is rebuilt with fresh nodes (and only when something changed) so screen readers announce what is new, not the whole list again.</li>
+<li><strong>Focus</strong>: by default the summary takes the focus; <code>focus: &#39;field&#39;</code> keeps the classic move to the first invalid field.</li>
+<li><strong>When</strong>: after a failed submit or <code>validate({ submit: true })</code>. Calling <code>inst.showSummary(true)</code> shows it on demand.</li>
+<li>Messages are put in as text, never HTML. The title is translated (<code>FormValidator.messages.errorSummary</code>, all 13 language packs) unless you pass <code>title</code>.</li>
+</ul>
+<h3 id="autoattributes-autofill-and-the-right-keyboard">autoAttributes: autofill and the right keyboard</h3>
+<p>Browsers fill forms and phones choose a keyboard from <code>type</code>, <code>inputmode</code> and <code>autocomplete</code>. Most forms get them wrong (<code>type=&quot;number&quot;</code> for a postcode, <code>autocomplete=&quot;off&quot;</code> on a login). <code>autoAttributes: true</code> sets them from your rules and the field names, and never replaces an attribute you wrote:</p>
+<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
+<thead>
+<tr>
+<th>You have</th>
+<th>It sets</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>email</code> rule</td>
+<td><code>type=&quot;email&quot;</code>, <code>inputmode=&quot;email&quot;</code>, <code>autocomplete=&quot;email&quot;</code> (<code>username</code> when the name says login or user)</td>
+</tr>
+<tr>
+<td><code>url</code>, <code>phone</code> rules</td>
+<td><code>type=&quot;url&quot;</code> / <code>type=&quot;tel&quot;</code>, matching <code>inputmode</code> and <code>autocomplete</code></td>
+</tr>
+<tr>
+<td><code>digits</code> rule</td>
+<td><code>inputmode=&quot;numeric&quot;</code> (never <code>type=&quot;number&quot;</code>: it drops leading zeros and reacts to the mouse wheel)</td>
+</tr>
+<tr>
+<td><code>number</code> rule</td>
+<td><code>inputmode=&quot;decimal&quot;</code></td>
+</tr>
+<tr>
+<td><code>creditcard</code> rule, or a name like <code>card_number</code>, <code>cvc</code></td>
+<td><code>inputmode=&quot;numeric&quot;</code>, <code>autocomplete=&quot;cc-number&quot;</code> / <code>cc-csc</code></td>
+</tr>
+<tr>
+<td>password field</td>
+<td><code>new-password</code> when it has a <code>pwcheck</code> or <code>equalTo</code> rule, there is more than one password field, or the name says new / confirm / signup; otherwise <code>current-password</code></td>
+</tr>
+<tr>
+<td>names such as <code>first_name</code>, <code>lastName</code>, <code>zip</code>, <code>city</code>, <code>otp</code>, <code>country</code></td>
+<td><code>given-name</code>, <code>family-name</code>, <code>postal-code</code>, <code>address-level2</code>, <code>one-time-code</code> (+ numeric keypad), <code>country-name</code> ...</td>
+</tr>
+<tr>
+<td>a <code>required</code> rule</td>
+<td><code>aria-required=&quot;true&quot;</code> (not <code>required</code>: the browser would show its own bubbles)</td>
+</tr>
+</tbody></table></div>
+<p><code>type</code> is only changed on a field that has none or <code>text</code>. Turn parts off with <code>autoAttributes: { type: false, ariaRequired: false }</code>. Fields added later are set up when they first get focus (or call <code>inst.refreshAttributes()</code>); <code>inst.attributeChanges</code> lists what was set.</p>
+<p><strong>Lint.</strong> With <code>autoAttributes</code> on, one <code>console.warn</code> lists markup problems: <code>autocomplete=&quot;off&quot;</code> on logins, emails and addresses (browsers and password managers ignore it and it blocks autofill), a password field without <code>autocomplete</code>, and <code>type=&quot;number&quot;</code> on codes, zip codes, phone and card numbers. <code>inst.lint()</code> returns them as <code>{ field, name, code, message, fix }</code>; <code>autoAttributes: { lint: false }</code> silences the warning.</p>
 <h2 id="live-validation-and-dynamic-forms">Live validation and dynamic forms</h2>
+<p><strong>Reward early, punish late (<code>validateOn</code>).</strong> Research on form UX is consistent: show success as soon as it is true, show errors only when the user has moved on. That is the default (<code>&#39;smart&#39;</code>): nothing is said while a field is typed into, the check runs when the user leaves an edited field, and a field that already shows an error is re-checked as they type, so the message disappears the moment it is fixed. Choose another timing with a preset, or a list of events:</p>
+<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
+<thead>
+<tr>
+<th><code>validateOn</code></th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&#39;smart&#39;</code> (default, same as <code>[&#39;change&#39;]</code>)</td>
+<td>Check after the user leaves an edited field or picks an option; live fixing of fields in error.</td>
+</tr>
+<tr>
+<td><code>&#39;blur&#39;</code></td>
+<td>Check on every blur, but never nag a field the user only tabbed through (empty fields wait for the first submit).</td>
+</tr>
+<tr>
+<td><code>&#39;input&#39;</code></td>
+<td>Check while typing (after <code>debounce</code>). The most aggressive; fine for usernames, pointless for emails.</td>
+</tr>
+<tr>
+<td><code>&#39;submit&#39;</code></td>
+<td>Nothing until the first submit; afterwards fields in error are fixed live.</td>
+</tr>
+<tr>
+<td><code>&#39;all&#39;</code></td>
+<td><code>change</code>, <code>blur</code> and <code>input</code>.</td>
+</tr>
+<tr>
+<td><code>[&#39;change&#39;, &#39;input&#39;]</code></td>
+<td>Your own list. (An <code>&#39;input&#39;</code> entry works now: in 2.11 and before it was ignored for fields without an error.)</td>
+</tr>
+</tbody></table></div>
+<p>Set <code>validClass: &#39;is-valid&#39;</code> to reward early: a field gets the class as soon as its value is valid, <strong>while typing</strong>, and an error is still never shown on input. A field that turns invalid while typing just loses the class and gets its message when the user leaves it. <code>rewardOnInput: false</code> adds the class only after a real check. Empty fields are never marked valid, and <code>resetForm()</code> clears the class.</p>
 <p><strong>While the user types</strong></p>
 <ul>
 <li>A field with no error is left alone while typing, so nobody is scolded halfway through an email address.</li>
@@ -807,7 +923,7 @@ form.removeRules(&#39;coupon&#39;);
 </code></pre>
 <p><strong>Buttons that skip validation.</strong> A submit button with the <code>formnovalidate</code> attribute, such as &quot;Save draft&quot;, submits without validating.</p>
 <p><strong>Rules from HTML attributes.</strong> With <code>autoRules: true</code> the library also reads the markup:</p>
-<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
 <thead>
 <tr>
 <th>Attribute</th>
@@ -850,7 +966,7 @@ form.removeRules(&#39;coupon&#39;);
 }
 </code></pre>
 <p>What the function may return:</p>
-<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
 <thead>
 <tr>
 <th>Return value</th>
@@ -894,7 +1010,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 }
 </code></pre>
 <p>By default it sends a <code>GET</code> request with the value in the query string (<code>/api/username-free?username=bob</code>), like jQuery Validation. For a <code>POST</code>, set <code>method: &#39;POST&#39;</code> on the rule: the body is JSON <code>{ &quot;username&quot;: &quot;bob&quot; }</code>, or a classic form body with <code>encoding: &#39;form&#39;</code>. To make <code>POST</code> the default for every remote rule, set <code>FormValidator.remoteDefaults.method = &#39;POST&#39;</code> (and <code>.encoding = &#39;form&#39;</code> if you want form bodies). The server answers with JSON:</p>
-<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
 <thead>
 <tr>
 <th>Response</th>
@@ -919,7 +1035,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 </tr>
 </tbody></table></div>
 <p>Options:</p>
-<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -988,7 +1104,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 <p>The first FileValidator message is shown under the field (with several files it starts with the file name, like <code>bad.exe: ...</code>), and the check also runs as soon as the user picks files. In the jQuery compatibility layer the same checks are available as the <code>fileValidator</code> method. The full FileValidator options are described in its own document (<a href="file.html">FileValidator.md</a>).</p>
 <h2 id="instance-api-callbacks-and-events">Instance API, callbacks and events</h2>
 <p><code>FormValidator.init(...)</code> returns an instance for one form, or an array when <code>formId</code> is an array.</p>
-<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
 <thead>
 <tr>
 <th>Method</th>
@@ -1037,7 +1153,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 </tr>
 </tbody></table></div>
 <p>Static functions on <code>FormValidator</code>:</p>
-<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
 <thead>
 <tr>
 <th>Function</th>
@@ -1171,7 +1287,7 @@ $.validator.addMethod(&#39;even&#39;, function (value, element) { return this.op
 <p>It supports <code>$.fn.validate</code>, <code>valid</code> and <code>rules</code>, <code>$.validator.addMethod</code>, <code>addClassRules</code>, <code>setDefaults</code>, <code>format</code>, <code>messages</code> and <code>methods</code>, all built-in and additional methods, per-field messages, <code>data-rule-*</code>, <code>data-msg-*</code>, class and attribute rules, <code>depends</code>, <code>normalizer</code>, <code>remote</code>, and the options <code>errorPlacement</code>, <code>highlight</code>, <code>unhighlight</code>, <code>success</code>, <code>invalidHandler</code>, <code>submitHandler</code>, <code>onfocusout</code>, <code>onkeyup</code>, <code>onclick</code>, <code>ignore</code>, <code>focusCleanup</code>, <code>debug</code>, <code>errorContainer</code>, <code>errorLabelContainer</code> and <code>wrapper</code>. The <code>groups</code> and <code>showErrors</code> options are supported too. The full list, the differences, and a step-by-step migration are in <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
 <h2 id="migrating-from-v1">Migrating from v1</h2>
 <p>Existing pages keep working: <code>FormValidator.init({ formId, rules, config, context })</code>, <code>FormValidator.validate(id, rules)</code> and <code>form._manualValidate()</code> are unchanged. These behaviours are different, on purpose:</p>
-<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 15" tabindex="0"><table>
 <thead>
 <tr>
 <th>Version 1</th>
@@ -1237,7 +1353,7 @@ $.validator.addMethod(&#39;even&#39;, function (value, element) { return this.op
 </tbody></table></div>
 <p>A rule without a message now shows a default English sentence (version 1 showed nothing useful). A message you write always wins.</p>
 <h2 id="troubleshooting-and-limits">Troubleshooting and limits</h2>
-<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 16" tabindex="0"><table>
 <thead>
 <tr>
 <th>Symptom</th>
@@ -1300,6 +1416,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.12.0</strong>: <code>validateOn</code> presets (<code>&#39;smart&#39;</code>, <code>&#39;blur&#39;</code>, <code>&#39;input&#39;</code>, <code>&#39;submit&#39;</code>, <code>&#39;all&#39;</code>; an <code>&#39;input&#39;</code> entry now works) and <code>validClass</code> (reward early, punish late); stable error codes (<code>data-code</code>, <code>code</code> in <code>getErrors()</code>, <code>checkValue</code>, schema issues, a rule&#39;s own <code>code</code>); <code>errorSummary</code> (accessible list with links and focus); <code>autoAttributes</code> and <code>inst.lint()</code>.</li>
 <li><strong>2.11.0</strong>: <code>FormValidator.serverErrors()</code> (any backend&#39;s validation answer), <code>precognition()</code> / <code>validateOnServer()</code> / <code>watchServer()</code>, <code>action()</code> for React 19 and Server Actions, <code>setServerErrors()</code>; <code>setErrors()</code> matches <code>items.0.qty</code> to <code>items[0].qty</code>.</li>
 <li><strong>2.10.0</strong>: <code>FormValidator.parseFormData()</code>, <code>FormValidator.ruleNames()</code>, a ReDoS fuzz test for every rule.</li>
 <li><strong>2.9.0</strong>: <code>FormValidator.schema(rules)</code>: the rules as a Standard Schema with <code>parse</code>, <code>safeParse</code> and typed values and errors.</li>

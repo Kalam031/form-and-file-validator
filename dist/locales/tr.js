@@ -60,6 +60,7 @@
         file: "Geçersiz dosya.",
         remote: "Lütfen bu alanı düzeltin.",
         badInput: "Lütfen geçerli bir değer girin.",
+        errorSummary: "Lütfen şunları düzeltin:",
         custom: "Geçersiz değer."
     },
     file: {
