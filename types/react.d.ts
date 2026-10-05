@@ -1,6 +1,6 @@
 // React bindings: `import { useFormValidator, FileDropzone } from 'form-and-file-validator/react'`
 import type { Ref, ForwardRefExoticComponent, RefAttributes, RefObject, InputHTMLAttributes } from 'react';
-import type { InitOptions, FormInstance, FieldError, FormValues, SubmitResult } from './formValidator';
+import type { InitOptions, FormInstance, FieldError, FormValues, SubmitResult, ServerErrorsResult, ServerErrorFormat, PrecognitionOptions, PrecognitionResult } from './formValidator';
 import type { FileValidatorConfig, WidgetOptions, WidgetEntry, RejectedFile, AddResult, ValidationResult } from './fileValidator';
 
 export interface UseFormValidatorResult {
@@ -13,6 +13,10 @@ export interface UseFormValidatorResult {
     getValues(): FormValues;
     /** Show messages from the server on the fields. Returns the names that matched no field. */
     setErrors(errors: Record<string, string | string[]>): string[];
+    /** Show what a backend answered (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod ...) on the fields and refresh `errors`. */
+    setServerErrors(body: unknown, options?: { format?: ServerErrorFormat; clear?: boolean }): ServerErrorsResult & { missed: string[] };
+    /** Precognition: ask your real endpoint whether the current values pass, and show its field errors. */
+    validateOnServer(url: string, options?: PrecognitionOptions): Promise<PrecognitionResult>;
     /** Refreshed after every validate() call. */
     errors: FieldError[];
     instance(): FormInstance | null;

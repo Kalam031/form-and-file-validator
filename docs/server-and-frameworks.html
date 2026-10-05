@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.8.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.9.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -138,7 +138,7 @@ function Signup() {
   );
 }
 </code></pre>
-<p><code>useFormValidator(options, deps)</code> creates the validator when the form appears and destroys it when it goes away; pass <code>deps</code> if your rules change. <code>errors</code> is refreshed after each <code>validate()</code> / <code>handleSubmit</code>. It also returns <code>getValues()</code> and <code>setErrors(map)</code>. <strong>Direct submit</strong> (the browser posts the form): leave out <code>onSubmit</code> and give the form <code>action</code> and <code>method</code>; a valid form posts, an invalid one is blocked. Call <code>handleSubmit(...)</code> while rendering, as above: it switches off the engine&#39;s own submit interception so your handler is the one that runs. <code>&lt;FileDropzone&gt;</code> gives a ref with <code>files</code>, <code>validate()</code>, <code>clear()</code>, <code>add(files)</code> and <code>appendTo(formData)</code>.</p>
+<p><code>useFormValidator(options, deps)</code> creates the validator when the form appears and destroys it when it goes away; pass <code>deps</code> if your rules change. <code>errors</code> is refreshed after each <code>validate()</code> / <code>handleSubmit</code>. It also returns <code>getValues()</code>, <code>setErrors(map)</code>, <code>setServerErrors(body)</code> (any backend&#39;s validation answer, see <code>FormValidator.serverErrors</code>) and <code>validateOnServer(url)</code> (Precognition). For React 19 <code>useActionState</code> and Server Actions see <code>FormValidator.action</code> in the FormValidator docs. <strong>Direct submit</strong> (the browser posts the form): leave out <code>onSubmit</code> and give the form <code>action</code> and <code>method</code>; a valid form posts, an invalid one is blocked. Call <code>handleSubmit(...)</code> while rendering, as above: it switches off the engine&#39;s own submit interception so your handler is the one that runs. <code>&lt;FileDropzone&gt;</code> gives a ref with <code>files</code>, <code>validate()</code>, <code>clear()</code>, <code>add(files)</code> and <code>appendTo(formData)</code>.</p>
 <h2 id="vue-3">Vue 3</h2>
 <pre tabindex="0"><code class="language-vue">&lt;script setup&gt;
 import { useFormValidator, FileDropzone } from &#39;form-and-file-validator/vue&#39;;

@@ -1,5 +1,5 @@
 /*!
- * Vue 3 bindings v1.0.0 — useFormValidator(), the v-form-validator directive and <FileDropzone>. Needs vue >= 3 (peer dependency).
+ * Vue 3 bindings v1.1.0 — useFormValidator(), the v-form-validator directive and <FileDropzone>. Needs vue >= 3 (peer dependency).
  *
  *   import { useFormValidator, FileDropzone, vFormValidator } from 'form-and-file-validator/vue';
  *
@@ -13,6 +13,7 @@
  *   <form v-form-validator="{ rules: { email: ['required', 'email'] } }">...</form>       <!-- directive form, no script needed -->
  *
  * Changelog
+ *   1.1.0  setServerErrors(body) reads any backend's validation answer; validateOnServer(url) asks your real endpoint (Precognition).
  *   1.0.0  First release.
  */
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
@@ -54,7 +55,21 @@ export function useFormValidator(options) {
     };
     const getValues = () => (instance.value ? instance.value.getValues() : {});
     const setServerErrors = map => { if (!instance.value) return Object.keys(map || {}); const missed = instance.value.setErrors(map); errors.value = instance.value.getErrors(); return missed; };
-    return { formRef, validate, reset, errors, handleSubmit, getValues, setErrors: setServerErrors, instance };
+    /** Shows what a backend answered (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod ...) on the fields and refreshes `errors`. */
+    const setServerResponse = (body, o) => {
+        if (!instance.value) return Object.assign(FormValidator.serverErrors(body, o), { missed: [] });
+        const r = instance.value.setServerErrors(body, o);
+        errors.value = instance.value.getErrors();
+        return r;
+    };
+    /** Precognition: asks your real endpoint whether the current values pass and shows its field errors. */
+    const validateOnServer = async (url, o) => {
+        if (!instance.value) return { valid: null, status: 0, errors: {}, all: {}, form: [], only: null };
+        const r = await instance.value.validateOnServer(url, o);
+        if (instance.value) errors.value = instance.value.getErrors();
+        return r;
+    };
+    return { formRef, validate, reset, errors, handleSubmit, getValues, setErrors: setServerErrors, setServerErrors: setServerResponse, validateOnServer, instance };
 }
 
 /** Directive: v-form-validator="{ rules, config, messages }" on a <form>. The instance is reachable as form.__fvInstance. */

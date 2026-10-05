@@ -143,7 +143,7 @@ function Signup() {
 }
 ```
 
-`useFormValidator(options, deps)` creates the validator when the form appears and destroys it when it goes away; pass `deps` if your rules change. `errors` is refreshed after each `validate()` / `handleSubmit`. It also returns `getValues()` and `setErrors(map)`. **Direct submit** (the browser posts the form): leave out `onSubmit` and give the form `action` and `method`; a valid form posts, an invalid one is blocked. Call `handleSubmit(...)` while rendering, as above: it switches off the engine's own submit interception so your handler is the one that runs. `<FileDropzone>` gives a ref with `files`, `validate()`, `clear()`, `add(files)` and `appendTo(formData)`.
+`useFormValidator(options, deps)` creates the validator when the form appears and destroys it when it goes away; pass `deps` if your rules change. `errors` is refreshed after each `validate()` / `handleSubmit`. It also returns `getValues()`, `setErrors(map)`, `setServerErrors(body)` (any backend's validation answer, see `FormValidator.serverErrors`) and `validateOnServer(url)` (Precognition). For React 19 `useActionState` and Server Actions see `FormValidator.action` in the FormValidator docs. **Direct submit** (the browser posts the form): leave out `onSubmit` and give the form `action` and `method`; a valid form posts, an invalid one is blocked. Call `handleSubmit(...)` while rendering, as above: it switches off the engine's own submit interception so your handler is the one that runs. `<FileDropzone>` gives a ref with `files`, `validate()`, `clear()`, `add(files)` and `appendTo(formData)`.
 
 ## Vue 3
 

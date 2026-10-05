@@ -237,3 +237,34 @@ void nope;
 const official: OfficialStandardSchema<SignupIn, InferOutput<typeof signupSchema>> = signupSchema;
 const verdict = official['~standard'].validate({});
 void verdict;
+
+// ---------------------------------------------------------------- server errors, precognition, action
+{
+    const parsed = FormValidator.serverErrors({ errors: { email: ['Taken'] } }, { format: 'laravel' });
+    const first: string | undefined = parsed.errors.email;
+    const msgs: string[] = parsed.form;
+    const pc = FormValidator.precognition('/check', { email: 'a@b.co' }, { only: ['email'], method: 'POST', timeout: 5000 });
+    pc.then(r => { const v: boolean | null = r.valid; const e: Record<string, string> = r.errors; return [v, e]; });
+    const shown = inst.setServerErrors({ title: 'x' }, { clear: true });
+    const missed: string[] = shown.missed;
+    inst.validateOnServer('/check', { only: ['email'] }).then(r => r.valid);
+    const stop: () => void = inst.watchServer({ url: '/check', delay: 100, exclude: ['pw'] });
+    inst.clearServerErrors();
+
+    const act = FormValidator.action({ email: ['required', 'email'], nick: { minlength: 3 } }, async (values, formData) => {
+        const e: string = values.email;
+        const f: FormData = formData;
+        return { id: 1 as number, e, f };
+    });
+    const init = act.initialState;
+    const ok: boolean = init.ok;
+    act(init, new FormData()).then(state => {
+        const emailError: string | undefined = state.errors.email;
+        const typed: string | undefined = state.values.email;
+        const id: number | undefined = state.result?.id;
+        // @ts-expect-error a misspelt field is not a key of the values
+        state.values.emial;
+        return [emailError, typed, id];
+    });
+    void [first, msgs, missed, stop];
+}

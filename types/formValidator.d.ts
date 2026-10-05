@@ -175,8 +175,16 @@ export interface FormInstance {
     validateAndGetValues(options?: { focus?: boolean; submit?: boolean }): Promise<SubmitResult>;
     /** An event handler for any framework: stops the native submit, validates, and only for a valid form calls fn(values, event, instance). fn may return `{ errors: { field: message } }` from your server. */
     handleSubmit(fn: (values: FormValues, event: Event | undefined, instance: FormInstance) => unknown): (event?: Event) => Promise<SubmitResult>;
-    /** Shows messages from the server on the fields (names matched exactly, then ignoring case). Returns the names that matched no field. */
+    /** Shows messages from the server on the fields (names matched exactly, as the same path written another way such as `items.0.qty` = `items[0].qty`, then ignoring case). Returns the names that matched no field. */
     setErrors(errors: Record<string, string | string[]>): string[];
+    /** Shows what a backend answered (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod ...) on the fields. `form` are the messages that belong to no field, `missed` the names that match no input. */
+    setServerErrors(body: unknown, options?: { format?: ServerErrorFormat; clear?: boolean }): ServerErrorsResult & { missed: string[] };
+    /** Removes the messages that came from the server. */
+    clearServerErrors(): void;
+    /** Sends the current values to your real endpoint and shows the field errors it answers (Precognition). `valid: null` = could not check, nothing changes. A newer call cancels an older one. */
+    validateOnServer(url: string | (PrecognitionOptions & { url: string }), options?: PrecognitionOptions): Promise<PrecognitionResult & { missed?: string[] }>;
+    /** Live server checks: a field the browser rules accept is checked on the server when the user leaves it. Returns a function that stops it. */
+    watchServer(url: string | (PrecognitionOptions & { url: string; delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }), options?: PrecognitionOptions & { delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }): () => void;
     setError(name: string, message: string): boolean;
     clearError(name: string): void;
     clearErrors(): void;
@@ -295,6 +303,68 @@ export type InferInput<S extends { readonly rules: Record<string, RulesForField>
 export type InferOutput<S extends { readonly rules: Record<string, RulesForField> }> = SchemaOutput<S['rules']>;
 export type InferErrors<S extends { readonly rules: Record<string, RulesForField> }> = SchemaErrors<S['rules']>;
 
+/** What a backend answered, read into one shape (see FormValidator.serverErrors). */
+export interface ServerErrorsResult {
+    /** Which layout was recognised: 'problem+json', 'errors-map', 'aspnet-modelstate', 'issues', 'fastapi', 'zod', 'field-map', 'generic' or 'none'. */
+    format: string;
+    /** First message per field. Keys are canonical paths: `items[0].qty`. */
+    errors: Record<string, string>;
+    /** Every message per field. */
+    all: Record<string, string[]>;
+    /** Messages that belong to no field. */
+    form: string[];
+}
+export type ServerErrorFormat = 'auto' | 'problem' | 'laravel' | 'rails' | 'aspnet' | 'modelstate' | 'drf' | 'map' | 'fastapi' | 'zod' | 'standard' | 'issues' | 'jsonapi' | 'express-validator';
+
+export interface PrecognitionOptions {
+    /** Field names to report on (sent as `Precognition-Validate-Only`). */
+    only?: string | string[];
+    /** Default 'POST'. */
+    method?: string;
+    headers?: Record<string, string>;
+    credentials?: RequestCredentials;
+    /** Default 'json'; a File among the values switches to 'multipart'. */
+    encoding?: 'json' | 'form' | 'multipart';
+    /** Milliseconds, default 10000. */
+    timeout?: number;
+    signal?: AbortSignal;
+    fetch?: (url: string, init?: any) => Promise<{ status: number; json(): Promise<any> }>;
+    format?: ServerErrorFormat;
+}
+export interface PrecognitionResult {
+    /** true: the server accepts the values; false: it names field errors; null: the check could not be made (see `error`) or was cancelled (`aborted`). */
+    valid: boolean | null;
+    status: number;
+    errors: Record<string, string>;
+    all: Record<string, string[]>;
+    form: string[];
+    only: string[] | null;
+    error?: Error;
+    aborted?: boolean;
+    format?: string;
+}
+
+/** The state of `FormValidator.action()`, the shape React 19's `useActionState` keeps. */
+export interface ActionState<R extends Record<string, RulesForField> = Record<string, RulesForField>, T = unknown> {
+    ok: boolean;
+    /** What was typed (trimmed by nobody: exactly as sent), without passwords and files, to fill the inputs again. */
+    values: { [K in keyof R]?: string };
+    errors: { [K in keyof R]?: string } & Record<string, string | undefined>;
+    /** Messages that belong to no field. */
+    form: string[];
+    /** What serverFn returned. */
+    result: T | undefined;
+}
+export interface ActionOptions extends ValueCheckOptions {
+    /** Fields whose typed value must not be handed back in `values` (password rules are always left out). */
+    omitValues?: string[];
+    /** Joins repeated fields (checkbox groups) into one text. Default ','. */
+    join?: string;
+}
+export type FormAction<R extends Record<string, RulesForField>, T> =
+    ((previous: ActionState<R, T> | null | undefined, formData: FormData | Record<string, unknown> | null | undefined) => Promise<ActionState<R, T>>)
+    & { readonly initialState: ActionState<R, T> };
+
 export interface FormValidatorStatic {
     readonly version: string;
     /**
@@ -308,6 +378,15 @@ export interface FormValidatorStatic {
      * `coerce: true` turns "42", "3.5", "true", "false" into numbers and booleans. Unsafe keys (`__proto__`, indexes above 999, over 20 levels) are dropped.
      */
     parseFormData(input: HTMLFormElement | FormData | URLSearchParams | Iterable<readonly [string, unknown]> | Record<string, unknown> | null | undefined, options?: { coerce?: boolean }): Record<string, any>;
+    /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */
+    serverErrors(body: unknown, options?: { format?: ServerErrorFormat }): ServerErrorsResult;
+    /** Asks your real endpoint whether the values would pass (Laravel Precognition protocol); nothing is saved. Never throws. */
+    precognition(url: string, values: Record<string, unknown>, options?: PrecognitionOptions): Promise<PrecognitionResult>;
+    /**
+     * One function for React 19 `useActionState`, Server Actions and any FormData handler: reads the fields, checks them with the rules, and only then calls
+     * `serverFn(validatedValues, formData, previousState)`. Returns the state `{ ok, values, errors, form, result }`.
+     */
+    action<const R extends Record<string, RulesForField>, T = undefined>(rules: R | FormSchema<R>, serverFn?: ((values: SchemaOutput<R>, formData: FormData, previous: ActionState<R, T> | null | undefined) => T | Promise<T>) | null, options?: ActionOptions): FormAction<R, T>;
     readonly ValidationError: new (issues: ReadonlyArray<SchemaIssue>) => ValidationError;
     /** Set up one form (returns its instance) or several (returns an array). */
     init(options: InitOptions & { formId: Array<string | HTMLFormElement> }): FormInstance[];

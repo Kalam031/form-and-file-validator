@@ -1,5 +1,5 @@
 /*!
- * React bindings v1.0.0 — useFormValidator() and <FileDropzone>. Needs react >= 17 (peer dependency).
+ * React bindings v1.1.0 — useFormValidator() and <FileDropzone>. Needs react >= 17 (peer dependency).
  *
  *   import { useFormValidator, FileDropzone } from 'form-and-file-validator/react';
  *
@@ -12,6 +12,7 @@
  *   <FileDropzone name="photos" config={{ accept: 'image/*', maxFiles: 3 }} options={{ preview: true }} onChange={files => setFiles(files)} />
  *
  * Changelog
+ *   1.1.0  setServerErrors(body) reads any backend's validation answer; validateOnServer(url) asks your real endpoint (Precognition).
  *   1.0.0  First release.
  */
 import { createElement, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -19,7 +20,7 @@ import { FormValidator, FileValidator } from 'form-and-file-validator';
 
 /**
  * Attaches FormValidator to the <form> that gets `ref`. `deps` (default []) decide when it is created again, for example when the rules change.
- * Returns { ref, validate(options), errors, instance() }. `errors` is refreshed after every validate() call and when the form is reset.
+ * Returns { ref, validate(options), errors, handleSubmit, getValues, setErrors, setServerErrors(body), validateOnServer(url), instance() }. `errors` is refreshed after every validate() call and when the form is reset.
  */
 export function useFormValidator(options, deps) {
     const ref = useRef(null);
@@ -54,7 +55,21 @@ export function useFormValidator(options, deps) {
     }, []);
     const getValues = useCallback(() => (instance.current ? instance.current.getValues() : {}), []);
     const setServerErrors = useCallback(map => { if (!instance.current) return Object.keys(map || {}); const missed = instance.current.setErrors(map); setErrors(instance.current.getErrors()); return missed; }, []);
-    return { ref, validate, reset, errors, handleSubmit, getValues, setErrors: setServerErrors, instance: () => instance.current };
+    /** Shows what a backend answered (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod ...) on the fields and refreshes `errors`. */
+    const setServerResponse = useCallback((body, o) => {
+        if (!instance.current) return Object.assign(FormValidator.serverErrors(body, o), { missed: [] });
+        const r = instance.current.setServerErrors(body, o);
+        setErrors(instance.current.getErrors());
+        return r;
+    }, []);
+    /** Precognition: asks your real endpoint whether the current values pass and shows its field errors. */
+    const validateOnServer = useCallback(async (url, o) => {
+        if (!instance.current) return { valid: null, status: 0, errors: {}, all: {}, form: [], only: null };
+        const r = await instance.current.validateOnServer(url, o);
+        if (instance.current) setErrors(instance.current.getErrors());
+        return r;
+    }, []);
+    return { ref, validate, reset, errors, handleSubmit, getValues, setErrors: setServerErrors, setServerErrors: setServerResponse, validateOnServer, instance: () => instance.current };
 }
 
 /**

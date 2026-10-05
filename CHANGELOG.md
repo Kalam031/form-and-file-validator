@@ -2,6 +2,11 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.9.0
+- **Server errors in one reader** (FormValidator 2.11.0): `FormValidator.serverErrors(body)` understands problem+json, ASP.NET Core ValidationProblemDetails and classic ModelState, Laravel / Rails, Django REST framework (nested and list serializers, `non_field_errors`), FastAPI / Pydantic, Zod, Standard Schema issues, express-validator, JSON:API and Ajv, and answers `{ errors, all, form }` with one key style (`items[0].qty`). `inst.setServerErrors(body)` shows it on the fields; `setErrors()` now matches `items.0.qty` to the input `items[0].qty`.
+- **Precognition**: `FormValidator.precognition(url, values, { only })`, `inst.validateOnServer(url)` and `inst.watchServer(url)` ask your real endpoint "would this pass?" (Laravel Precognition protocol: `Precognition` headers, 204 / 422) without saving anything; stale requests are cancelled and a broken endpoint never shows a false error.
+- **React 19 / Server Actions**: `FormValidator.action(rules, serverFn)` returns the `(state, formData) => state` function for `useActionState`; typed values come back so inputs refill after React resets the form; passwords never do. Tested with real React 19. React bindings 1.1.0: `setServerErrors(body)` and `validateOnServer(url)` on `useFormValidator`.
+
 ## 3.8.0
 - **ReDoS guarantee** (FormValidator 2.10.0): a fuzz test in CI feeds 50,000-character hostile strings to every built-in rule and every jQuery-layer method (country and bank checks included) and fails if one takes longer than 250 ms. New rules are covered automatically through the new `FormValidator.ruleNames()`.
 - **SVG hardening** (FileValidator 2.10.0): the SVG scan now also rejects `<!DOCTYPE>` / `<!ENTITY>` (XXE, entity bombs), external `href` / `xlink:href` (remote `<use>`, `<image>`, tracking pixels), CSS `@import` and `url(http...)`, `xml-stylesheet`, and `javascript:` hidden by character references or whitespace. `#id` references, `data:image` pictures and `<a href="https://...">` links stay allowed. It is a linear scan, tested on hostile input.

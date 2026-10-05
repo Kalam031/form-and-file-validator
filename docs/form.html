@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.8.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.9.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -28,7 +28,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v2100-documentation">FormValidator v2.10.0 — Documentation</h1>
+<h1 id="formvalidator-v2110-documentation">FormValidator v2.11.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -428,6 +428,61 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 // { valid, errors: { pw2: &#39;Values do not match.&#39; }, details: { pw2: { rule: &#39;equalTo&#39;, message: &#39;...&#39; } } }
 </code></pre>
 <p>No DOM is needed, so this runs in Node, in tests and in the Angular validators. File, checkbox-count and remote rules need a form or a server and throw. Options: <code>trim</code>, <code>values</code> (the other fields), <code>messages</code> (per rule type).</p>
+<h3 id="server-errors-one-reader-for-every-backend">Server errors: one reader for every backend</h3>
+<p><code>FormValidator.serverErrors(body)</code> turns what your backend answered into <code>{ errors, all, form }</code>, whatever framework wrote it. It never throws; unreadable input gives empty results.</p>
+<pre tabindex="0"><code class="language-js">const r = FormValidator.serverErrors(await response.json());
+r.errors;  // { email: &#39;Already registered&#39;, &#39;items[0].qty&#39;: &#39;Must be at least 1&#39; }   first message per field
+r.all;     // { email: [&#39;Already registered&#39;, &#39;Not a valid address&#39;], ... }              every message
+r.form;    // [&#39;Try again later&#39;]                                                       messages that belong to no field
+r.format;  // &#39;problem+json&#39; | &#39;errors-map&#39; | &#39;aspnet-modelstate&#39; | &#39;issues&#39; | &#39;fastapi&#39; | &#39;zod&#39; | &#39;field-map&#39; | &#39;generic&#39; | &#39;none&#39;
+</code></pre>
+<p>Understood without any setting: RFC 9457 problem+json and ASP.NET Core <code>ValidationProblemDetails</code>, classic ASP.NET <code>ModelState</code> (the <code>model.</code> prefix is removed), Laravel and Rails (<code>{ errors: { field: [..] } }</code>, dotted paths such as <code>items.0.name</code>), Django REST framework (field lists, <code>non_field_errors</code>, nested serializers, list serializers), FastAPI / Pydantic (<code>{ detail: [{ loc, msg }] }</code>, the <code>body</code> / <code>query</code> prefix is dropped), Zod (<code>issues</code>, <code>flatten()</code>), Standard Schema issue lists, express-validator, JSON:API (<code>source.pointer</code>) and Ajv (<code>instancePath</code>). A body that names no field (<code>{ message: &#39;Server error&#39; }</code>, problem+json without <code>errors</code>) goes to <code>form</code>. Force a layout with <code>{ format: &#39;laravel&#39; }</code> if a body is ambiguous.</p>
+<p>Field keys are written one way, <code>items[0].qty</code>, so <code>items.0.qty</code>, <code>items[0][qty]</code> and <code>[&#39;items&#39;, 0, &#39;qty&#39;]</code> are the same field. Keys such as <code>__proto__</code> are dropped.</p>
+<p>On a form, show the answer on the fields in one call:</p>
+<pre tabindex="0"><code class="language-js">const inst = FormValidator.getInstance(form);
+const r = inst.setServerErrors(await response.json());   // { errors, all, form, format, missed }
+r.form;     // show these yourself, near the submit button
+r.missed;   // field names that match no input
+inst.clearServerErrors();                                 // or setServerErrors(body, { clear: true })
+</code></pre>
+<p><code>setErrors(map)</code> now also matches a field written another way (<code>items.0.qty</code> finds the input named <code>items[0].qty</code> or <code>items[0][qty]</code>).</p>
+<h3 id="ask-the-server-precognition">Ask the server: Precognition</h3>
+<p>Some rules only the server can answer (&quot;is this username taken&quot;, &quot;does this coupon exist&quot;), and you do not want a second copy of the rules. <code>precognition</code> sends the values to the same endpoint your form posts to, with the header <code>Precognition: true</code>, and the endpoint validates and stops (Laravel does this out of the box; any backend can: answer <code>204</code> for &quot;would pass&quot; or <code>422</code> with errors). Nothing is saved.</p>
+<pre tabindex="0"><code class="language-js">const r = await FormValidator.precognition(&#39;/signup&#39;, { email, name }, { only: [&#39;email&#39;] });
+r.valid;   // true: the server accepts it | false: r.errors names the fields | null: could not check (r.error), or cancelled (r.aborted)
+r.errors;  // { email: &#39;Already registered&#39; }  only the fields you asked about
+
+// on a form: shows the answer on the fields, cancels an older request, keeps the browser&#39;s own messages
+await inst.validateOnServer(&#39;/signup&#39;, { only: [&#39;email&#39;] });
+const stop = inst.watchServer(&#39;/signup&#39;, { exclude: [&#39;coupon&#39;] });   // checks each field when the user leaves it
+</code></pre>
+<ul>
+<li><strong>Headers</strong>: <code>Precognition: true</code>, <code>Precognition-Validate-Only: email,name</code> (when <code>only</code> is set), <code>Accept: application/json</code>. Add your own with <code>headers</code> (CSRF token) and <code>credentials</code>.</li>
+<li><strong>Body</strong>: JSON by default, <code>encoding: &#39;form&#39;</code> for a classic form body, <code>&#39;multipart&#39;</code> (automatic when a <code>File</code> is among the values), or <code>method: &#39;GET&#39;</code> for the query string.</li>
+<li><strong>Never throws</strong>: network errors, timeouts (<code>timeout</code>, 10 s), 5xx and unreadable answers give <code>valid: null</code>, so a broken endpoint never blocks the user and never shows a false error. Your real submit still validates.</li>
+<li><strong><code>watchServer</code></strong> checks a field only when it holds a value, passes the browser rules and is not excluded; passwords are never sent unless you set <code>excludePasswords: false</code>; only that field&#39;s errors are shown.</li>
+<li>Answers from <code>422</code>, <code>400</code> and <code>409</code> are read with <code>serverErrors</code>, so every backend listed above works.</li>
+</ul>
+<h3 id="react-19-server-actions-and-any-formdata-handler">React 19, Server Actions and any FormData handler</h3>
+<p><code>FormValidator.action(rules, serverFn)</code> is one function for <code>useActionState</code>, Server Actions and plain <code>FormData</code> handlers. It reads the fields, checks them with the rules (the same engine as <code>schema()</code>), and only for valid input calls your function.</p>
+<pre tabindex="0"><code class="language-jsx">// actions.js  (&#39;use server&#39; works too: the same function runs on the server, so the form works before JavaScript loads)
+export const signup = FormValidator.action(
+  { email: [&#39;required&#39;, &#39;email&#39;], password: { required: true, pwcheck: { minLength: 8 } } },
+  async (values, formData) =&gt; {
+    const user = await db.users.create(values);          // values: validated, trimmed text
+    return user.exists ? { errors: { email: &#39;Already registered&#39; } } : { id: user.id };
+  });
+
+// Signup.jsx
+const [state, formAction, pending] = useActionState(signup, signup.initialState);
+&lt;form action={formAction}&gt;
+  &lt;input name=&quot;email&quot; defaultValue={state.values.email} /&gt;     {/* typed values come back: React clears the form after an action */}
+  &lt;p&gt;{state.errors.email}&lt;/p&gt;
+  &lt;input name=&quot;password&quot; type=&quot;password&quot; /&gt;                     {/* passwords are never handed back */}
+  &lt;button disabled={pending}&gt;Sign up&lt;/button&gt;
+&lt;/form&gt;
+</code></pre>
+<p>State: <code>{ ok, values, errors, form, result }</code>. Invalid input never reaches your function. The function may return <code>{ errors: {...} }</code> or any backend body <code>serverErrors</code> understands (they land in <code>errors</code> / <code>form</code>); other return values arrive as <code>result</code>. Errors you throw are not swallowed (React&#39;s error boundary sees them). Repeated fields (checkbox groups) arrive joined with <code>,</code> (<code>join</code> option). <code>omitValues: [&#39;field&#39;]</code> keeps more fields out of <code>values</code>. You may pass an existing <code>FormValidator.schema(...)</code> instead of rules.</p>
 <h3 id="parseformdata-flat-form-fields-to-a-nested-object">parseFormData: flat form fields to a nested object</h3>
 <p><code>FormValidator.parseFormData(input, options?)</code> turns a <code>&lt;form&gt;</code>, <code>FormData</code>, <code>URLSearchParams</code>, a list of <code>[name, value]</code> pairs or a plain object into the nested object your schema or API expects. Use it in a server action, a Next.js route or the browser.</p>
 <pre tabindex="0"><code class="language-js">FormValidator.parseFormData(new FormData(form));
@@ -1245,6 +1300,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.11.0</strong>: <code>FormValidator.serverErrors()</code> (any backend&#39;s validation answer), <code>precognition()</code> / <code>validateOnServer()</code> / <code>watchServer()</code>, <code>action()</code> for React 19 and Server Actions, <code>setServerErrors()</code>; <code>setErrors()</code> matches <code>items.0.qty</code> to <code>items[0].qty</code>.</li>
 <li><strong>2.10.0</strong>: <code>FormValidator.parseFormData()</code>, <code>FormValidator.ruleNames()</code>, a ReDoS fuzz test for every rule.</li>
 <li><strong>2.9.0</strong>: <code>FormValidator.schema(rules)</code>: the rules as a Standard Schema with <code>parse</code>, <code>safeParse</code> and typed values and errors.</li>
 <li><strong>2.8.0</strong>: 19 new rules (<code>integer</code>, <code>uuid</code>, <code>hexColor</code>, <code>slug</code>, <code>ipv4</code>, <code>ipv6</code>, <code>iban</code>, <code>time</code>, <code>domain</code>, <code>base64</code>, <code>mac</code>, <code>latitude</code>, <code>longitude</code>, <code>startsWith</code>, <code>endsWith</code>, <code>contains</code>, <code>notOneOf</code>, <code>minWords</code>, <code>maxWords</code>), also in the .NET package and all language packs.</li>

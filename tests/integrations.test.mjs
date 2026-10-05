@@ -202,3 +202,97 @@ test('Vue: handleSubmit gives the validated values only for a valid form and sho
     assert.deepEqual(api.getValues(), { email: 'taken@example.com' });
     app.unmount();
 });
+
+test('React 19: FormValidator.action works with useActionState and <form action>, keeping typed values after the reset', async () => {
+    const React = await import('react');
+    const { createRoot } = await import('react-dom/client');
+    const { act } = React;
+    const { FormValidator } = await import('../dist/validator.mjs');
+    document.getElementById('root').innerHTML = '';
+    const nodeFormData = globalThis.FormData;
+    globalThis.FormData = w.FormData;   // React builds the FormData of the form: it must be the page's (jsdom's) class
+    const sent = [];
+    const signup = FormValidator.action({ email: ['required', 'email'], nick: { minlength: 3 } }, async values => {
+        sent.push(values);
+        return values.nick === 'taken' ? { errors: { nick: ['Nick is taken'] } } : { id: 1 };
+    });
+    let latest;
+    function App() {
+        const [state, formAction, pending] = React.useActionState(signup, signup.initialState);
+        latest = state;
+        return React.createElement('form', { id: 'af', action: formAction },
+            React.createElement('input', { name: 'email', defaultValue: state.values.email || '' }),
+            React.createElement('input', { name: 'nick', defaultValue: state.values.nick || '' }),
+            React.createElement('p', { id: 'emsg' }, state.errors.email || ''),
+            React.createElement('p', { id: 'nmsg' }, state.errors.nick || ''),
+            React.createElement('button', { type: 'submit', id: 'ago', disabled: pending }, 'Go'));
+    }
+    const root = createRoot(document.getElementById('root'));
+    await act(async () => { root.render(React.createElement(App)); });
+    const type = (name, value) => { document.querySelector(`#af [name=${name}]`).value = value; };
+    type('email', 'bad'); type('nick', 'ab');
+    await act(async () => { $('#ago').click(); await settle(); });
+    assert.equal(sent.length, 0, 'invalid input never reaches the server function');
+    assert.ok($('#emsg').textContent && $('#nmsg').textContent);
+    assert.equal(document.querySelector('#af [name=email]').value, 'bad', 'typed values come back after React resets the form');
+    type('email', 'a@b.co'); type('nick', 'taken');
+    await act(async () => { $('#ago').click(); await settle(); });
+    assert.deepEqual(sent, [{ email: 'a@b.co', nick: 'taken' }]);
+    assert.equal($('#nmsg').textContent, 'Nick is taken');
+    assert.equal(latest.ok, false);
+    type('nick', 'bobby');
+    await act(async () => { $('#ago').click(); await settle(); });
+    assert.equal(latest.ok, true);
+    assert.deepEqual(latest.result, { id: 1 });
+    globalThis.FormData = nodeFormData;
+    await act(async () => { root.unmount(); });
+});
+
+test('React: setServerErrors reads a backend response and validateOnServer asks the endpoint', async () => {
+    const React = await import('react');
+    const { createRoot } = await import('react-dom/client');
+    const { act } = React;
+    const { useFormValidator } = await import('../dist/integrations/react.mjs');
+    document.getElementById('root').innerHTML = '';
+    let api;
+    function App() {
+        api = useFormValidator({ rules: {} });
+        return React.createElement('form', { ref: api.ref }, React.createElement('input', { name: 'email', defaultValue: 'a@b.co' }));
+    }
+    const root = createRoot(document.getElementById('root'));
+    await act(async () => { root.render(React.createElement(App)); });
+    let r;
+    await act(async () => { r = api.setServerErrors({ type: 'x', status: 422, errors: { Email: ['Taken'], '': ['Try later'] } }); });
+    assert.deepEqual(r.form, ['Try later']);
+    assert.equal(api.errors.length, 1);
+    assert.equal($('.error[data-error-for=email]').textContent, 'Taken');
+    const f = async () => ({ status: 204, json: async () => ({}) });
+    await act(async () => { r = await api.validateOnServer('/check', { fetch: f, only: ['email'] }); });
+    assert.equal(r.valid, true);
+    assert.equal(api.errors.length, 0);
+    await act(async () => { root.unmount(); });
+});
+
+test('Vue: setServerErrors reads a backend response and validateOnServer asks the endpoint', async () => {
+    const Vue = await import('vue');
+    const { useFormValidator } = await import('../dist/integrations/vue.mjs');
+    document.getElementById('root').innerHTML = '<div id="vue3"></div>';
+    let api;
+    const App = Vue.defineComponent({
+        setup() {
+            api = useFormValidator({ rules: {} });
+            return () => Vue.h('form', { ref: api.formRef }, [Vue.h('input', { name: 'email', value: 'a@b.co' })]);
+        }
+    });
+    const app = Vue.createApp(App);
+    app.mount('#vue3');
+    await settle();
+    const r = api.setServerErrors({ detail: [{ loc: ['body', 'email'], msg: 'Taken' }] });
+    assert.equal(r.format, 'fastapi');
+    assert.equal(api.errors.value.length, 1);
+    assert.equal($('.error[data-error-for=email]').textContent, 'Taken');
+    const ok = await api.validateOnServer('/check', { fetch: async () => ({ status: 204, json: async () => ({}) }), only: ['email'] });
+    assert.equal(ok.valid, true);
+    assert.equal(api.errors.value.length, 0);
+    app.unmount();
+});

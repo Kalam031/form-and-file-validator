@@ -1,7 +1,10 @@
 /*!
- * FormValidator v2.10.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.11.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.11.0 FormValidator.serverErrors(body): problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API, express-validator, Ajv in one shape; inst.setServerErrors();
+ *          setErrors() matches items.0.qty to items[0].qty. precognition(url, values) / inst.validateOnServer() / inst.watchServer(): ask the real endpoint (Laravel Precognition protocol).
+ *          FormValidator.action(rules, serverFn): one function for React 19 useActionState, Server Actions and FormData handlers.
  *   2.10.0 FormValidator.parseFormData(formData, { coerce }): flat fields (a.b[0].c, tags[], repeated names) -> the nested object a schema expects, safe against __proto__ keys and huge indexes.
  *          FormValidator.ruleNames(). A fuzz test (tests/redos.test.js) now guards every rule against catastrophic regex backtracking.
  *   2.9.0  FormValidator.schema(rules): the rules of an object as a Standard Schema (parse, safeParse, ~standard.validate, typed values and errors in TypeScript).
@@ -698,6 +701,9 @@
             _tokens: new Map(),
             _aborters: new Map(),
             _remoteCache: new Map(),
+            _serverNames: new Set(),
+            _serverToken: 0,
+            _serverAbort: null,
             _listeners: [],
             _timers: new Map(),
             _busy: false, _bypass: false, _submitted: false,
@@ -1161,13 +1167,75 @@
             },
             /** Shows messages from the server on the fields: { Email: 'Already registered' } (a list takes the first message). Names are matched exactly, then ignoring case. Returns the names that match no field. */
             setErrors: map => {
-                const names = Array.from(form.elements).map(el => el.name).filter(Boolean), missed = [];
+                const names = Array.from(form.elements).map(el => el.name).filter(Boolean), missed = [], byCanon = new Map();
+                names.forEach(n => { const c = canonKey(n); if (c !== null) { if (!byCanon.has(c)) byCanon.set(c, n); if (!byCanon.has('~' + c.toLowerCase())) byCanon.set('~' + c.toLowerCase(), n); } });
                 Object.keys(map || {}).forEach(key => {
-                    const msg = [].concat(map[key])[0];
-                    const target = names.includes(key) ? key : names.find(n => n.toLowerCase() === String(key).toLowerCase());
+                    const msg = [].concat(map[key])[0], c = canonKey(key);
+                    // exact name, then the same path written another way (items.0.qty = items[0][qty] = items[0].qty), then ignoring case
+                    const target = names.includes(key) ? key : (c !== null && byCanon.get(c)) || names.find(n => n.toLowerCase() === String(key).toLowerCase()) || (c !== null && byCanon.get('~' + c.toLowerCase()));
                     if (!target || msg === undefined || msg === null || !inst.setError(target, String(msg))) missed.push(key);
+                    else inst._serverNames.add(target);
                 });
                 return missed;
+            },
+            /**
+             * Shows what a backend answered (problem+json, Laravel, Django REST, ASP.NET, FastAPI, Zod ...) on the fields: see FormValidator.serverErrors().
+             * Resolves to { errors, all, form, format, missed }: `form` are the messages that belong to no field, `missed` the field names that match no input.
+             * options.clear (default false) removes the earlier server messages first.
+             */
+            setServerErrors: (body, options) => {
+                const r = serverErrors(body, options);
+                if (options && options.clear) inst.clearServerErrors();
+                const missed = inst.setErrors(r.all);
+                return Object.assign({}, r, { missed });
+            },
+            clearServerErrors: () => { Array.from(inst._serverNames).forEach(n => inst.clearError(n)); inst._serverNames.clear(); },
+            /**
+             * Precognition: sends the current values to your real endpoint (url) and shows the field errors it answers, without saving anything.
+             * validateOnServer(url, { only: ['email'], method, headers, ... }). `only` limits what is reported (and shown); default is every field.
+             * A newer call cancels an older one. Resolves to the precognition() result plus { missed }. valid === null means "could not check": nothing is changed.
+             */
+            validateOnServer: async (url, options) => {
+                const o = Object.assign({}, typeof url === 'object' && url ? url : { url }, options);
+                const names = o.only === undefined ? null : [].concat(o.only);
+                if (inst._serverAbort) inst._serverAbort.abort();
+                const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+                inst._serverAbort = ctrl;
+                const token = ++inst._serverToken;
+                const r = await precognition(o.url, collectValues(), Object.assign({}, o, { only: names === null ? undefined : names, signal: ctrl ? ctrl.signal : o.signal }));
+                if (token !== inst._serverToken || r.aborted) return Object.assign({}, r, { aborted: true, valid: null });
+                if (inst._serverAbort === ctrl) inst._serverAbort = null;
+                if (r.valid === null) return r;
+                // fields that were asked about and now pass lose an earlier server message
+                const asked = names === null ? Array.from(inst._serverNames) : Array.from(form.elements).map(el => el.name).filter(n => n && names.some(x => canonKey(x) === canonKey(n)));
+                asked.forEach(n => { if (!Object.prototype.hasOwnProperty.call(r.errors, canonKey(n)) && inst._serverNames.has(n)) { inst.clearError(n); inst._serverNames.delete(n); } });
+                const missed = inst.setErrors(r.all);
+                return Object.assign({}, r, { missed });
+            },
+            /**
+             * Live server checks like Laravel Precognition: when the user leaves a field that passes the browser rules and holds a value, only that field is checked
+             * on the server (validateOnServer with only: [name]). options: url, delay (ms, default 200), exclude (names), validateEmpty, excludePasswords (default true),
+             * plus the validateOnServer options. Returns a function that stops it.
+             */
+            watchServer: (url, options) => {
+                const o = Object.assign({}, typeof url === 'object' && url ? url : { url }, options), delay = typeof o.delay === 'number' ? o.delay : 200;
+                const timers = new Map();
+                const handler = e => {
+                    const el = e.target;
+                    if (!el || !el.name || el.disabled || el.type === 'file' || (el.type === 'password' && o.excludePasswords !== false) || [].concat(o.exclude || []).includes(el.name)) return;
+                    clearTimeout(timers.get(el.name));
+                    timers.set(el.name, setTimeout(() => {
+                        timers.delete(el.name);
+                        if (inst.getErrors().some(x => x.name === el.name && !inst._serverNames.has(el.name))) return;   // the browser rules already complain
+                        const v = collectValues()[el.name];
+                        if (!o.validateEmpty && (v === '' || v === undefined || v === null || (Array.isArray(v) && !v.length))) return;
+                        inst.validateOnServer(Object.assign({}, o, { only: [el.name] })).catch(() => {});
+                    }, delay));
+                };
+                ['change', 'focusout'].forEach(t => form.addEventListener(t, handler));
+                const stop = () => { ['change', 'focusout'].forEach(t => form.removeEventListener(t, handler)); timers.forEach(clearTimeout); timers.clear(); };
+                inst._listeners.push(stop);
+                return stop;
             },
             validateSync: o => validateAllSync(o),
             validateElementSync: (el, o) => { const u = unitOf(el); return u ? validateUnitSync(u, o) : true; },
@@ -1435,9 +1503,282 @@
         return root;
     }
 
+    // ------------------------------------------------------------------ server errors: any backend's validation response -> { field: message }
+    /** Canonical field key: 'items.0.qty', 'items[0][qty]' and ['items', 0, 'qty'] all become 'items[0].qty'. null for unsafe keys. */
+    function canonKey(key) {
+        let tokens;
+        if (Array.isArray(key)) {
+            tokens = key.map(p => (typeof p === 'number' ? p : (/^[0-9]+$/.test(String(p)) ? +p : String(p))));
+            if (tokens.some(p => typeof p === 'string' && BAD_KEYS.indexOf(p) >= 0)) return null;
+        } else {
+            const s = String(key);
+            tokens = pathTokens(s);
+            if (!tokens) tokens = s.split('.').filter(Boolean).some(p => BAD_KEYS.indexOf(p) >= 0) ? null : [s];
+            else tokens = tokens.map(p => (typeof p === 'string' && /^[0-9]+$/.test(p) ? +p : p));
+        }
+        if (!tokens || !tokens.length) return null;
+        let out = '';
+        tokens.forEach((t, i) => { out += typeof t === 'number' ? '[' + t + ']' : t === '' ? '[]' : (i ? '.' : '') + t; });
+        return out;
+    }
+    /** Path parts of a response key, or null when a part is unsafe (__proto__ ...). */
+    function keyParts(key) {
+        const t = pathTokens(key);
+        if (t) return t.some(p => typeof p === 'string' && BAD_KEYS.indexOf(p) >= 0) ? null : t;
+        return String(key).split(/[.\[\]]/).some(p => BAD_KEYS.indexOf(p) >= 0) ? null : [key];
+    }
+    const MESSAGE_KEYS = ['message', 'msg', 'detail', 'title', 'description', 'error', 'reason'];
+    const MESSAGE_OBJECT_KEYS = ['message', 'msg', 'code', 'type', 'detail', 'title', 'description', 'error', 'reason', 'field', 'path', 'rule', 'ctx', 'input', 'url', 'severity', 'params', 'keyword', 'schemaPath'];
+    /** A string for a message-like value (string, number, { message }), else null. */
+    function messageText(m, depth) {
+        if (typeof m === 'string') return m.trim() || null;
+        if (typeof m === 'number' && isFinite(m)) return String(m);
+        if (m && typeof m === 'object' && !Array.isArray(m) && (depth || 0) < 2) {
+            for (const k of MESSAGE_KEYS) { const t = messageText(m[k], (depth || 0) + 1); if (t) return t; }
+        }
+        return null;
+    }
+    const isMessageObject = o => o && typeof o === 'object' && !Array.isArray(o) && messageText(o) !== null && Object.keys(o).every(k => MESSAGE_OBJECT_KEYS.indexOf(k) >= 0);
+    const FORM_KEYS = ['non_field_errors', '__all__', 'nonFieldErrors', 'formErrors', 'detail', '$', ''];
+    const META_KEYS = ['message', 'Message', 'error', 'detail', 'title', 'status', 'statusCode', 'code', 'type', 'success', 'ok', 'path', 'timestamp', 'instance', 'trace', 'traceId', 'name'];
+    const LOCATIONS = ['body', 'query', 'path', 'header', 'cookie', 'form'];
+    /** '#/a/0/b' or '/data/attributes/email' -> ['a', 0, 'b'] / ['email'] */
+    function pointerParts(p) {
+        let parts = String(p).replace(/^#/, '').split('/').filter(s => s !== '').map(s => s.replace(/~1/g, '/').replace(/~0/g, '~'));
+        if (parts[0] === 'data' && parts.length > 1) { parts = parts.slice(1); if (parts[0] === 'attributes' || parts[0] === 'relationships') parts = parts.slice(1); }
+        return parts;
+    }
+    /**
+     * Reads the validation response of any common backend into one shape:
+     *   { format, errors: { 'items[0].qty': 'First message' }, all: { 'items[0].qty': ['First', 'Second'] }, form: ['Message that belongs to no field'] }
+     * Understood (detected from the body, or forced with options.format): RFC 9457 problem+json, ASP.NET Core ValidationProblemDetails and classic ModelState,
+     * Laravel / Rails ({ errors: { field: [..] } }), Django REST framework (field lists, non_field_errors, nested serializers and list errors), FastAPI / Pydantic
+     * ({ detail: [{ loc, msg }] }), Zod (issues, flatten()), Standard Schema issue lists, express-validator, JSON:API ({ errors: [{ source: { pointer } }] }), Ajv.
+     * `body` may be the parsed JSON, a JSON string or an array of issues. Anything else gives an empty result. Never throws.
+     */
+    function serverErrors(body, options) {
+        const o = options || {}, res = { format: 'none', errors: {}, all: {}, form: [] };
+        let count = 0;
+        const add = (key, msgs) => {
+            if (count > 2000) return;
+            const list = [].concat(msgs).map(m => messageText(m)).filter(m => m !== null);
+            if (!list.length) return;
+            const k = key === null || key === undefined ? null : (Array.isArray(key) ? canonKey(key) : (key === '' ? null : canonKey(key)));
+            if (k === null) { if (key === null || key === undefined || key === '' || (Array.isArray(key) && !key.length)) list.forEach(m => { res.form.push(m); count++; }); return; }
+            if (!Object.prototype.hasOwnProperty.call(res.all, k)) res.all[k] = [];
+            list.forEach(m => { res.all[k].push(m); count++; });
+        };
+        // { key: message | [messages] | { nested } | [ { nested }, ... ] } -> add() for every leaf
+        const walk = (obj, parts, depth) => {
+            if (!obj || typeof obj !== 'object' || depth > 12 || count > 2000) return;
+            Object.keys(obj).forEach(key => {
+                const kp = keyParts(key);   // 'items.0.name' / 'a[b]' are paths, not one long name
+                if (!kp) return;
+                const v = obj[key], here = parts.concat(kp);
+                const isForm = parts.length === 0 && FORM_KEYS.indexOf(key) >= 0;
+                const target = isForm ? null : here;
+                if (messageText(v) !== null && !(v && typeof v === 'object')) { add(target, v); return; }
+                if (Array.isArray(v)) {
+                    if (v.every(x => typeof x === 'string' || typeof x === 'number' || isMessageObject(x))) { add(target, v); return; }
+                    v.forEach((item, i) => {
+                        if (typeof item === 'string' || typeof item === 'number' || isMessageObject(item)) add(target, item);
+                        else if (item && typeof item === 'object') walk(item, here.concat([i]), depth + 1);
+                    });
+                    return;
+                }
+                if (v && typeof v === 'object') {
+                    if (isMessageObject(v)) add(target, v);
+                    else walk(v, here, depth + 1);
+                }
+            });
+        };
+        // [ { path | pointer | loc | param | field | name | instancePath, message | msg | detail } ]
+        const issues = list => {
+            list.forEach(it => {
+                if (typeof it === 'string') { add(null, it); return; }
+                if (!it || typeof it !== 'object') return;
+                let key = null;
+                if (Array.isArray(it.path)) key = it.path.map(p => (p && typeof p === 'object' && 'key' in p ? p.key : p));
+                else if (Array.isArray(it.loc)) key = LOCATIONS.indexOf(String(it.loc[0])) >= 0 ? it.loc.slice(1) : it.loc;
+                else if (it.source && typeof it.source === 'object' && typeof it.source.pointer === 'string') key = pointerParts(it.source.pointer);
+                else if (it.source && typeof it.source === 'object' && typeof it.source.parameter === 'string') key = [it.source.parameter];
+                else if (typeof it.pointer === 'string') key = pointerParts(it.pointer);
+                else if (typeof it.instancePath === 'string') key = pointerParts(it.instancePath);
+                else if (typeof it.dataPath === 'string') key = canonKey(it.dataPath.replace(/^\./, ''));
+                else {
+                    const k = it.path !== undefined ? it.path : it.param !== undefined ? it.param : it.field !== undefined ? it.field : it.name !== undefined ? it.name : it.property;
+                    if (typeof k === 'string' && k !== '') key = [k];
+                }
+                if (typeof key === 'string') key = [key];
+                if (key && key.some(p => p && typeof p === 'object')) key = null;
+                const text = messageText(it.message) || messageText(it.msg) || messageText(it.detail) || messageText(it.title) || messageText(it.error) || messageText(it.description);
+                if (text) add(key && key.length ? key : null, text);
+            });
+        };
+        let data = body;
+        if (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { data = null; } }
+        const fmt = String(o.format || 'auto').toLowerCase();
+        try {
+            if (Array.isArray(data)) { res.format = 'issues'; issues(data); }
+            else if (data && typeof data === 'object') {
+                const generic = () => {
+                    // top level { title, detail, message } says what went wrong when no field is named
+                    if (!Object.keys(res.all).length) ['detail', 'title', 'message', 'Message', 'error'].some(k => { const t = messageText(data[k]); if (t) { res.form.push(t); return true; } return false; });
+                };
+                if ((fmt === 'auto' || fmt === 'aspnet' || fmt === 'modelstate') && data.ModelState && typeof data.ModelState === 'object') {
+                    res.format = 'aspnet-modelstate';
+                    const ms = {};
+                    Object.keys(data.ModelState).forEach(k => { ms[k.replace(/^(?:model|\$)\./i, '')] = data.ModelState[k]; });
+                    walk(ms, [], 0);
+                    generic();
+                } else if ((fmt === 'auto' || fmt === 'zod' || fmt === 'issues' || fmt === 'standard') && Array.isArray(data.issues)) { res.format = 'issues'; issues(data.issues); }
+                else if ((fmt === 'auto' || fmt === 'zod') && data.fieldErrors && typeof data.fieldErrors === 'object') { res.format = 'zod'; walk(data.fieldErrors, [], 0); [].concat(data.formErrors || []).forEach(m => add(null, m)); }
+                else if ((fmt === 'auto' || fmt === 'fastapi' || fmt === 'issues') && Array.isArray(data.detail) && data.detail.some(x => x && typeof x === 'object')) { res.format = 'fastapi'; issues(data.detail); }
+                else if ((fmt === 'auto' || fmt === 'jsonapi' || fmt === 'express-validator' || fmt === 'issues') && Array.isArray(data.errors)) { res.format = 'issues'; issues(data.errors); generic(); }
+                else if ((fmt === 'auto' || fmt === 'problem' || fmt === 'laravel' || fmt === 'rails' || fmt === 'aspnet') && data.errors && typeof data.errors === 'object') {
+                    res.format = fmt === 'auto' ? (data.type !== undefined || data.status !== undefined || data.title !== undefined ? 'problem+json' : 'errors-map') : fmt;
+                    walk(data.errors, [], 0);
+                    generic();
+                } else if (fmt === 'auto' || fmt === 'drf' || fmt === 'map') {
+                    if (fmt === 'auto' && Object.keys(data).every(k => META_KEYS.indexOf(k) >= 0)) generic();   // { message: 'Server error' } names no field
+                    else walk(data, [], 0);
+                    if (Object.keys(res.all).length || res.form.length) res.format = 'field-map';
+                }
+                if (res.format === 'none' && (fmt === 'auto') && !Object.keys(res.all).length && !res.form.length) generic();
+                if (res.format === 'none' && (Object.keys(res.all).length || res.form.length)) res.format = 'generic';
+            }
+        } catch (e) { /* hostile or cyclic input: whatever was collected stays */ }
+        Object.keys(res.all).forEach(k => { res.errors[k] = res.all[k][0]; });
+        return res;
+    }
+
+    // ------------------------------------------------------------------ precognition: ask the real endpoint "would this pass?" without saving anything
+    function flattenValues(values, into, prefix, depth) {
+        Object.keys(values || {}).forEach(k => {
+            if (BAD_KEYS.indexOf(k) >= 0) return;
+            const v = values[k], name = prefix ? prefix + (/^[0-9]+$/.test(k) ? '[' + k + ']' : '.' + k) : k;
+            const isBlob = typeof Blob === 'function' && v instanceof Blob;
+            if (v && typeof v === 'object' && !isBlob && depth < 8) flattenValues(v, into, name, depth + 1);
+            else if (v !== undefined && v !== null) into.push([name, v]);
+            else if (v === null) into.push([name, '']);
+        });
+        return into;
+    }
+    /**
+     * FormValidator.precognition(url, values, options): sends the values to the real endpoint with `Precognition: true` (Laravel Precognition protocol) and answers
+     * { valid, status, errors, all, form, only, error?, aborted? }. The endpoint must validate and then stop (Laravel answers 204 / 422). Never throws:
+     * `valid` is true (2xx), false (field errors), or null when the check could not be made (network, timeout, 5xx, unreadable answer: see `error`) or was cancelled
+     * (`aborted: true`). Options: method (POST), only (field names to report), headers, credentials, encoding ('json' | 'form' | 'multipart', files pick multipart),
+     * timeout (10000 ms), signal, fetch, format (see serverErrors).
+     */
+    async function precognition(url, values, options) {
+        const o = options || {};
+        const only = o.only === undefined ? null : [].concat(o.only).map(String);
+        const method = String(o.method || 'POST').toUpperCase();
+        const doFetch = o.fetch || (typeof fetch === 'function' ? fetch : null);
+        const result = (extra) => Object.assign({ valid: null, status: 0, errors: {}, all: {}, form: [], only }, extra);
+        if (!doFetch) return result({ error: new Error('precognition: no fetch available (pass options.fetch)') });
+        if (!url) return result({ error: new Error('precognition: url is required') });
+        const headers = Object.assign({ 'Accept': 'application/json', 'Precognition': 'true' }, o.headers);
+        if (only) headers['Precognition-Validate-Only'] = only.join(',');
+        const entries = flattenValues(values, [], '', 0);
+        const hasFile = entries.some(e => typeof Blob === 'function' && e[1] instanceof Blob);
+        const encoding = o.encoding || (hasFile ? 'multipart' : 'json');
+        let target = String(url), body;
+        if (method === 'GET' || method === 'HEAD') {
+            const qs = new URLSearchParams();
+            entries.forEach(e => { if (!(typeof Blob === 'function' && e[1] instanceof Blob)) qs.append(e[0], String(e[1])); });
+            const s = qs.toString();
+            if (s) target += (target.indexOf('?') >= 0 ? '&' : '?') + s;
+        } else if (encoding === 'multipart') {
+            body = new FormData();
+            entries.forEach(e => body.append(e[0], e[1]));
+        } else if (encoding === 'form') {
+            body = new URLSearchParams(entries.map(e => [e[0], String(e[1])])).toString();
+            headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+        } else {
+            body = JSON.stringify(values || {});
+            headers['Content-Type'] = 'application/json';
+        }
+        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+        let timedOut = false;
+        const timer = ctrl ? setTimeout(() => { timedOut = true; ctrl.abort(); }, o.timeout || 10000) : null;
+        const onAbort = () => ctrl && ctrl.abort();
+        if (o.signal) { if (o.signal.aborted) onAbort(); else if (o.signal.addEventListener) o.signal.addEventListener('abort', onAbort, { once: true }); }
+        try {
+            const resp = await doFetch(target, { method, headers, body, credentials: o.credentials, signal: ctrl ? ctrl.signal : undefined });
+            const status = resp.status;
+            if (status >= 200 && status < 300) return result({ valid: true, status });
+            let data = null;
+            try { data = await resp.json(); } catch (e) { /* no JSON body */ }
+            const parsed = serverErrors(data, { format: o.format });
+            const hasErrors = Object.keys(parsed.all).length > 0;
+            const filter = m => { if (!only) return m; const out = {}; Object.keys(m).forEach(k => { if (only.some(n => canonKey(n) === k)) out[k] = m[k]; }); return out; };
+            if ((status === 422 || status === 400 || status === 409) && (hasErrors || parsed.form.length)) {
+                const all = filter(parsed.all), errors = {};
+                Object.keys(all).forEach(k => { errors[k] = all[k][0]; });
+                // when only some fields were asked for and none of them failed, the answer for those fields is "valid"
+                return result({ valid: Object.keys(all).length === 0 && only ? true : false, status, errors, all, form: parsed.form, format: parsed.format, rawErrors: parsed.errors });
+            }
+            return result({ status, error: new Error('precognition: HTTP ' + status), form: parsed.form });
+        } catch (e) {
+            if (e && e.name === 'AbortError' && !timedOut) return result({ aborted: true });
+            return result({ error: timedOut ? new Error('precognition: timed out') : e });
+        } finally {
+            if (timer) clearTimeout(timer);
+            if (o.signal && o.signal.removeEventListener) o.signal.removeEventListener('abort', onAbort);
+        }
+    }
+
+    // ------------------------------------------------------------------ action: one function for React 19 useActionState / Server Actions / any FormData handler
+    /**
+     * FormValidator.action(rules, serverFn, options) -> async (previousState, formData) => state, the shape React 19's useActionState wants.
+     *   state = { ok, values, errors: { field: message }, form: [messages], result }
+     * It reads the form fields, checks them with the rules (same engine as schema()) and only then calls serverFn(validatedValues, formData). `values` hands back
+     * what was typed (never passwords, never files) so the inputs can be filled again after React resets the form. serverFn may return { errors } (or a backend
+     * response body, see serverErrors) to show server-side messages; any other return value arrives as `result`. Errors thrown by serverFn are not swallowed.
+     * Works without JavaScript on the page (Server Actions) because the same function runs on the server.
+     */
+    function action(rulesOrSchema, serverFn, options) {
+        const o = options || {};
+        const sch = rulesOrSchema && rulesOrSchema['~standard'] && rulesOrSchema.rules ? rulesOrSchema : schema(rulesOrSchema || {}, o);
+        const names = sch.fields;
+        const secret = rules => [].concat(rules).some(r => r === 'pwcheck' || (r && typeof r === 'object' && ('pwcheck' in r || r.type === 'pwcheck')));
+        const secretNames = new Set(names.filter(n => secret(sch.rules[n])).concat(o.omitValues || []));
+        const read = fd => {
+            const data = {};
+            names.forEach(n => {
+                let v;
+                if (fd && typeof fd.getAll === 'function') { const all = fd.getAll(n).filter(x => typeof x === 'string'); v = all.length > 1 ? all : all[0]; }
+                else if (fd && typeof fd === 'object') v = fd[n];
+                if (Array.isArray(v)) v = v.join(o.join === undefined ? ',' : o.join);
+                if (v !== undefined) data[n] = v;
+            });
+            return data;
+        };
+        const keep = data => { const out = {}; Object.keys(data).forEach(n => { if (!secretNames.has(n) && typeof data[n] === 'string') out[n] = data[n]; }); return out; };
+        const run = async (prev, formData) => {
+            const input = read(formData), values = keep(input);
+            const r = sch.safeParse(input);
+            if (!r.success) return { ok: false, values, errors: r.errors, form: [], result: undefined };
+            if (!isFn(serverFn)) return { ok: true, values, errors: {}, form: [], result: undefined };
+            const out = await serverFn(r.data, formData, prev);
+            if (out && typeof out === 'object') {
+                const se = (out.errors && typeof out.errors === 'object' && !Array.isArray(out.errors) && Object.keys(out.errors).every(k => messageText(out.errors[k]) !== null || Array.isArray(out.errors[k]))) ? serverErrors({ errors: out.errors }) : (out.errors || out.issues || out.fieldErrors || out.ModelState ? serverErrors(out) : null);
+                if (se && (Object.keys(se.all).length || se.form.length)) return { ok: false, values, errors: se.errors, form: se.form, result: out };
+            }
+            return { ok: true, values, errors: {}, form: [], result: out };
+        };
+        run.initialState = { ok: false, values: {}, errors: {}, form: [], result: undefined };
+        return run;
+    }
+
     return {
         init,
         parseFormData, // (formData | form | entries | object, { coerce? }) -> nested object: 'a.b[0].c' -> { a: { b: [{ c }] } }
+        serverErrors,  // (response body, { format? }) -> { errors, all, form, format } from problem+json, Laravel, DRF, ASP.NET, FastAPI, Zod ...
+        precognition,  // async (url, values, { only, method, ... }) -> { valid, errors, ... }: ask the real endpoint whether the values would pass
+        action,        // (rules, serverFn) -> (prevState, formData) => state, for React 19 useActionState and Server Actions
         schema,        // (rules, options?) -> Standard Schema with parse / safeParse / check
         ValidationError,
         validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
@@ -1455,6 +1796,6 @@
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
         defaults: DEFAULTS,             // mutable global defaults
         getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
-        version: '2.10.0'
+        version: '2.11.0'
     };
 });
