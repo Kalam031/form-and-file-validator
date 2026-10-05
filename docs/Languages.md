@@ -27,6 +27,15 @@ import 'form-and-file-validator/locales/de.js';    // registers the pack
 locales.use('de');
 ```
 
+Bundlers that tree-shake should prefer the **ES module packs**: plain data, no side effects, one import per language, so only the languages you import end up in your bundle.
+
+```js
+import { locales } from 'form-and-file-validator';
+import de from 'form-and-file-validator/locales/de.mjs';
+locales.register('de', de);
+locales.use('de');
+```
+
 ## On the server
 
 The server companion has its own registry, because it runs its own FileValidator:

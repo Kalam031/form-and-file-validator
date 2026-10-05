@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.28.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.29.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -25,11 +25,13 @@
       <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
       <li><a href="accessibility.html">Accessibility</a></li>
       <li><a href="benchmarks.html">Benchmarks</a></li>
+      <li><a href="api-stability.html">API stability</a></li>
       <li><a href="playground.html">Playground</a></li>
     </ul>
   </nav>
   <main id="content">
 <h1 id="formvalidator-filevalidator">FormValidator + FileValidator</h1>
+<p><a href="https://www.npmjs.com/package/form-and-file-validator"><img src="https://img.shields.io/npm/v/form-and-file-validator" alt="npm"></a> <a href="https://github.com/Kalam031/form-and-file-validator/actions/workflows/ci.yml"><img src="https://github.com/Kalam031/form-and-file-validator/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <img src="https://img.shields.io/badge/runtime%20dependencies-0-brightgreen" alt="dependencies"> <img src="https://img.shields.io/badge/types-included-blue" alt="types"> <img src="https://img.shields.io/badge/node-18%20%7C%2020%20%7C%2022%20%7C%2024%20%7C%2026-339933" alt="node"> <img src="https://img.shields.io/badge/browsers-Chrome%20%7C%20Edge%20%7C%20Firefox%20%7C%20Safari-informational" alt="browsers"> <a href="LICENSE"><img src="https://img.shields.io/npm/l/form-and-file-validator" alt="license"></a></p>
 <p>Two dependency-free libraries for validating forms and file uploads in the browser (and, for files, in Node). They work as plain <code>&lt;script&gt;</code> tags or with a bundler. jQuery, Select2 and Bootstrap are optional.</p>
 <h2 id="install">Install</h2>
 <pre tabindex="0"><code>npm install form-and-file-validator
@@ -71,13 +73,42 @@
 </tr>
 </tbody></table></div>
 <p>TypeScript types are included.</p>
+<h2 id="compatibility">Compatibility</h2>
+<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th></th>
+<th>Tested in CI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Node</td>
+<td>18, 20, 22, 24, 26</td>
+</tr>
+<tr>
+<td>Browsers</td>
+<td>Chromium (Chrome, Edge), Firefox, WebKit (Safari) with real browser tests</td>
+</tr>
+<tr>
+<td>Frameworks</td>
+<td>React 19, Vue 3, Angular 21+ (Reactive Forms and Signal Forms), Svelte 5, Solid, Lit, Alpine, React Hook Form (Standard Schema)</td>
+</tr>
+<tr>
+<td>Supply chain</td>
+<td>zero runtime dependencies, no install scripts, <code>sbom.cdx.json</code> (CycloneDX) lists every shipped file with its SHA-256</td>
+</tr>
+<tr>
+<td>Stability</td>
+<td><a href="api-stability.html">semver and deprecation policy</a></td>
+</tr>
+</tbody></table></div>
 <h2 id="which-file-do-i-load">Which file do I load?</h2>
 <p><strong>One file: <code>dist/validator.min.js</code></strong> (127 KB minified; gzip is about a third of that).</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;
 </code></pre>
 <p>It holds FormValidator, FileValidator, the upload widget, the jQuery Validation layer and the language registry (<code>FVLocales</code>). The jQuery layer switches on by itself when jQuery was loaded first. If jQuery loads after it, call <code>FormValidator.useJQuery(jQuery)</code>. With a bundler or Node: <code>const { FormValidator, FileValidator } = require(&#39;./dist/validator.js&#39;)</code>.</p>
 <p><strong>Project layout</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
 <thead>
 <tr>
 <th>Folder</th>
@@ -106,7 +137,7 @@
 </tr>
 </tbody></table></div>
 <p><strong>Why does <code>src/</code> have four main files?</strong> They are four separate jobs with different dependencies, so a page that needs only one part can load only that part (<code>dist/</code> has each one on its own, readable and minified):</p>
-<div class="tablewrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
 <thead>
 <tr>
 <th>Part</th>
@@ -143,7 +174,7 @@
 <p>If you do not care about size, ignore them and use the one file.</p>
 <h2 id="the-four-parts-with-examples">The four parts, with examples</h2>
 <p>All four are in <code>dist/validator.min.js</code>. Pick by what your page has:</p>
-<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
 <thead>
 <tr>
 <th>Your page has...</th>
@@ -218,7 +249,7 @@
 if (!result.isValid) alert(FileValidator.summary(result).join(&#39;\n&#39;));
 </code></pre>
 <p>What it does for files the user picks (the message goes into <code>#cv-msg</code> and the input is cleared):</p>
-<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
 <thead>
 <tr>
 <th>File</th>
@@ -399,7 +430,7 @@ The packs are machine-quality translations: please have a native speaker check t
 <h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
 <p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/validator.min.js&quot;
-        integrity=&quot;sha384-9gwS9yHdJfxAQVjeyUAkhfryOx/37Ug/vC/Yc60OEUZEX4viB+gRQb/1VXZ7zpNk&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+        integrity=&quot;sha384-5gmlWpJaNKKRXfh/D/yX3ciGf+rR2RIELQtFMhTtmC0gIqcmmlg9Nss7tuG4pyPL&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/locales/de.min.js&quot;
         integrity=&quot;sha384-mmSW5mVYaC+rhElftx/0QVwLyq0VSIOLlmUzwkOjvzKCUJXHIEaGTfS0K0bB96ln&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;

@@ -1,0 +1,1106 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "library",
+      "bom-ref": "form-and-file-validator@3.29.0",
+      "name": "form-and-file-validator",
+      "version": "3.29.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/form-and-file-validator@3.29.0"
+    },
+    "properties": [
+      {
+        "name": "runtime-dependencies",
+        "value": "0"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "file",
+      "bom-ref": "file:dist/SRI.json",
+      "name": "dist/SRI.json",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "10ac7698595ea57f6f5fe68c011812bc37b4a8aa8617c48b700353ad19ef7e96"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.js",
+      "name": "dist/fileValidator.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5d9c1ee953a6a48a82b482991e1bf36d2bd77bca74a0a5eeb0b64189e8e92763"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.min.js",
+      "name": "dist/fileValidator.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "60de7e22d05a4eb677383b08621f0bf319a2f5cd5021e9fbb822e5bf06a593c5"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.upload.js",
+      "name": "dist/fileValidator.upload.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b0120b3d6324f8d1a0cce79a52b0d2862b0c13ee451d5b9eb983cf29cba73c2f"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.upload.min.js",
+      "name": "dist/fileValidator.upload.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5bfd2d92a18c21c53f8f28c3e3a5dbfabdefcc78f9f92cf5867f6cb88e53c90b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.widget.js",
+      "name": "dist/fileValidator.widget.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "068202a4a41d798d277cdd78f081e60ba8118fd1c236b3e0c8adc82bab753b40"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.widget.min.js",
+      "name": "dist/fileValidator.widget.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c0ac9ad254a071ff163fd26d9addb211b94ccba414e768d8bf92a3df2ecfde56"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.additional.js",
+      "name": "dist/formValidator.additional.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "32653bac082721b1491a7dc20c1709f1fe0d8f7e39dc125c6a88e8a1f31bbba6"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.additional.min.js",
+      "name": "dist/formValidator.additional.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "715bc9aee1773d3d85d4e50c2d3178c6ddd220022e4d93ff3b3ee32945bda47b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.core.min.js",
+      "name": "dist/formValidator.core.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d6f001a272531ef12780ae41b47b9b6f1e5a02e85c879238ae97098398afe72d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.core.min.mjs",
+      "name": "dist/formValidator.core.min.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "33e6945647b9f3c2ecfc62cda9a01dd2a195ba972efda0cb47bf33e25b7548d3"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.element.js",
+      "name": "dist/formValidator.element.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "310576c78126e73ea481423dcd71439588d712f5e6c06012e83a40c4b96c765d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.element.min.js",
+      "name": "dist/formValidator.element.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "46334dac9fef91f805933aabc6d5cf013d8034f32dd10d0c847b9d024ac49a00"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.jquery.js",
+      "name": "dist/formValidator.jquery.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b431b9b0ddc1dd2627d86103f88a5e38ff21289ebba42f6931ee9e8ee6b20fcf"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.jquery.min.js",
+      "name": "dist/formValidator.jquery.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4649446cd2bdb031d60dedd9585d4e7837a69266d3b973b5e9d92966b3ca9d2e"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.js",
+      "name": "dist/formValidator.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "001c854cc188cc4c44448c19148293e39a28a277639e60046fd767101aac8467"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.min.js",
+      "name": "dist/formValidator.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0b9f4440bba2fe427905ade1b78e30e1aa0414b23ec2f290b43a86432c324df9"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.password.js",
+      "name": "dist/formValidator.password.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ab4309b6a9c2c79cb9c950b2d6383883f79f5faa6f5c837a9f1db9702916f4e0"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.password.min.js",
+      "name": "dist/formValidator.password.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "10876b1e82e6b01bc0405653cab3f6c9f68bce3221b7932de55790dde62b1588"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/alpine.js",
+      "name": "dist/integrations/alpine.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b42e2797e63588f76ffeac28a466185509b0e027856237f893000c52c2d4ab74"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/alpine.min.js",
+      "name": "dist/integrations/alpine.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bd0c97b2b2e2b9ca3e45e9391919381064615ac80345f331e9deb480c7c34be6"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/angular-signals.mjs",
+      "name": "dist/integrations/angular-signals.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "96cd9373bd2468a25056fc373b88627e8948ef3d36c11e31c1feb055a1735ec7"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/angular.mjs",
+      "name": "dist/integrations/angular.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4a0537698e92228330c97e5ea66bb9e6c99a608c8701e9b5c6fa3bd1977b0c90"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/lit.mjs",
+      "name": "dist/integrations/lit.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f20d7bf6dc49849eedb04b70495a98561cf944a52638c8ae7ef3b00734a1bed"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/react.mjs",
+      "name": "dist/integrations/react.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "61323c628be67969b0bd957f764223a314f4003ce0d8a353f0ee3529f074d977"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/solid.mjs",
+      "name": "dist/integrations/solid.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b33ad6d23d26313172edd0ed36ed140b97aa910723faa18e16e653d99df50aa2"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/svelte.mjs",
+      "name": "dist/integrations/svelte.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "979b6dbe76ac709a60f78f9e026698148cd1d18c6561b0e30dd7fd88c60c01ae"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/integrations/vue.mjs",
+      "name": "dist/integrations/vue.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6c2598894c890e4935618b8f96c144e8876859b8a94df35fd7966f524516a877"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locale.js",
+      "name": "dist/locale.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6c67cac30208003794859adebe17aad95e3b389bb98df6991223fcfff15c8ef0"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locale.min.js",
+      "name": "dist/locale.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "661bfcade07a0bb6c359d8f84546265fb2dfb1f2ae17c0323f14ab00c356fa7b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/all.js",
+      "name": "dist/locales/all.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "408ab83924c79dc3611e8b9e4b60747e4034d1b349183cdf8c6ab8460e132c55"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/all.min.js",
+      "name": "dist/locales/all.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e039682811752949dd13dffcf14ca4d8ad5978727aed9eeef26b9ca29c52d4ad"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ar.js",
+      "name": "dist/locales/ar.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8be03f01660e92a99b07e11264376273c9d3ddbd19dfb16979affba66e96a8de"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ar.min.js",
+      "name": "dist/locales/ar.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7051fb976f8fd98d7fc35eacef0cb72bb3c68c3a1fabbbe7c84cdb9141bf0f82"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ar.mjs",
+      "name": "dist/locales/ar.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "90ebf53d0e50a05d242736dfd8ebe372c9aedbcc67e3d88d2c24675496c4ee16"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/bn.js",
+      "name": "dist/locales/bn.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5812459014b8d0a2442c72f7f0af5eb55c8e6aae7d45d468fe406bb27706237a"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/bn.min.js",
+      "name": "dist/locales/bn.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "42a7f4154f5685c4a223fb9e2da2d288d3bf89a9299f51a9a8c0bbdbd6bfeca8"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/bn.mjs",
+      "name": "dist/locales/bn.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4b2a883911ccf47afd915be9ce12fa3d1eb2769712a956e23e93e4bf875d0ab7"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/de.js",
+      "name": "dist/locales/de.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1a143e6fe4c7a566381b2244050c894e0b11c4f22be671e9d8ed16b98ea5d840"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/de.min.js",
+      "name": "dist/locales/de.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b1716016309a8209e81ef8b3c40ac6380216db2c213ab3dad066963d0c85eaf8"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/de.mjs",
+      "name": "dist/locales/de.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "95b3488ff76fd3e2c69605d5aedee28a8e7e2111e628db89ad1bc99c8b0664c6"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/es.js",
+      "name": "dist/locales/es.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a96ceb25b1e4a02cb8cfd78edf99f1935f6ac1371543e38f824021872fb235aa"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/es.min.js",
+      "name": "dist/locales/es.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d023465cba763b9cdc5b3794883fbabe9152df8059a533f47295c99ce634412c"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/es.mjs",
+      "name": "dist/locales/es.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4fc161cb72b8aa30967eba84d6c440ca46aefd652dff56934a2d978eb770091d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/fr.js",
+      "name": "dist/locales/fr.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "65af2eaf928bec9fa4847a59f62ac488e2f6741e0f849e9f1044de6b4c893b8d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/fr.min.js",
+      "name": "dist/locales/fr.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4f66d52732433563420ad50b2c0e5b9ddf4c9c9b2c9e28c38f446e9b5ba0137e"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/fr.mjs",
+      "name": "dist/locales/fr.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "df08f037bc2b360c01dea82fd95bc8198094f90acbe81d5bfdebbd4386ecc697"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/hi.js",
+      "name": "dist/locales/hi.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a4b50f27e641a668c9f098abb25d196be24c8850c4d18cde40204a690f1d3596"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/hi.min.js",
+      "name": "dist/locales/hi.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ae9a2f8dffaf09329ab0d0bae3b94a583d9d1cb0818f64fb0af1cbbd64b99cd1"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/hi.mjs",
+      "name": "dist/locales/hi.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4eea17457246f2a07d7165312f2255f72552b924c567f0a494d958233d1809c6"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/id.js",
+      "name": "dist/locales/id.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9cbb0853d93a87a5c5cdcf910a7dfd961259bb89d598204d5fb389a6dcc677ed"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/id.min.js",
+      "name": "dist/locales/id.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7176743f1f7924dddd0f84188cbaa98990a2c1a096d0037b2acdba3ce712ed8b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/id.mjs",
+      "name": "dist/locales/id.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e0cc53d0b73a1925e829ce6e148004c017054684a2d6fd5098d0bf579e90f8c9"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/it.js",
+      "name": "dist/locales/it.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "27288c1ce24f87b893c1d5aba9b733c378af7fdbf893655504f6ba305e03ecf0"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/it.min.js",
+      "name": "dist/locales/it.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4c190325a0af493879aa6bee21da6fec62593993b73cb4cd1f6c570b4d90b894"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/it.mjs",
+      "name": "dist/locales/it.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "662fe36bd2834adf0a7541d717aec384e67b45df52f664903a44d47c4e51db05"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ja.js",
+      "name": "dist/locales/ja.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0b95f5ec5ca78ebd5ca31d8871b3442653cb8620d5703ae1dbc89861b2243465"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ja.min.js",
+      "name": "dist/locales/ja.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d7a88ed4e2bf5ba61aa806477af4e7d254438a460477855511f5a0aa1259e979"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ja.mjs",
+      "name": "dist/locales/ja.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a7e6e7c0b48e6e13fb5c34d25efc4ed485a53d43257b4118763e67892dc57b56"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ko.js",
+      "name": "dist/locales/ko.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "87f60c7c9a270d5720faaa8d4d43b5000864281b06ee52948212dbf50b1053ee"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ko.min.js",
+      "name": "dist/locales/ko.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0e69db8c3cc5b4266a973da1bec3787a514654e75d47d092d05b96c5be5b326d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ko.mjs",
+      "name": "dist/locales/ko.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fd3a397e2d08207a54dabd7b0be5ca7fe19e89869290fedcc11b66ac21a00fc0"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/nl.js",
+      "name": "dist/locales/nl.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "239b548acced30b16830a1ea8e55a7f351a4f1a0a51ac83106bacf393a84da29"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/nl.min.js",
+      "name": "dist/locales/nl.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "176578ab8c18d2c181680e3e99567008fe89fb6ba0a593852c65af236776878c"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/nl.mjs",
+      "name": "dist/locales/nl.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "00a945c96363d055f584f53b177afad3b179ddf1ed2992ffcb0a87799a2861a2"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/pl.js",
+      "name": "dist/locales/pl.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e0268279846a7bfdbab164b9039104c7d1a8fb56aa78523b08e1f5e9136350cf"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/pl.min.js",
+      "name": "dist/locales/pl.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1ab0787236a6f31a5ddf6ea7b6e85a5705ba22aa0ff5f1307d4d705b782b797f"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/pl.mjs",
+      "name": "dist/locales/pl.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6403722d13951169e545ede069e187802ddee0fb87ac1cee62980fcdfaab3bd3"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/pt.js",
+      "name": "dist/locales/pt.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fcd4565f9f339c4543bcd014a461522cdebf6b96c6289415efb7d382fc6d96cd"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/pt.min.js",
+      "name": "dist/locales/pt.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "90e0119fbcc8d32d0bf9a4bc9842c170807291fefdad455fb962afb4a2af5460"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/pt.mjs",
+      "name": "dist/locales/pt.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "09f86d61efb25eadabeefb2372063c7b0578b38a1631604f3af763123d61991f"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ru.js",
+      "name": "dist/locales/ru.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a447a11b933b6a9db4c26f2c79fb0139b6b937b82415fc0ff8769f505a3cec7e"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ru.min.js",
+      "name": "dist/locales/ru.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c4f929a15e265316ad23d76f8ebce7fafc12ccb624b0fdcf1d72a4a28aff43ec"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/ru.mjs",
+      "name": "dist/locales/ru.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "639a951a63fe0ac89f0b38408429d3ff4a9ee1ed1763a3965624f50e3d59d982"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/sv.js",
+      "name": "dist/locales/sv.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cbc8d4ea257251e705e7782b70382651ffc9dad29ce0eba1b6900a30f9b4fd3f"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/sv.min.js",
+      "name": "dist/locales/sv.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2ef3d5ac8f87e84f970e9ab124bf92dc9ce1746fff8e4ab3715cb78e1afba956"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/sv.mjs",
+      "name": "dist/locales/sv.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b85ad657b0a2376fe1bb587745d553ace62c828a8083d950f37ac60345b4f2fb"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/tr.js",
+      "name": "dist/locales/tr.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1a3671047d0193882431a2d91f7bac259b08d7401a98391a566024db3fbb575d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/tr.min.js",
+      "name": "dist/locales/tr.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf1e1a83391020c15fb430637aa59923e15b460efbb5219a5fd8dcfc1cd428fd"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/tr.mjs",
+      "name": "dist/locales/tr.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "93895453a39a5f5f16be971e6a03c0d55163f4920bf3cfc5fe80f37fd040b76b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/vi.js",
+      "name": "dist/locales/vi.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3db50cc82dbb54e14f551c989dedc991bec06f0a7ca15f221ebc662b6683f435"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/vi.min.js",
+      "name": "dist/locales/vi.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "31e06b6ecf118469d0ea1cda94b5154b3bfb0001b1511a1f6099ba756cbb7e9d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/vi.mjs",
+      "name": "dist/locales/vi.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d19b3c4ad1af0716d7e3a51dfa6b4b565418848329a0bc071cdd3d3f3698b208"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/zh.js",
+      "name": "dist/locales/zh.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a78761b3aa4199b4bd9e0ca64786d7cc8d527e938de5bc85dad858984f6d5898"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/zh.min.js",
+      "name": "dist/locales/zh.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "aa7a5eb9ec2ea4da5181e614a6f8da20f3b5bfdfcdce802a5121747c7e1dbc2c"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/locales/zh.mjs",
+      "name": "dist/locales/zh.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "525eae936376dcfaf259846c6b0894cc5aa233c0c6fca2322e7648772a018921"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/scanners.js",
+      "name": "dist/scanners.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a4addc0353ed009ce708bd9dcc55c4e5295646b7d334aa91b45b0f5f7e94a504"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/server.js",
+      "name": "dist/server.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "99cbd83d04fcfff0d78af92927b7ef24f0188650bf46221196edae20006f29fd"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/testing.js",
+      "name": "dist/testing.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5ef23dcaacbd26e07f0c71d57fae965e28b5aad6162270366e73d32c6445eca6"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/validator.js",
+      "name": "dist/validator.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c7491d85b54e394d051311f115ed0079eb1c47ae5d8964df12a66171ad8904c7"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/validator.min.js",
+      "name": "dist/validator.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "77e7962ad43ee893961da626ec11311c59b8e8c8a976191fc507c5f8a6729fff"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/validator.min.mjs",
+      "name": "dist/validator.min.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "be27e5a591ff673984698deb78633a0869312989f54219e5ba306d020fb3748a"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/validator.mjs",
+      "name": "dist/validator.mjs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "05a321ba683192d5d8d2da6485f0f532935ce4f3cc80c099308588c81b5e254a"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "peer:@angular/core",
+      "name": "@angular/core",
+      "version": ">=21",
+      "scope": "optional",
+      "description": "Optional peer: only needed when you use the matching integration"
+    },
+    {
+      "type": "library",
+      "bom-ref": "peer:@angular/forms",
+      "name": "@angular/forms",
+      "version": ">=14",
+      "scope": "optional",
+      "description": "Optional peer: only needed when you use the matching integration"
+    },
+    {
+      "type": "library",
+      "bom-ref": "peer:lit",
+      "name": "lit",
+      "version": ">=2",
+      "scope": "optional",
+      "description": "Optional peer: only needed when you use the matching integration"
+    },
+    {
+      "type": "library",
+      "bom-ref": "peer:react",
+      "name": "react",
+      "version": ">=17",
+      "scope": "optional",
+      "description": "Optional peer: only needed when you use the matching integration"
+    },
+    {
+      "type": "library",
+      "bom-ref": "peer:solid-js",
+      "name": "solid-js",
+      "version": ">=1.6",
+      "scope": "optional",
+      "description": "Optional peer: only needed when you use the matching integration"
+    },
+    {
+      "type": "library",
+      "bom-ref": "peer:vue",
+      "name": "vue",
+      "version": ">=3",
+      "scope": "optional",
+      "description": "Optional peer: only needed when you use the matching integration"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "form-and-file-validator@3.29.0",
+      "dependsOn": []
+    }
+  ]
+}

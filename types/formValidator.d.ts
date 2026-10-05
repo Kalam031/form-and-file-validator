@@ -117,6 +117,8 @@ export interface FormConfig {
     disableOnSubmit?: boolean;
     /** Keep what the user typed (never passwords, files, hidden fields) and restore it; cleared after a successful save. */
     draft?: boolean | { key?: string; storage?: 'session' | 'local'; exclude?: string[]; debounce?: number; maxAgeDays?: number };
+    /** Called on every submit attempt and when the page is left without a successful submit, with per-field counts and times (focus, edits, errors by code). Never contains values; nothing is sent anywhere. */
+    onFieldStats?: (stats: FieldStats) => void;
     /** The browser asks before leaving a page with unsaved changes. */
     leaveWarning?: boolean | string;
     /** Read ASP.NET MVC / Razor data-val-* attributes (`required`, `length`, `range`, `regex`, `equalto`, `remote` ...), `data-valmsg-for`, `data-valmsg-summary` and the field-validation-* / input-validation-* classes. */
@@ -261,6 +263,8 @@ export interface FormInstance {
     readonly state: FormState;
     getState(): FormState;
     /** Calls fn(state) (once per tick) when errors, touched, dirty, pending or the submit count change. Returns the unsubscribe function. */
+    /** Per-field counts and times when `onFieldStats` is set (empty `fields` otherwise). */
+    getFieldStats(): FieldStats;
     onStateChange(fn: (state: FormState) => void): () => void;
     /** Wizards: validates only the fields inside a step (element, selector or list of names), shows and focuses; true when the step is valid. */
     validateStep(scope: string | Element | ArrayLike<string>, options?: { focus?: boolean }): Promise<boolean>;
@@ -630,3 +634,6 @@ export interface FormValidatorStatic {
 declare const FormValidator: FormValidatorStatic;
 export default FormValidator;
 export { FormValidator };
+
+export interface FieldStat { field: string; focusCount: number; focusMs: number; changes: number; errorsShown: number; codes: Record<string, number>; lastCode: string | null; invalid: boolean }
+export interface FieldStats { form: string | null; durationMs: number; submitCount: number; reason?: 'submit' | 'abandon'; valid?: boolean | null; fields: Record<string, FieldStat> }

@@ -23,13 +23,14 @@ const PAGES = [
     { file: 'migrating.html', title: 'Migrating from jQuery Validate', src: 'docs/Migrating-from-jQuery-Validate.md' },
     { file: 'accessibility.html', title: 'Accessibility', src: 'docs/Accessibility.md' },
     { file: 'benchmarks.html', title: 'Benchmarks', src: 'docs/Benchmarks.md' },
+    { file: 'api-stability.html', title: 'API stability', src: 'docs/API-Stability.md' },
     { file: 'playground.html', title: 'Playground', src: null }
 ];
 const LINKS = {
     'docs/FormValidator.md': 'form.html', 'FormValidator.md': 'form.html', 'docs/FileValidator.md': 'file.html', 'FileValidator.md': 'file.html',
     'docs/Languages.md': 'languages.html', 'Languages.md': 'languages.html', 'docs/Server-and-Frameworks.md': 'server-and-frameworks.html', 'Server-and-Frameworks.md': 'server-and-frameworks.html',
     'docs/Migrating-from-jQuery-Validate.md': 'migrating.html', 'Migrating-from-jQuery-Validate.md': 'migrating.html',
-    'docs/Accessibility.md': 'accessibility.html', 'Accessibility.md': 'accessibility.html', 'docs/Benchmarks.md': 'benchmarks.html', 'Benchmarks.md': 'benchmarks.html',
+    'docs/Accessibility.md': 'accessibility.html', 'Accessibility.md': 'accessibility.html', 'docs/Benchmarks.md': 'benchmarks.html', 'Benchmarks.md': 'benchmarks.html', 'docs/API-Stability.md': 'api-stability.html', 'API-Stability.md': 'api-stability.html',
     'CONTRIBUTING.md': REPO + '/blob/main/CONTRIBUTING.md', 'SECURITY.md': REPO + '/blob/main/SECURITY.md'
 };
 

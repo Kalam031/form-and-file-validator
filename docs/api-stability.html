@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API stability · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.29.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="benchmarks.html">Benchmarks</a></li>
+      <li><a href="api-stability.html" aria-current="page">API stability</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="api-stability-and-support-policy">API stability and support policy</h1>
+<p>This page says what you can rely on when you upgrade.</p>
+<h2 id="versioning">Versioning</h2>
+<p>The package follows <a href="https://semver.org/">semver</a>. <code>MAJOR.MINOR.PATCH</code>:</p>
+<ul>
+<li><strong>PATCH</strong>: bug fixes, new or corrected translations, documentation. Never changes how a correct call behaves.</li>
+<li><strong>MINOR</strong>: new rules, options, methods, languages and integrations. Existing calls keep working. A new <em>default</em> that changes what users see is never done in a minor; it is opt-in (for example <code>validateOn: &#39;smart&#39;</code> is the default, other presets are options).</li>
+<li><strong>MAJOR</strong>: anything listed below under &quot;What counts as breaking&quot;.</li>
+</ul>
+<p>Every release is in <a href="../CHANGELOG.md">CHANGELOG.md</a>. Each source file also keeps its own changelog in its header.</p>
+<h2 id="what-is-public-stable">What is public (stable)</h2>
+<ul>
+<li>Everything documented in <a href="form.html">FormValidator</a>, <a href="file.html">FileValidator</a> and <a href="server-and-frameworks.html">Server and frameworks</a>, and everything in <code>types/*.d.ts</code>.</li>
+<li>The entry points in <code>package.json</code> <code>exports</code> (<code>.</code>, <code>/core</code>, <code>/form</code>, <code>/file</code>, <code>/upload</code>, <code>/widget</code>, <code>/server</code>, <code>/testing</code>, <code>/scanners</code>, <code>/password</code>, <code>/react</code>, <code>/vue</code>, <code>/angular</code>, <code>/angular-signals</code>, <code>/svelte</code>, <code>/lit</code>, <code>/solid</code>, <code>/alpine</code>, <code>/jquery</code>, <code>/jquery-additional</code>, <code>/locales/*</code>).</li>
+<li>Error <strong>codes</strong> (<code>required</code>, <code>email.format</code>, <code>FILE_TOO_LARGE</code>, ...), rule names, option names, the <code>fv:*</code> events, CSS classes the library adds (<code>error</code>, <code>fv-valid</code>, <code>fv-submitting</code>, ...) and the <code>data-fv*</code> attributes.</li>
+<li>The shared test vectors in <code>spec/*.vectors.json</code> (they pin the behaviour of every rule).</li>
+</ul>
+<h2 id="what-is-not-public">What is not public</h2>
+<ul>
+<li>Anything with a leading underscore (<code>inst._errors</code>, <code>inst._stateSubs</code>, ...), and anything not in the types or the docs.</li>
+<li>The exact wording of <strong>English messages</strong> and the machine-quality translations. Messages can be corrected in a minor or patch release; rely on <strong>codes</strong>, not text, in tests and logic.</li>
+<li>The exact bytes and layout of <code>dist/</code> files beyond the documented names, and the order of the keys in returned objects.</li>
+<li>The devtools panel&#39;s markup and the console warnings&#39; wording.</li>
+</ul>
+<h2 id="what-counts-as-breaking-needs-a-major-version">What counts as breaking (needs a major version)</h2>
+<ul>
+<li>Removing or renaming a public function, option, rule, code, event, export path or type.</li>
+<li>A valid input that used to pass now fails, or the reverse, <strong>for a rule&#39;s documented behaviour</strong> (a fix for a documented-wrong result is a bug fix and goes in a minor or patch, with a changelog line).</li>
+<li>Raising the minimum supported runtime (see below).</li>
+<li>Changing an option default in a way users can see.</li>
+</ul>
+<p>Security fixes may tighten behaviour in a patch release (for example a file that is a polyglot is now blocked). They are always in the changelog.</p>
+<h2 id="deprecation">Deprecation</h2>
+<p>Something is deprecated for at least one <strong>minor</strong> release before it is removed in the next major. The deprecation is in the changelog, in the types (<code>@deprecated</code>) and, where it makes sense, as a one-time console warning that names the replacement.</p>
+<h2 id="supported-runtimes">Supported runtimes</h2>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th></th>
+<th>Supported</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Node</td>
+<td>the current LTS lines and newer (CI runs 18, 20, 22, 24, 26). A Node line is dropped in a minor release only after it reached end of life, and is announced in the changelog first.</td>
+</tr>
+<tr>
+<td>Browsers</td>
+<td>the last two major versions of Chrome, Edge, Firefox and Safari (the real-browser tests run Chromium, Firefox and WebKit).</td>
+</tr>
+<tr>
+<td>Others</td>
+<td>Deno, Bun and Cloudflare Workers work for the Node-free parts (<code>/core</code>, <code>/server</code>); they are tested in CI only where listed in the docs.</td>
+</tr>
+<tr>
+<td>TypeScript</td>
+<td>the declarations compile with the current stable TypeScript; types are checked in CI.</td>
+</tr>
+<tr>
+<td>Frameworks</td>
+<td>the peer ranges in <code>package.json</code> (<code>peerDependencies</code>); the listed integrations are tested against real installs of those versions.</td>
+</tr>
+</tbody></table></div>
+<h2 id="pre-release-and-unstable-pieces">Pre-release and unstable pieces</h2>
+<ul>
+<li>Language packs marked &quot;machine-quality&quot; may change wording at any time (patch).</li>
+<li>Anything documented as <strong>experimental</strong> can change in a minor release. It says so on its documentation page.</li>
+</ul>
+<h2 id="reporting-a-problem">Reporting a problem</h2>
+<p>Use GitHub issues for bugs and <a href="../SECURITY.md">SECURITY.md</a> for vulnerabilities.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

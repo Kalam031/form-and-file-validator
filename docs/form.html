@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.28.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.29.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -25,6 +25,7 @@
       <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
       <li><a href="accessibility.html">Accessibility</a></li>
       <li><a href="benchmarks.html">Benchmarks</a></li>
+      <li><a href="api-stability.html">API stability</a></li>
       <li><a href="playground.html">Playground</a></li>
     </ul>
   </nav>
@@ -1445,6 +1446,14 @@ form.addEventListener(&#39;fv:valid&#39;, () =&gt; console.log(&#39;valid&#39;))
 <p><strong>Submitting.</strong> With no <code>submitHandler</code>, a valid form is submitted with <code>form.requestSubmit()</code>, so the button that was clicked, its name and value, and your other submit listeners are all preserved. With <code>submitHandler</code>, only your function runs.</p>
 <h3 id="devtools-panel">Devtools panel</h3>
 <p><code>FormValidator.devtools(form, { container })</code> shows a live panel with every field&#39;s value, pristine / dirty / touched / pending state, error message and error code, plus the form&#39;s error count and submit count. It updates through <code>onStateChange</code>, only uses <code>textContent</code>, and <code>destroy()</code> removes it. Without a started form or a DOM, <code>element</code> is <code>null</code>. Use it in development only.</p>
+<h3 id="field-analytics-onfieldstats">Field analytics: <code>onFieldStats</code></h3>
+<pre tabindex="0"><code class="language-js">FormValidator.init({ form: &#39;signup&#39;, rules, config: {
+    onFieldStats: stats =&gt; navigator.sendBeacon(&#39;/analytics/forms&#39;, JSON.stringify(stats))   // you decide where it goes
+} });
+</code></pre>
+<p>The callback runs on every submit attempt (<code>reason: &#39;submit&#39;</code>, <code>valid</code>) and once when the page is left without a successful submit (<code>reason: &#39;abandon&#39;</code>, on <code>pagehide</code>). <code>stats.fields[name]</code> has <code>focusCount</code>, <code>focusMs</code>, <code>changes</code> (edits), <code>errorsShown</code>, <code>codes</code> (how often each error code was shown, e.g. <code>{ &quot;email.format&quot;: 2 }</code>), <code>lastCode</code> and <code>invalid</code>. <strong>Values are never included</strong> and the library sends nothing itself. <code>inst.getFieldStats()</code> returns the same object any time. Use it to find the field people give up on.</p>
+<h3 id="rule-mistakes-point-at-your-code">Rule mistakes point at your code</h3>
+<p>An unknown rule name (a typo such as <code>emial</code>) warns once per field with the field name, the closest rule and the line that called <code>init()</code>: <code>unknown rule &quot;emial&quot; on field &quot;mail&quot; (did you mean &quot;email&quot;?) - rules passed at app.js:12:5</code>.</p>
 <h2 id="jquery-style-api-on-the-native-engine">jQuery-style API on the native engine</h2>
 <p>If you know the jQuery Validation plugin, the native <code>FormValidator</code> speaks the same language, without jQuery.</p>
 <p><strong>Scalar rule parameters</strong></p>

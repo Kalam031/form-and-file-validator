@@ -153,3 +153,19 @@ test('the newest packs: Bengali, Indonesian, Vietnamese, Korean, Swedish transla
     assert.strictEqual(FormValidator.checkValue('ab', { minlength: 3 }).message, '3자 이상 입력하세요.');
     locales.use('en');
 });
+
+test('every language also ships as a side-effect-free ES module equal to the script pack', async () => {
+    const fs = require('fs'), path = require('path'), { pathToFileURL } = require('url');
+    const dir = path.join(__dirname, '..', 'dist', 'locales');
+    const mjs = fs.readdirSync(dir).filter(f => f.endsWith('.mjs'));
+    assert.ok(mjs.length >= 18);
+    for (const f of mjs) {
+        const mod = await import(pathToFileURL(path.join(dir, f)).href);
+        const umd = require(path.join(__dirname, '..', 'src', 'locales', f.replace(/\.mjs$/, '.js')));
+        assert.deepEqual(mod.default, umd, f);
+    }
+    const de = (await import(pathToFileURL(path.join(dir, 'de.mjs')).href)).default;
+    const L = require('../src/locale.js');
+    L.register('de-test', de);
+    assert.equal(L.get('de-test').name, 'Deutsch');
+});

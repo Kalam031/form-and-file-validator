@@ -130,6 +130,12 @@ async function buildLocales(withMin) {
         const src = fs.readFileSync(path.join(dir, f), 'utf8');
         all += src + '\n';
         fs.writeFileSync(path.join(out, f), src);
+        // ES module with no side effects: import de from 'form-and-file-validator/locales/de.mjs'; locales.register('de', de)
+        const sandbox = { module: { exports: {} }, self: {}, globalThis: {} };
+        require('vm').runInNewContext(src, sandbox);
+        const pack = sandbox.module.exports;
+        const header = src.split(/\r?\n/)[0];
+        fs.writeFileSync(path.join(out, f.replace(/\.js$/, '.mjs')), header + '\nexport default ' + JSON.stringify(pack, null, 2) + ';\n');
         if (withMin) fs.writeFileSync(path.join(out, f.replace(/\.js$/, '.min.js')), await minify(src));
     }
     fs.writeFileSync(path.join(out, 'all.js'), all);

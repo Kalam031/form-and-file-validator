@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.28.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.29.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -25,6 +25,7 @@
       <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
       <li><a href="accessibility.html">Accessibility</a></li>
       <li><a href="benchmarks.html">Benchmarks</a></li>
+      <li><a href="api-stability.html">API stability</a></li>
       <li><a href="playground.html">Playground</a></li>
     </ul>
   </nav>
@@ -48,6 +49,12 @@
 <h2 id="in-a-module-project">In a module project</h2>
 <pre tabindex="0"><code class="language-js">import { locales } from &#39;form-and-file-validator&#39;;
 import &#39;form-and-file-validator/locales/de.js&#39;;    // registers the pack
+locales.use(&#39;de&#39;);
+</code></pre>
+<p>Bundlers that tree-shake should prefer the <strong>ES module packs</strong>: plain data, no side effects, one import per language, so only the languages you import end up in your bundle.</p>
+<pre tabindex="0"><code class="language-js">import { locales } from &#39;form-and-file-validator&#39;;
+import de from &#39;form-and-file-validator/locales/de.mjs&#39;;
+locales.register(&#39;de&#39;, de);
 locales.use(&#39;de&#39;);
 </code></pre>
 <h2 id="on-the-server">On the server</h2>

@@ -2,6 +2,13 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.29.0
+- **ES module language packs**: `form-and-file-validator/locales/de.mjs` (all 18 languages) export the pack as plain data with no side effects, so a bundler ships only the languages you import: `locales.register('de', de)`.
+- **`onFieldStats`**: per-field analytics (focus count and time, edits, errors shown by code) delivered to your callback on submit and when the page is left unsent. Never contains values; nothing is sent by the library. `inst.getFieldStats()`.
+- **Rule mistakes point at your code**: an unknown rule warns once per field with the field name, the closest rule name and the `init()` call site.
+- **Supply chain**: `sbom.cdx.json` (CycloneDX, every shipped file with its SHA-256), `tools/make-sbom.js`, and tests that fail if a runtime dependency or install script appears.
+- **Docs**: the [API stability and support policy](docs/API-Stability.md) and compatibility badges in the README.
+
 ## 3.28.0
 - **`FormValidator.devtools(form)`**: a live inspector panel with each field's value, pristine / dirty / touched / pending state, error message and error code. Built only from `textContent`, removed with `destroy()`.
 - **Fuzz tests for FileValidator**: 600 seeded mutations (truncated, bit-flipped, spliced, polyglot-appended) of every file family plus hand-made hostile inputs; the validator must never throw or hang.

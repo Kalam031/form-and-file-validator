@@ -958,6 +958,20 @@ form.addEventListener('fv:valid', () => console.log('valid'));
 
 `FormValidator.devtools(form, { container })` shows a live panel with every field's value, pristine / dirty / touched / pending state, error message and error code, plus the form's error count and submit count. It updates through `onStateChange`, only uses `textContent`, and `destroy()` removes it. Without a started form or a DOM, `element` is `null`. Use it in development only.
 
+### Field analytics: `onFieldStats`
+
+```js
+FormValidator.init({ form: 'signup', rules, config: {
+    onFieldStats: stats => navigator.sendBeacon('/analytics/forms', JSON.stringify(stats))   // you decide where it goes
+} });
+```
+
+The callback runs on every submit attempt (`reason: 'submit'`, `valid`) and once when the page is left without a successful submit (`reason: 'abandon'`, on `pagehide`). `stats.fields[name]` has `focusCount`, `focusMs`, `changes` (edits), `errorsShown`, `codes` (how often each error code was shown, e.g. `{ "email.format": 2 }`), `lastCode` and `invalid`. **Values are never included** and the library sends nothing itself. `inst.getFieldStats()` returns the same object any time. Use it to find the field people give up on.
+
+### Rule mistakes point at your code
+
+An unknown rule name (a typo such as `emial`) warns once per field with the field name, the closest rule and the line that called `init()`: `unknown rule "emial" on field "mail" (did you mean "email"?) - rules passed at app.js:12:5`.
+
 ## jQuery-style API on the native engine
 
 If you know the jQuery Validation plugin, the native `FormValidator` speaks the same language, without jQuery.

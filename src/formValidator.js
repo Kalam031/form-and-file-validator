@@ -1,7 +1,8 @@
 /*!
- * FormValidator v2.16.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.17.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.17.0 onFieldStats option and inst.getFieldStats(); unknown-rule warnings name the field, suggest the closest rule and point at the init() call.
  *   2.16.0 FormValidator.devtools(form): a live panel (value, pristine/dirty/touched/pending, error and code per field).
  *   2.15.0 registerRule(name, fn, { raw: true }) keeps a value untrimmed (pwcheck and the password add-on use it). Rules requiredIf, dateAfter, dateBefore, atLeastOne, sumEquals (other fields come from the form, options.values or the data). inst.state / getState() / onStateChange():
  *          touched, dirty, pending, errors, submit count. inst.validateStep(scope) for wizards. FormValidator.explain(value, rules): why a value passes or fails, rule by rule.
@@ -177,6 +178,7 @@
         idempotencyKey: false,            // true | { field: '_idempotency_key', header: 'Idempotency-Key' }: one key per submission attempt, kept across retries until it succeeds (inst.idempotencyKey())
         disableOnSubmit: false,           // true: submit buttons are disabled (and the form gets .fv-submitting) while your onSubmit / handleSubmit function runs
         draft: false,                     // true | { key, storage: 'session' | 'local', exclude: [names], debounce: 400, maxAgeDays: 7 }: keep what the user typed (never passwords or files) and restore it
+        onFieldStats: null,               // function(stats): per-field analytics on submit and when the page is left unsent (counts and times only, never values; nothing is sent anywhere)
         leaveWarning: false,              // true: the browser asks before leaving a page with unsaved changes
         unobtrusive: false,               // read ASP.NET data-val-* attributes (MVC / Razor), use data-valmsg-for / data-valmsg-summary and the field-validation-* classes; see FormValidator.unobtrusive
         autoAttributes: false             // true | { type, inputmode, autocomplete, ariaRequired, lint }: set type / inputmode / autocomplete / aria-required from the rules and field names, and warn about autocomplete="off" and type="number" misuse
@@ -855,6 +857,15 @@
         }
         const context = Object.assign({}, opts.context, { form });
 
+        const warned = {};
+        /** Names the field, suggests the closest rule and points at the init() call, once per field and rule. */
+        function warnUnknownRule(unit, rule) {
+            const field = unit && unit.fields && unit.fields[0] ? unit.fields[0].name : '?', key = field + '|' + rule.type;
+            if (warned[key] || !root.console) return;
+            warned[key] = true;
+            const best = Object.keys(validators).map(n => [n, editDistance(String(rule.type).toLowerCase(), n.toLowerCase(), 2)]).filter(x => x[1] <= 2).sort((a, b) => a[1] - b[1])[0];
+            console.warn('FormValidator: unknown rule "' + rule.type + '" on field "' + field + '"' + (best ? ' (did you mean "' + best[0] + '"?)' : '') + (opts.origin ? ' - rules passed at ' + opts.origin : '') + '. Register it with FormValidator.registerRule().');
+        }
         const inst = {
             form, config: cfg, context,
             rules: {},
@@ -1132,6 +1143,7 @@
             err.textContent = message;
             place(err, unit);
             inst._errors.set(unit.key, { el: err, message, unit, code: code || 'custom' });
+            if (statsOn) { const t = statOf(unit.fields[0].name); t.errorsShown++; t.lastCode = code || 'custom'; t.codes[t.lastCode] = (t.codes[t.lastCode] || 0) + 1; }
             refreshSummary();
             scheduleState();
             unit.fields.forEach(f => {
@@ -1172,7 +1184,7 @@
             try {
                 for (const rule of rules) {
                     const def = validators[rule.type];
-                    if (!def) { if (root.console) console.warn('FormValidator: unknown rule "' + rule.type + '"'); continue; }
+                    if (!def) { warnUnknownRule(unit, rule); continue; }
                     if (isFn(rule.when) && !guard(rule.when, true, env.value, env)) continue;   // a throwing `when` counts as "applies"
                     if (env.empty && !def.runOnEmpty) continue;
                     if (def.remote && o.event === 'input') continue;
@@ -1212,7 +1224,7 @@
 
             for (const rule of rules) {
                 const def = validators[rule.type];
-                if (!def) { if (root.console) console.warn('FormValidator: unknown rule "' + rule.type + '"'); continue; }
+                if (!def) { warnUnknownRule(unit, rule); continue; }
                 if (isFn(rule.when) && !guard(rule.when, true, env.value, env)) continue;   // a throwing `when` counts as "applies"
                 if (env.empty && !def.runOnEmpty) continue;
                 if (def.remote && o.event === 'input') continue;
@@ -1267,13 +1279,19 @@
             if (o && o.submit) { inst._submitted = true; inst._submitCount++; scheduleState(); }
             const units = allUnits();
             const results = await Promise.all(units.map(u => validateUnit(u, o)));
-            return finishAll(units, results, o);
+            const ok = finishAll(units, results, o);
+            inst._lastOk = ok;
+            if (o && o.submit) reportStats('submit', ok);
+            return ok;
         }
 
         function validateAllSync(o) {
             if (o && o.submit) { inst._submitted = true; inst._submitCount++; scheduleState(); }
             const units = allUnits();
-            return finishAll(units, units.map(u => validateUnitSync(u, o)), o);
+            const ok = finishAll(units, units.map(u => validateUnitSync(u, o)), o);
+            inst._lastOk = ok;
+            if (o && o.submit) reportStats('submit', ok);
+            return ok;
         }
 
         function emit(type, detail) {
@@ -1449,6 +1467,35 @@
             if (el && el.jquery) el = el[0];
             if (!el || !el.contains) return [];
             return allUnits().filter(u => u.fields.some(f => el === f || el.contains(f)));
+        }
+
+        // ---- onFieldStats: how people struggle with each field (never values); you decide where the numbers go
+        const statsOn = isFn(cfg.onFieldStats);
+        const stats = {};
+        let statsSent = false, statsStart = Date.now();
+        const statOf = name => stats[name] || (stats[name] = { field: name, focusCount: 0, focusMs: 0, changes: 0, errorsShown: 0, codes: {}, lastCode: null, _since: 0 });
+        function getFieldStats() {
+            const now = Date.now(), fields = {};
+            Object.keys(stats).forEach(n => {
+                const t = stats[n];
+                fields[n] = { field: n, focusCount: t.focusCount, focusMs: t.focusMs + (t._since ? now - t._since : 0), changes: t.changes, errorsShown: t.errorsShown, codes: Object.assign({}, t.codes), lastCode: t.lastCode, invalid: allUnits().some(u => u.fields[0].name === n && inst._errors.has(u.key)) };
+            });
+            return { form: form.id || form.getAttribute('name') || null, durationMs: now - statsStart, submitCount: inst._submitCount, fields };
+        }
+        function reportStats(reason, valid) {
+            if (!statsOn || (reason === 'abandon' && (statsSent || !Object.keys(stats).length))) return;
+            if (reason === 'abandon') statsSent = true;
+            guard(cfg.onFieldStats, undefined, Object.assign(getFieldStats(), { reason, valid: valid === undefined ? null : valid }));
+        }
+        if (statsOn) {
+            listen(form, 'focusin', e => { if (e.target && e.target.name) { const t = statOf(e.target.name); t.focusCount++; t._since = Date.now(); } });
+            listen(form, 'focusout', e => { if (e.target && e.target.name) { const t = statOf(e.target.name); if (t._since) { t.focusMs += Date.now() - t._since; t._since = 0; } } });
+            listen(form, 'input', e => { if (e.target && e.target.name) statOf(e.target.name).changes++; });
+            if (root.addEventListener) {
+                const leave = () => { if (inst._submitCount === 0 || !inst._lastOk) reportStats('abandon'); };
+                root.addEventListener('pagehide', leave);
+                inst._listeners.push(() => root.removeEventListener('pagehide', leave));
+            }
         }
 
         // ---- flow protections: bots, double submits, idempotency keys, drafts and unsaved changes
@@ -1925,6 +1972,8 @@
             },
             /** What a UI needs: { valid, errorCount, dirty, pristine, touched, validating, submitCount, submitted, fields: { name: { value, dirty, pristine, touched, pending, valid, error, code } } } */
             getState,
+            /** Per-field counts and times (focus count and ms, edits, errors shown by code) when the onFieldStats option is set; never values. */
+            getFieldStats,
             /** Calls fn(state) (once per tick) when errors, touched, dirty, pending or the submit count change. Returns the unsubscribe function. */
             onStateChange: fn => { if (!isFn(fn)) return () => {}; inst._stateSubs.add(fn); return () => { inst._stateSubs.delete(fn); }; },
             /**
@@ -2230,14 +2279,23 @@
     }
 
     // ------------------------------------------------------------------ public API
+    /** The first stack line outside this library: where the page called init(), so a bad rule can be traced back to it. */
+    function callSite() {
+        try {
+            const lines = String(new Error().stack || '').split(/\r?\n/).slice(1);
+            const hit = lines.find(l => !/form-and-file-validator|[\\/]src[\\/]formValidator\.js|[\\/](validator|formValidator)(\.min)?\.m?js|node:internal/.test(l));
+            return hit ? hit.replace(/^\s*at\s+/, '').trim() : '';
+        } catch (e) { return ''; }
+    }
     function init(options) {
         options = options || {};
+        const origin = callSite();
         const targets = [].concat(options.formId !== undefined ? options.formId : options.form);
         const instances = targets.map(t => {
             const form = resolveForm(t);
             if (!form) throw new Error(`Form "${t && t.id ? t.id : t}" not found`);
             if (form._fvInstance) form._fvInstance.destroy();
-            const inst = createInstance(form, { rules: options.rules, config: options.config, context: options.context, messages: options.messages });
+            const inst = createInstance(form, { rules: options.rules, config: options.config, context: options.context, messages: options.messages, origin });
             inst.attach();
             form._fvInstance = inst;
             form._manualValidate = () => inst.validate(); // legacy hook
@@ -3308,7 +3366,7 @@
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.16.0'
+        version: '2.17.0'
     }, CORE ? {} : {
         init,
         initFromUrl,   // async (formId, url, { config, messages }) -> instance: load() the rules and start the form

@@ -1,5 +1,7 @@
 # FormValidator + FileValidator
 
+[![npm](https://img.shields.io/npm/v/form-and-file-validator)](https://www.npmjs.com/package/form-and-file-validator) [![CI](https://github.com/Kalam031/form-and-file-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Kalam031/form-and-file-validator/actions/workflows/ci.yml) ![dependencies](https://img.shields.io/badge/runtime%20dependencies-0-brightgreen) ![types](https://img.shields.io/badge/types-included-blue) ![node](https://img.shields.io/badge/node-18%20%7C%2020%20%7C%2022%20%7C%2024%20%7C%2026-339933) ![browsers](https://img.shields.io/badge/browsers-Chrome%20%7C%20Edge%20%7C%20Firefox%20%7C%20Safari-informational) [![license](https://img.shields.io/npm/l/form-and-file-validator)](LICENSE)
+
 Two dependency-free libraries for validating forms and file uploads in the browser (and, for files, in Node). They work as plain `<script>` tags or with a bundler. jQuery, Select2 and Bootstrap are optional.
 
 ## Install
@@ -19,6 +21,16 @@ npm install form-and-file-validator
 | .NET (ASP.NET MVC 5, ASP.NET Core) | the `FormAndFileValidator` package in `dotnet/` (same form rules and file checks, same answers) |
 
 TypeScript types are included.
+
+## Compatibility
+
+| | Tested in CI |
+| --- | --- |
+| Node | 18, 20, 22, 24, 26 |
+| Browsers | Chromium (Chrome, Edge), Firefox, WebKit (Safari) with real browser tests |
+| Frameworks | React 19, Vue 3, Angular 21+ (Reactive Forms and Signal Forms), Svelte 5, Solid, Lit, Alpine, React Hook Form (Standard Schema) |
+| Supply chain | zero runtime dependencies, no install scripts, `sbom.cdx.json` (CycloneDX) lists every shipped file with its SHA-256 |
+| Stability | [semver and deprecation policy](docs/API-Stability.md) |
 
 ## Which file do I load?
 
@@ -304,7 +316,7 @@ Always pin the exact version and keep the `integrity` attribute, so the file you
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/validator.min.js"
-        integrity="sha384-9gwS9yHdJfxAQVjeyUAkhfryOx/37Ug/vC/Yc60OEUZEX4viB+gRQb/1VXZ7zpNk" crossorigin="anonymous"></script>
+        integrity="sha384-5gmlWpJaNKKRXfh/D/yX3ciGf+rR2RIELQtFMhTtmC0gIqcmmlg9Nss7tuG4pyPL" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/locales/de.min.js"
         integrity="sha384-mmSW5mVYaC+rhElftx/0QVwLyq0VSIOLlmUzwkOjvzKCUJXHIEaGTfS0K0bB96ln" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>

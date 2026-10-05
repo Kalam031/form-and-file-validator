@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.28.0",
+  "version": "3.29.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
@@ -88,6 +88,10 @@
       "types": "./types/alpine.d.ts",
       "default": "./dist/integrations/alpine.js"
     },
+    "./locales/*.mjs": {
+      "types": "./types/locale-pack.d.ts",
+      "default": "./dist/locales/*.mjs"
+    },
     "./locales/*": "./dist/locales/*",
     "./widget": "./dist/fileValidator.widget.js",
     "./jquery": "./dist/formValidator.jquery.js",
@@ -108,6 +112,7 @@
     "spec/file-rules.vectors.json",
     "spec/metadata-vectors.json",
     "README.md",
+    "sbom.cdx.json",
     "LICENSE",
     "CHANGELOG.md"
   ],
@@ -131,7 +136,7 @@
   },
   "scripts": {
     "build": "node build.js",
-    "pretest": "node build.js",
+    "pretest": "node build.js && node tools/make-sbom.js",
     "test": "node --test && npm run test:types",
     "test:types": "tsc -p types/typecheck/tsconfig.json",
     "site": "node build.js && node site-build.js",

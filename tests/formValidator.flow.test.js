@@ -261,3 +261,46 @@ test('devtools: shows live state, escapes hostile text, and removes itself', asy
     assert.equal(document.body.contains(dt.element), false);
     assert.equal(FormValidator.devtools('missing-form').element, null);
 });
+
+globalThis.addEventListener = (...a) => w.addEventListener(...a);
+globalThis.removeEventListener = (...a) => w.removeEventListener(...a);
+test('onFieldStats: counts focus, edits and errors per field, reports on submit and abandon, never values', async () => {
+    const form = mount('<input name="email" type="email"><input name="pw" value="secret-value">');
+    const seen = [];
+    const inst = FormValidator.init({ form, rules: { email: { required: true, email: true } }, config: { debounce: 0, onFieldStats: s => seen.push(s) } });
+    const email = form.elements.email;
+    fire(email, 'focusin'); email.value = 'bad'; fire(email, 'input'); fire(email, 'focusout');
+    await FormValidator.validate(form);
+    const ok = await inst.validate({ submit: true });
+    assert.equal(ok, false);
+    const last = seen[seen.length - 1];
+    assert.equal(last.reason, 'submit');
+    assert.equal(last.valid, false);
+    assert.ok(last.fields.email.focusCount >= 1);
+    assert.equal(last.fields.email.changes, 1);
+    assert.ok(last.fields.email.errorsShown >= 1);
+    assert.ok(last.fields.email.codes.email >= 1 || Object.keys(last.fields.email.codes).length);
+    assert.equal(JSON.stringify(last).includes('secret-value'), false);
+    window.dispatchEvent(new w.Event('pagehide'));
+    assert.equal(seen[seen.length - 1].reason, 'abandon');
+    const n = seen.length; window.dispatchEvent(new w.Event('pagehide')); assert.equal(seen.length, n);
+    assert.ok(inst.getFieldStats().fields.email.focusCount >= 1);
+    // a throwing callback never breaks the form
+    const f2 = mount('<input name="a">');
+    const i2 = FormValidator.init({ form: f2, rules: { a: 'required' }, config: { onFieldStats() { throw new Error('boom'); } } });
+    const orig = console.error; console.error = () => {};
+    assert.equal(await i2.validate({ submit: true }), false);
+    console.error = orig;
+});
+
+test('unknown rule warning names the field, suggests the closest rule and points at the init() call, once', async () => {
+    const form = mount('<input name="mail" value="x">');
+    const warn = console.warn; const seen = []; console.warn = m => seen.push(String(m));
+    try {
+        const inst = FormValidator.init({ form, rules: { mail: ['emial'] }, config: { debounce: 0 } });
+        await inst.validate(); await inst.validate();
+    } finally { console.warn = warn; }
+    assert.equal(seen.length, 1);
+    assert.match(seen[0], /unknown rule "emial" on field "mail" \(did you mean "email"\?\)/);
+    assert.match(seen[0], /rules passed at .*formValidator\.flow\.test\.js:\d+/);
+});
