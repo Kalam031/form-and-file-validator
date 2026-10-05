@@ -63,6 +63,12 @@ test('passwordStrength: user inputs and years weigh nothing; unicode and long in
     const t0 = Date.now();
     s('Ab1!'.repeat(5000));
     assert.ok(Date.now() - t0 < 1500, 'a 20000-character password does not hang it');
+    assert.equal(s('a'.repeat(1000)).score, 0, 'a thousand a');
+    const piece = s('Zq7!mK2$bP9xL'), many = s('Zq7!mK2$bP9xL'.repeat(30));
+    assert.ok(many.bits <= piece.bits + 5 && many.feedback.includes('repeated'), 'a piece repeated 30 times is only as strong as the piece');
+    assert.ok(s('Zq7!'.repeat(60)).score <= 1, 'a short piece repeated is weak');
+    assert.equal(s('Zq7!mK2$bP9xL'.repeat(30)).length, 390);
+    assert.equal(s('aB1!-_.@ '.repeat(10000)).length, 90000);
     assert.equal(s(null).length, 0);
     assert.equal(s(12345678).feedback.includes('only-digits'), true);
 });

@@ -41,7 +41,9 @@
      */
     function passwordStrength(password, options) {
         const o = options || {};
-        const pw = password === null || password === undefined ? '' : String(password);
+        const full = password === null || password === undefined ? '' : String(password);
+        // a password of 256 characters is judged on its first 256: anything longer than that is strong unless it repeats, and repeats show up in the first 256 too
+        const pw = full.length > 256 ? full.slice(0, 256) : full;
         const chars = Array.from(pw), n = chars.length;
         const feedback = [];
         if (!n) return { score: 0, label: LABELS[0], bits: 0, length: 0, feedback: ['too-short'] };
@@ -87,8 +89,17 @@
             const parts = t.length >= 3 ? [t].concat(t.split(/[^\p{L}\p{N}]+/u).filter(x => x.length >= 3)) : [];
             parts.forEach(p => { const at = lower.indexOf(p); if (at >= 0) { cover(at, p.length); note('user-input'); } });
         });
-        let bits = 0;
-        covered.forEach(c => { bits += c ? 1.2 : per; });
+        // free characters cost `per` bits each; a whole run of pattern characters (qwerty, aaaa, abcd) costs about ten bits however long it is
+        let bits = 0, run = 0;
+        const endRun = () => { if (run) { bits += 3 + 1.2 * Math.min(run, 6); run = 0; } };
+        covered.forEach(c => { if (c) run++; else { endRun(); bits += per; } });
+        endRun();
+        // a password that is one short piece repeated over and over is only as strong as that piece
+        for (let p = 1; p * 3 <= n; p++) {
+            let same = true;
+            for (let i = 0; i + p < n; i++) if (lowerChars[i] !== lowerChars[i + p]) { same = false; break; }
+            if (same) { bits = Math.min(bits, p * per + 4); note('repeated'); break; }
+        }
         // a common password (also with l33t substitutions or a few characters added) is not a secret
         const plain = lower.replace(/[01345 7@$!+]/g, ch => LEET[ch] || ch), stripped = lower.replace(/[^\p{L}\p{N}]/gu, '');
         const isCommon = w => COMMON_PASSWORDS.has(w) || (w.length >= 5 && COMMON_LIST.some(c => w.indexOf(c) === 0 && w.length <= c.length + 3 || (w.length <= c.length + 3 && w.slice(-c.length) === c)));
@@ -99,7 +110,7 @@
         if (n < 12 && bits < 60) note('add-length');
         bits = Math.round(bits * 10) / 10;
         const score = bits < 28 ? 0 : bits < 36 ? 1 : bits < 60 ? 2 : bits < 80 ? 3 : 4;
-        return { score, label: LABELS[score], bits, length: n, feedback };
+        return { score, label: LABELS[score], bits, length: full.length > 256 ? Array.from(full).length : n, feedback };
     }
 
     // a small SHA-1 for pages without crypto.subtle (plain http)
