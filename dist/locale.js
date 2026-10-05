@@ -28,7 +28,7 @@
         'the ZIP directory at the end of the file is missing (the file may be cut off)', 'the ZIP directory points outside the file', 'the ZIP directory is damaged',
         'unsafe file paths inside the archive', 'it holds {n} files', 'it would expand to {size}', 'it compresses {ratio} times, which is not normal for a real document',
         'required parts are missing, so it is not a real {type} file', 'macros', 'embedded programs', 'the end of the file is missing (it may be cut off)',
-        'JavaScript in a PDF', 'a launch action in a PDF', 'an embedded program in a PDF', 'scripts',
+        'JavaScript in a PDF', 'a launch action in a PDF', 'an embedded program in a PDF', 'scripts', 'hidden extra data',
         'Remove {name}', '…and {n} more.', '{n} selected.', '{name} removed. {n} selected.', 'All files removed.', 'status.added', 'status.rejected'];
 
     const packs = { en: { name: 'English', dir: 'ltr' } };

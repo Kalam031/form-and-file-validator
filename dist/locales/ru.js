@@ -136,6 +136,7 @@
         "a launch action in a PDF": "действие запуска в PDF",
         "an embedded program in a PDF": "встроенная программа в PDF",
         "scripts": "скрипты",
+        "hidden extra data": "скрытые дополнительные данные",
         "Remove {name}": "Удалить {name}",
         "…and {n} more.": "…и ещё {n}.",
         "{n} selected.": "Выбрано: {n}.",

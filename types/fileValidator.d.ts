@@ -82,6 +82,10 @@ export interface FileValidatorConfig {
     imageTimeoutMs?: number;
     readImageSize?: (file: File) => Promise<{ width: number; height: number } | null> | { width: number; height: number } | null;
     scanSvg?: boolean;
+    /** Refuse a script, program or archive hidden in a picture (head and tail). `false` turns it off, `'all'` also covers audio, video, fonts and PDFs. Default true. */
+    polyglot?: boolean | 'all';
+    /** KB searched at the start and at the end of a file for hidden content. Default 256. */
+    polyglotScanKB?: number;
     // audio and video
     maxDurationSec?: number | string;
     minDurationSec?: number | string;
@@ -227,6 +231,10 @@ export interface FileValidatorStatic {
     getCategory(file: { name: string; type?: string }, sniffedMime?: string): FileCategory;
     getPath(file: File): string;
     isIgnored(file: File, ignoreFiles: boolean | Array<string | RegExp>): boolean;
+    /** What the content is, whatever the name or file.type says: { type, mime, extensions, executable }, null when no known signature matches, undefined when the file cannot be read. */
+    detect(file: File): Promise<{ type: string; mime: string | null; extensions: string[]; executable: boolean } | null | undefined>;
+    /** A file name that is safe to store and to show: no path, bidi / control characters or reserved names, bounded length, only the last dot. */
+    safeName(name: unknown, options?: { replacement?: string; maxLength?: number; lowercase?: boolean; ascii?: boolean; dots?: 'replace' | 'keep'; fallback?: string; extensionMaxLength?: number }): string;
     detectSignature(file: File): Promise<{ name: string; mime?: string; exts: string[]; executable?: boolean } | null | undefined>;
     readonly constants: {
         DEFAULT_DANGEROUS_EXTENSIONS: string[];

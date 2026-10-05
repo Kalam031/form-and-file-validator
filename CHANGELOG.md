@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.18.0
+- **Polyglots** (FileValidator 2.11.0): a script, program or archive hidden inside a picture is now `DANGEROUS_CONTENT`: `<?php`, `<script`, `<html`, a shebang, a DOS or ELF program, a PDF, an appended ZIP / JAR (GIFAR) in the head and tail of a PNG, JPEG, GIF, WebP and other pictures, and GIFs that are also JavaScript (`GIF89a/*...`). `polyglot: false` turns it off, `'all'` covers audio, video, fonts and PDFs, `polyglotScanKB` sets the window (256). The patterns are long enough not to fire on picture data, checked on 200 KB of random bytes. New message fragment "hidden extra data" in all 13 language packs.
+- **`FileValidator.safeName(name, options)`**: a name that is safe to store and show (no path, control or bidi characters, no reserved Windows names, bounded length with the extension kept, only the last dot so `invoice.php.jpg` cannot be run as PHP). Idempotent.
+- **`FileValidator.detect(file)`**: what the content is, whatever the name or type says.
+- **Upload security checklist** in docs/FileValidator.md: what an upload endpoint should do, whatever library it uses.
+
 ## 3.17.0
 - **Cross-field rules** (FormValidator 2.15.0): `requiredIf` (filled in / `equals` / `in` / `notEquals`), `dateAfter` / `dateBefore` (`inclusive`, `format`), `atLeastOne`, `sumEquals`. They read the other fields from the form, from `checkValue`'s `values`, or from the data in `checkValues` / `schema` (same row first in arrays), and a form re-checks the field when the fields it looks at change. Messages in all 13 language packs.
 - **`inst.state`** / `getState()` / `onStateChange(fn)`: per field and overall: value, dirty (against the starting value), pristine, touched, pending, valid, error, code; `submitCount`, `submitted`, `validating`, `errorCount`. `resetForm()` starts over.

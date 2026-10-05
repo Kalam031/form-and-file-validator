@@ -136,6 +136,7 @@
         "a launch action in a PDF": "PDF içinde bir başlatma eylemi",
         "an embedded program in a PDF": "PDF içinde gömülü bir program",
         "scripts": "komut dosyaları",
+        "hidden extra data": "gizli ek veriler",
         "Remove {name}": "{name} dosyasını kaldır",
         "…and {n} more.": "…ve {n} tane daha.",
         "{n} selected.": "{n} seçildi.",

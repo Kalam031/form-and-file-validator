@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.17.0",
+  "version": "3.18.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",

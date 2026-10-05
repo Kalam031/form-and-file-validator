@@ -136,6 +136,7 @@
         "a launch action in a PDF": "uma ação de execução em um PDF",
         "an embedded program in a PDF": "um programa incorporado em um PDF",
         "scripts": "scripts",
+        "hidden extra data": "dados ocultos",
         "Remove {name}": "Remover {name}",
         "…and {n} more.": "…e mais {n}.",
         "{n} selected.": "{n} selecionado(s).",

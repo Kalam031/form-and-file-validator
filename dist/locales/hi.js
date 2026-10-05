@@ -136,6 +136,7 @@
         "a launch action in a PDF": "PDF में लॉन्च क्रिया",
         "an embedded program in a PDF": "PDF में एम्बेडेड प्रोग्राम",
         "scripts": "स्क्रिप्ट",
+        "hidden extra data": "छिपा हुआ अतिरिक्त डेटा",
         "Remove {name}": "{name} हटाएँ",
         "…and {n} more.": "…और {n} अन्य।",
         "{n} selected.": "{n} चुनी गईं।",

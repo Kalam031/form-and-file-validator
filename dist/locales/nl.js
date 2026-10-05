@@ -136,6 +136,7 @@
         "a launch action in a PDF": "een startactie in een pdf",
         "an embedded program in a PDF": "een ingebed programma in een pdf",
         "scripts": "scripts",
+        "hidden extra data": "verborgen extra gegevens",
         "Remove {name}": "{name} verwijderen",
         "…and {n} more.": "…en nog {n}.",
         "{n} selected.": "{n} geselecteerd.",

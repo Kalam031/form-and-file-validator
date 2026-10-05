@@ -30,7 +30,7 @@ FileValidator decides whether selected files are safe and acceptable before you 
 
 Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: `<script src="dist/validator.min.js"></script>`.
 
-With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.10.0). The optional upload widget (`fileValidator.widget.js`) is version 1.4.0.
+With CommonJS or a bundler: `const FileValidator = require('./dist/fileValidator.js')`. In Node, image dimension checks are skipped unless you supply a `readImageSize` function. Check the version with `FileValidator.version` (currently 2.11.0). The optional upload widget (`fileValidator.widget.js`) is version 1.4.0.
 
 ## Quick start
 
@@ -171,6 +171,8 @@ All options are optional. Numbers may be given as numeric strings (`'5'`), and l
 | `imageDecode` | `true` | Set `false` to skip decoding the image (faster on huge photos) |
 | `imageTimeoutMs` | `10000` | Give up decoding after this long |
 | `readImageSize` | built in | `async (file) => ({ width, height })` to supply your own reader, for example in Node |
+| `polyglot` | `true` | A script, program or archive hidden in the head or tail of a picture is refused (`DANGEROUS_CONTENT`). `false` turns it off, `'all'` also covers audio, video, fonts and PDFs. See the upload security checklist |
+| `polyglotScanKB` | `256` | How much of the start and the end of a file is searched |
 | `scanSvg` | `true` | Set `false` to skip the SVG safety check (scripts, event handlers, `javascript:`, `foreignObject`, `<!DOCTYPE>` / `<!ENTITY>`, external `href` / `xlink:href`, CSS `@import` and `url(http...)`; `#id`, `data:image/...` and `<a href="https://...">` are fine) |
 
 **Folders and documents**
@@ -613,6 +615,20 @@ For files that really are PDF, ZIP or Office (found by their content, so a renam
 { documents: { blockPdfJavaScript: false, maxUncompressedMB: 500 } }   // adjust
 { documents: false }                                                     // switch the inspection off
 ```
+
+## Upload security checklist
+
+Everything in the browser is a convenience for the user; the **server decides**. The same rules run on the server with `form-and-file-validator/server`, and this list is what an upload endpoint should do whatever library it uses:
+
+1. **Never trust the client.** `file.type`, the file name and the extension are chosen by the sender. Decide from the content: `await FileValidator.detect(file)` answers `{ type, mime, extensions, executable }` from the first bytes (or `null` when no known signature matches), and the validator compares it with the name and the allowed types.
+2. **Check size and count on the server** (`maxFileSizeMB`, `maxFiles`, `maxTotalSizeMB`), and also set the limit in your web server or framework, before the body is read.
+3. **Block executables and disguised files**: executables under a picture name, double extensions (`photo.php.jpg`), right-to-left override names (`invoice\u202Egpj.exe`), SVGs with scripts or external references, macros in Office files, JavaScript in PDFs, zip bombs and unsafe archive paths. These are on by default.
+4. **Polyglots**: a file can be a valid PNG, JPEG or GIF and a PHP script, an HTML page, a ZIP or an EXE at the same time. The signature check sees only the first bytes, so the head and the tail of a picture (256 KB each, `polyglotScanKB`) are searched for `<?php`, `<script`, `<html`, a shebang, a DOS or ELF program, a PDF and an appended ZIP / JAR, and a GIF whose "width" is text (`GIF89a/*...`) is refused. `polyglot: false` turns it off, `polyglot: 'all'` also covers audio, video, fonts and PDFs. A payload in the middle of a very large file needs a bigger `polyglotScanKB`; for stronger guarantees re-encode pictures (below).
+5. **Store under a name you chose.** `FileValidator.safeName(name)` returns a name that is safe to store and to show: no path, no control or bidirectional characters, no reserved Windows names, no trailing dots, a bounded length with the extension kept, and only the last dot left (`invoice.php.jpg` becomes `invoice_php.jpg`, so a server that reads the first extension cannot run it). Better still: generate a random name and keep the original only as display text. Options: `maxLength`, `lowercase`, `ascii`, `replacement`, `dots: 'keep'`, `fallback`.
+6. **Serve uploads from another origin or with `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`**, never from a folder where a script engine runs.
+7. **Re-encode pictures** if you can (resize, convert to WebP/JPEG): it removes metadata, polyglot payloads and parser exploits in one step. `FileValidator.stripMetadata()` removes EXIF and GPS without re-encoding.
+8. **Scan for malware** with the `scan` hook (ClamAV, VirusTotal, a cloud scanner) for anything that is shared with other people.
+9. **Rate-limit and authenticate** the endpoint, and delete uploads that are never attached to a record.
 
 ## Malware scanning
 

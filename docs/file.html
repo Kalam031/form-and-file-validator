@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.17.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.18.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -54,7 +54,7 @@
 &lt;script src=&quot;dist/fileValidator.widget.js&quot;&gt;&lt;/script&gt;   &lt;!-- optional: the upload widget --&gt;
 </code></pre>
 <p>Or load everything (FormValidator, FileValidator, the widget and the jQuery layer) as one file: <code>&lt;script src=&quot;dist/validator.min.js&quot;&gt;&lt;/script&gt;</code>.</p>
-<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.10.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.4.0.</p>
+<p>With CommonJS or a bundler: <code>const FileValidator = require(&#39;./dist/fileValidator.js&#39;)</code>. In Node, image dimension checks are skipped unless you supply a <code>readImageSize</code> function. Check the version with <code>FileValidator.version</code> (currently 2.11.0). The optional upload widget (<code>fileValidator.widget.js</code>) is version 1.4.0.</p>
 <h2 id="quick-start">Quick start</h2>
 <p>Call <code>validateFiles</code> with the selected files and a config. It always resolves, and never throws on odd input.</p>
 <pre tabindex="0"><code class="language-js">const input = document.querySelector(&#39;#upload&#39;);
@@ -309,6 +309,16 @@ if (await g.validate()) { /* ... */ }
 <td><code>readImageSize</code></td>
 <td>built in</td>
 <td><code>async (file) =&gt; ({ width, height })</code> to supply your own reader, for example in Node</td>
+</tr>
+<tr>
+<td><code>polyglot</code></td>
+<td><code>true</code></td>
+<td>A script, program or archive hidden in the head or tail of a picture is refused (<code>DANGEROUS_CONTENT</code>). <code>false</code> turns it off, <code>&#39;all&#39;</code> also covers audio, video, fonts and PDFs. See the upload security checklist</td>
+</tr>
+<tr>
+<td><code>polyglotScanKB</code></td>
+<td><code>256</code></td>
+<td>How much of the start and the end of a file is searched</td>
 </tr>
 <tr>
 <td><code>scanSvg</code></td>
@@ -1058,6 +1068,19 @@ FileValidator.validateFiles(files, { methods: { maxLines: 100 } });
 <pre tabindex="0"><code class="language-js">{ documents: { blockPdfJavaScript: false, maxUncompressedMB: 500 } }   // adjust
 { documents: false }                                                     // switch the inspection off
 </code></pre>
+<h2 id="upload-security-checklist">Upload security checklist</h2>
+<p>Everything in the browser is a convenience for the user; the <strong>server decides</strong>. The same rules run on the server with <code>form-and-file-validator/server</code>, and this list is what an upload endpoint should do whatever library it uses:</p>
+<ol>
+<li><strong>Never trust the client.</strong> <code>file.type</code>, the file name and the extension are chosen by the sender. Decide from the content: <code>await FileValidator.detect(file)</code> answers <code>{ type, mime, extensions, executable }</code> from the first bytes (or <code>null</code> when no known signature matches), and the validator compares it with the name and the allowed types.</li>
+<li><strong>Check size and count on the server</strong> (<code>maxFileSizeMB</code>, <code>maxFiles</code>, <code>maxTotalSizeMB</code>), and also set the limit in your web server or framework, before the body is read.</li>
+<li><strong>Block executables and disguised files</strong>: executables under a picture name, double extensions (<code>photo.php.jpg</code>), right-to-left override names (<code>invoice\u202Egpj.exe</code>), SVGs with scripts or external references, macros in Office files, JavaScript in PDFs, zip bombs and unsafe archive paths. These are on by default.</li>
+<li><strong>Polyglots</strong>: a file can be a valid PNG, JPEG or GIF and a PHP script, an HTML page, a ZIP or an EXE at the same time. The signature check sees only the first bytes, so the head and the tail of a picture (256 KB each, <code>polyglotScanKB</code>) are searched for <code>&lt;?php</code>, <code>&lt;script</code>, <code>&lt;html</code>, a shebang, a DOS or ELF program, a PDF and an appended ZIP / JAR, and a GIF whose &quot;width&quot; is text (<code>GIF89a/*...</code>) is refused. <code>polyglot: false</code> turns it off, <code>polyglot: &#39;all&#39;</code> also covers audio, video, fonts and PDFs. A payload in the middle of a very large file needs a bigger <code>polyglotScanKB</code>; for stronger guarantees re-encode pictures (below).</li>
+<li><strong>Store under a name you chose.</strong> <code>FileValidator.safeName(name)</code> returns a name that is safe to store and to show: no path, no control or bidirectional characters, no reserved Windows names, no trailing dots, a bounded length with the extension kept, and only the last dot left (<code>invoice.php.jpg</code> becomes <code>invoice_php.jpg</code>, so a server that reads the first extension cannot run it). Better still: generate a random name and keep the original only as display text. Options: <code>maxLength</code>, <code>lowercase</code>, <code>ascii</code>, <code>replacement</code>, <code>dots: &#39;keep&#39;</code>, <code>fallback</code>.</li>
+<li><strong>Serve uploads from another origin or with <code>Content-Disposition: attachment</code> and <code>X-Content-Type-Options: nosniff</code></strong>, never from a folder where a script engine runs.</li>
+<li><strong>Re-encode pictures</strong> if you can (resize, convert to WebP/JPEG): it removes metadata, polyglot payloads and parser exploits in one step. <code>FileValidator.stripMetadata()</code> removes EXIF and GPS without re-encoding.</li>
+<li><strong>Scan for malware</strong> with the <code>scan</code> hook (ClamAV, VirusTotal, a cloud scanner) for anything that is shared with other people.</li>
+<li><strong>Rate-limit and authenticate</strong> the endpoint, and delete uploads that are never attached to a record.</li>
+</ol>
 <h2 id="malware-scanning">Malware scanning</h2>
 <p>FileValidator does not contain an antivirus. The <code>scan</code> option connects yours (ClamAV, a cloud scanning API, your own service). It runs for files that passed every other check, before <code>remote</code>.</p>
 <pre tabindex="0"><code class="language-js">{

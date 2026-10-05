@@ -136,6 +136,7 @@
         "a launch action in a PDF": "PDF内の起動アクション",
         "an embedded program in a PDF": "PDF内の埋め込みプログラム",
         "scripts": "スクリプト",
+        "hidden extra data": "隠された追加データ",
         "Remove {name}": "{name} を削除",
         "…and {n} more.": "…ほか {n} 件。",
         "{n} selected.": "{n} 件選択中。",

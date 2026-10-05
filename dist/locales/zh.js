@@ -136,6 +136,7 @@
         "a launch action in a PDF": "PDF 中的启动操作",
         "an embedded program in a PDF": "PDF 中的嵌入程序",
         "scripts": "脚本",
+        "hidden extra data": "隐藏的附加数据",
         "Remove {name}": "移除 {name}",
         "…and {n} more.": "……以及另外 {n} 个。",
         "{n} selected.": "已选择 {n} 个。",

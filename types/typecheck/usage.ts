@@ -361,3 +361,11 @@ import { FvFormController } from '../lit';
     const why = FormValidator.explain('x', ['required', 'email']).map(e => e.passed);
     void [dirty, stop, step, why];
 }
+
+// ---------------------------------------------------------------- upload security
+{
+    const safe: string = FileValidator.safeName('../a.php.jpg', { maxLength: 80, ascii: true, dots: 'replace' });
+    FileValidator.detect(new File([], 'a')).then(d => { const t: string | undefined = d?.type; void t; });
+    const cfg: FileValidatorConfig = { polyglot: 'all', polyglotScanKB: 512 };
+    void [safe, cfg];
+}

@@ -1,7 +1,8 @@
 /*!
- * FileValidator v2.10.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.11.0 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.11.0 Polyglots: a script, program or ZIP hidden in the head or tail of a picture is DANGEROUS_CONTENT (`polyglot` option). FileValidator.safeName(name) for storage, FileValidator.detect(file).
  *   2.10.0 SVG scan hardened: <!DOCTYPE>/<!ENTITY> (XXE, entity bombs), external href / xlink:href (remote <use>, <image>), CSS @import and url(http...),
  *          xml-stylesheet, and javascript: hidden by character references or whitespace are now DANGEROUS_CONTENT. #id, data:image and <a href=https> stay allowed.
  *   2.9.0  readMetadata() and stripMetadata(): see what a JPEG, PNG or WebP gives away (EXIF, GPS position, XMP, IPTC, comments) and remove it without
@@ -138,7 +139,7 @@
         'allowNoFiles', 'allowEmpty', 'allowExecutables', 'maxFilenameLength', 'filenameRegex', 'duplicateNames',
         'maxImageWidth', 'maxImageHeight', 'minImageWidth', 'minImageHeight', 'imageTimeoutMs', 'imageDecode',
         'aspectRatio', 'aspectRatioTolerance', 'readImageSize', 'categories', 'messages', 'concurrency',
-        'validate', 'validateTarget', 'validateScope', 'imageLimit', 'fileLimit', 'type', 'options', 'scanSvg', 'message', 'when',
+        'validate', 'validateTarget', 'validateScope', 'polyglot', 'polyglotScanKB', 'imageLimit', 'fileLimit', 'type', 'options', 'scanSvg', 'message', 'when',
         'methods', 'custom', 'customAll', 'remote', 'duplicateContent', 'duplicateContentMaxMB', 'maxDurationSec', 'minDurationSec', 'readMediaInfo', 'requireMediaInfo', 'mimeByExtension', 'dangerousMimeTypes', 'maxPathDepth', 'maxPathLength', 'ignoreFiles', 'documents', 'scan', 'scanFailOpen', 'scanTimeout'];
 
     const DEFAULT_DANGEROUS_EXTENSIONS = [
@@ -840,6 +841,106 @@
         return SIGNATURES.find(s => s.test(head)) || null;
     }
 
+    // ---------------------------------------------------------------- polyglots: a program, a script or an archive hidden inside a picture
+    // A file can be a valid PNG / JPEG / GIF *and* a PHP script, an HTML page, a ZIP or an EXE. The signature check sees only the first bytes, so these are looked for in the
+    // head and tail of the file (where metadata and appended payloads live). The patterns are long enough (5+ bytes of text, structured headers) not to fire on image data.
+    const POLY_TEXT = ['<?php', '<script', '<html', '<!doctype html', '<%@ page', '#!/bin/', '#!/usr/bin/'];
+    const lowerAscii = c => (c >= 65 && c <= 90 ? c + 32 : c);
+    function indexOfText(b, text, from) {
+        const n = text.length, end = b.length - n;
+        const first = text.charCodeAt(0);
+        for (let i = from || 0; i <= end; i++) {
+            if (lowerAscii(b[i]) !== first) continue;
+            let k = 1;
+            while (k < n && lowerAscii(b[i + k]) === text.charCodeAt(k)) k++;
+            if (k === n) return i;
+        }
+        return -1;
+    }
+    function indexOfBytes(b, pat, from) {
+        const end = b.length - pat.length;
+        for (let i = from || 0; i <= end; i++) {
+            if (b[i] !== pat[0]) continue;
+            let k = 1;
+            while (k < pat.length && b[i + k] === pat[k]) k++;
+            if (k === pat.length) return i;
+        }
+        return -1;
+    }
+    const DOS_STUB = Array.from('This program cannot be run in DOS mode').map(c => c.charCodeAt(0));
+    /** What is hidden in these bytes: 'scripts', 'embedded programs', 'hidden extra data' or null. `pos0` is the offset of buffer[0] in the file. */
+    function findHidden(b, pos0, fileSize, sigName, textToo) {
+        if (textToo) for (const t of POLY_TEXT) if (indexOfText(b, t) >= 0) return 'scripts';
+        if (indexOfBytes(b, DOS_STUB) >= 0) return 'embedded programs';
+        for (let i = indexOfBytes(b, [0x7f, 0x45, 0x4c, 0x46]); i >= 0; i = indexOfBytes(b, [0x7f, 0x45, 0x4c, 0x46], i + 1)) {
+            if ((pos0 + i > 0) && (b[i + 4] === 1 || b[i + 4] === 2) && (b[i + 5] === 1 || b[i + 5] === 2) && b[i + 6] === 1) return 'embedded programs';
+        }
+        if (sigName !== 'pdf') for (let i = indexOfBytes(b, [0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e]); i >= 0; i = indexOfBytes(b, [0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e], i + 1)) { if (pos0 + i > 0) return 'hidden extra data'; }
+        // a ZIP / JAR appended to the file: an end-of-central-directory record whose comment ends exactly at the end of the file and whose directory fits inside it
+        for (let i = indexOfBytes(b, [0x50, 0x4b, 0x05, 0x06]); i >= 0; i = indexOfBytes(b, [0x50, 0x4b, 0x05, 0x06], i + 1)) {
+            if (i + 22 > b.length) continue;
+            const comment = b[i + 20] | (b[i + 21] << 8);
+            const entries = b[i + 10] | (b[i + 11] << 8);
+            const cdSize = (b[i + 12] | (b[i + 13] << 8) | (b[i + 14] << 16) | (b[i + 15] << 24)) >>> 0;
+            const cdOff = (b[i + 16] | (b[i + 17] << 8) | (b[i + 18] << 16) | (b[i + 19] << 24)) >>> 0;
+            if (pos0 + i + 22 + comment === fileSize && entries > 0 && cdOff + cdSize <= pos0 + i) return 'hidden extra data';
+        }
+        return null;
+    }
+    /** GIF whose width is two printable ASCII characters (8224 px or more): a script that is also a GIF, such as "GIF89a" followed by a JavaScript comment. */
+    function gifIsScript(head) {
+        if (!(ascii(head, 0, 'GIF87a') || ascii(head, 0, 'GIF89a')) || head.length < 10) return false;
+        const printable = c => c >= 0x20 && c <= 0x7e;
+        return printable(head[6]) && printable(head[7]);
+    }
+
+    // ---------------------------------------------------------------- file names for storage
+    const RESERVED_NAMES = /^(con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$)$/i;
+    // control characters, bidirectional overrides (the "photo-gpj.exe" trick), zero-width characters, line separators, byte order mark
+    const INVISIBLE = /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff\ufff9-\ufffb]/g;
+    /**
+     * A file name that is safe to store and to show: no path, no control or bidi characters, no characters that file systems or shells treat specially, no reserved
+     * Windows names, no trailing dots or spaces, a bounded length with the extension kept, and (default) only the LAST dot left, so `invoice.php.jpg` cannot be
+     * handled as PHP by a server that reads the first extension. Idempotent: safeName(safeName(x)) === safeName(x).
+     * options: replacement ('_'), maxLength (100, counts characters), lowercase (false), ascii (false: strip accents and turn other characters into the replacement),
+     * dots ('replace' (default) | 'keep'), fallback ('file' for a name that ends up empty), extensionMaxLength (16).
+     */
+    function safeName(name, options) {
+        const o = options || {};
+        const rep = typeof o.replacement === 'string' && !/[\\/:*?"<>|\u0000-\u001f.\s]/.test(o.replacement) ? o.replacement : '_';
+        const max = isNum(o.maxLength) && o.maxLength >= 8 ? Math.floor(o.maxLength) : 100;
+        const extMax = isNum(o.extensionMaxLength) && o.extensionMaxLength >= 2 ? Math.floor(o.extensionMaxLength) : 16;
+        let s = String(name === null || name === undefined ? '' : name);
+        try { s = s.normalize('NFC'); } catch (e) { /* very old engines */ }
+        s = s.slice(Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\')) + 1);          // no path
+        s = s.replace(INVISIBLE, '');
+        if (o.ascii) {
+            try { s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { /* */ }
+            s = s.replace(/[^\x20-\x7e]/g, rep);
+        }
+        s = s.replace(/[<>:"|?*\u0000-\u001f\\\/]/g, rep).replace(/\s+/g, ' ').trim();
+        s = s.replace(/^[.\s]+/, '').replace(/[.\s]+$/, '');                         // no leading or trailing dots and spaces
+        let base = s, ext = '';
+        const dot = s.lastIndexOf('.');
+        if (dot > 0 && dot < s.length - 1) { base = s.slice(0, dot); ext = s.slice(dot + 1); }
+        if (ext.length > extMax || /\s/.test(ext)) { base = s; ext = ''; }          // "no.extension at all, just words" is not an extension
+        if (o.dots !== 'keep') base = base.replace(/\./g, rep);
+        base = base.replace(/^[.\s]+|[.\s]+$/g, '');
+        if (!base) base = typeof o.fallback === 'string' && o.fallback ? o.fallback : 'file';
+        if (RESERVED_NAMES.test(base)) base = rep + base;
+        const room = max - (ext ? ext.length + 1 : 0);
+        if (Array.from(base).length > room) base = Array.from(base).slice(0, Math.max(1, room)).join('').replace(/[.\s]+$/g, '') || 'file';
+        let out = ext ? base + '.' + ext : base;
+        if (o.lowercase) out = out.toLowerCase();
+        return out;
+    }
+    /** What the content says the file is: { type, mime, extensions, executable } or null when no known signature matches (undefined: unreadable). Never trust file.type or the name. */
+    async function detect(file) {
+        const s = await detectSignature(file);
+        if (s === undefined || s === null) return s;
+        return { type: s.name, mime: s.mime || null, extensions: (s.exts || []).slice(), executable: !!s.executable };
+    }
+
     // ------------------------------------------------------------------ image inspection
     async function readImageSize(file, timeoutMs) {
         if (typeof root.document === 'undefined' && typeof root.createImageBitmap !== 'function') return null; // no DOM (Node)
@@ -1215,6 +1316,20 @@
             if (details.length) return finish(details, cfg);
         }
 
+        // ---- a script, program or archive hidden inside a picture (polyglot)
+        if (sig && !sig.executable && file.size > 0 && cfg.polyglot !== false && cfg.validate?.polyglot !== false &&
+            (sig.mime && sig.mime.indexOf('image/') === 0 || (cfg.polyglot === 'all' && !['zip', 'ole', 'rtf', 'postscript', 'sqlite', 'tar', 'gzip', 'xz', 'zstd', 'bzip2', '7z', 'rar', 'cab', 'shebang'].includes(sig.name)))) {
+            const win = Math.max(4, isNum(cfg.polyglotScanKB) ? cfg.polyglotScanKB : 256) * 1024;
+            let hidden = null;
+            try {
+                const head = await readRange(file, 0, Math.min(file.size, win));
+                if (sig.name === 'gif' && gifIsScript(head)) hidden = 'scripts';
+                if (!hidden) hidden = findHidden(head, 0, file.size, sig.name, true);
+                if (!hidden && file.size > win) { const from = Math.max(win, file.size - win); hidden = findHidden(await readRange(file, from, file.size), from, file.size, sig.name, true); }
+            } catch (e) { /* unreadable: the other checks decide */ }
+            if (hidden) { add('DANGEROUS_CONTENT', { detected: phrase(hidden) }); return finish(details, cfg); }
+        }
+
         // ---- SVG can carry scripts
         if (ext === '.svg' && cfg.scanSvg !== false && file.size > 0 && file.size <= 5 * 1048576 && typeof file.text === 'function') {
             const txt = await file.text();
@@ -1483,7 +1598,7 @@
     }
 
     return {
-        version: '2.10.0',
+        version: '2.11.0',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         isValid,         // async (files | <input> | selector, config) -> true / false
         guard,           // (input, config, { onSubmit, messageElement }) : check the file input when its form is submitted, direct or AJAX
@@ -1505,6 +1620,8 @@
         bind,
         defaultMessages,
         detectSignature, // async (File) -> signature | null | undefined
+        detect,          // async (File) -> { type, mime, extensions, executable } | null: what the content is, whatever the name or file.type says
+        safeName,        // (name, options?) -> a file name that is safe to store: no path, bidi / control characters, reserved names, one dot
         getCategory,
         formatBytes,
         units,           // { B, KB, MB, GB }: the size labels (a language pack changes them)
