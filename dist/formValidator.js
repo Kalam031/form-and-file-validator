@@ -1,7 +1,9 @@
 /*!
- * FormValidator v2.14.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.15.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.15.0 Rules requiredIf, dateAfter, dateBefore, atLeastOne, sumEquals (other fields come from the form, options.values or the data). inst.state / getState() / onStateChange():
+ *          touched, dirty, pending, errors, submit count. inst.validateStep(scope) for wizards. FormValidator.explain(value, rules): why a value passes or fails, rule by rule.
  *   2.14.0 Field arrays and nested data: path keys ('user.email', 'items[0].qty') and wildcards ('items[].qty') in checkValues / schema / forms; rules unique, minItems, maxItems;
  *          schema output is nested like the input; ValidationError.errors are keyed by the concrete path.
  *   2.13.0 ASP.NET unobtrusive validation: `unobtrusive: true` reads data-val-* (required, length, range, regex, equalto, remote, email, url, ... + custom adapters),
@@ -112,6 +114,11 @@
         minWords: 'Please enter at least {min} words.',
         maxWords: 'Please enter no more than {max} words.',
         unique: 'This value is used more than once.',
+        requiredIf: 'This field is required.',
+        dateAfter: 'Please enter a later date.',
+        dateBefore: 'Please enter an earlier date.',
+        atLeastOne: 'Please fill in at least one of these fields.',
+        sumEquals: 'The values must add up to {total}.',
         minItems: 'Please add at least {min}.',
         maxItems: 'Please add no more than {max}.',
         notEqualTo: 'This value is not allowed.',
@@ -474,6 +481,44 @@
     });
     R('minItems', (v, r, env) => !env.array || env.array.length >= Number(r.min !== undefined ? r.min : r.param), { runOnEmpty: true });
     R('maxItems', (v, r, env) => !env.array || env.array.length <= Number(r.max !== undefined ? r.max : r.param), { runOnEmpty: true });
+    // rules that look at other fields: the other values come from checkValue's options.values, or from the form
+    const valuesOf = env => env.values || (env.inst && isFn(env.inst.getValues) ? env.inst.getValues() : null);
+    /** The other field as trimmed text (checkbox groups joined with ','), undefined when it is not known. */
+    function otherText(env, name) {
+        const vals = valuesOf(env);
+        if (!vals || name === undefined || name === null) return undefined;
+        let v = vals[name];
+        if (v === undefined) { const c = canonKey(String(name)); if (c) v = vals[c]; }
+        if (v === undefined) return undefined;
+        return v === null ? '' : (Array.isArray(v) ? v.join(',') : String(v)).trim();
+    }
+    const ruleFields = r => [].concat(r.fields !== undefined ? r.fields : (r.param !== undefined ? r.param : []));
+    /** Names of the other fields a rule depends on (so a form re-checks it when they change). */
+    const ruleTargetNames = r => {
+        if (r.type === 'equalTo' || r.type === 'notEqualTo') return r.target ? [String(r.target).replace(/^#/, '')] : [];
+        if (r.type === 'requiredIf' || r.type === 'dateAfter' || r.type === 'dateBefore') return r.field ? [String(r.field)] : [];
+        if (r.type === 'atLeastOne' || r.type === 'sumEquals') return ruleFields(r).map(String);
+        return [];
+    };
+    // requiredIf: { field: 'country', equals: 'US' } | { field, in: ['US','CA'] } | { field, notEquals: 'x' } | 'country' (required whenever that field is filled in)
+    R('requiredIf', (v, r, env) => {
+        const other = otherText(env, r.field);
+        if (other === undefined) return true;
+        const applies = r.equals !== undefined ? other === String(r.equals) : Array.isArray(r.in) ? r.in.map(String).indexOf(other) >= 0 : r.notEquals !== undefined ? other !== String(r.notEquals) : other !== '';
+        return !applies || v !== '';
+    }, { runOnEmpty: true });
+    // dateAfter / dateBefore: { field: 'start', inclusive: true, format: 'd/M/y' }  (nothing to compare with: no opinion)
+    R('dateAfter', (v, r, env) => { const o = otherText(env, r.field); if (o === undefined || o === '') return true; const a = dateValue(v, r), b = dateValue(o, r); return !isNaN(a) && !isNaN(b) && (r.inclusive ? a >= b : a > b); });
+    R('dateBefore', (v, r, env) => { const o = otherText(env, r.field); if (o === undefined || o === '') return true; const a = dateValue(v, r), b = dateValue(o, r); return !isNaN(a) && !isNaN(b) && (r.inclusive ? a <= b : a < b); });
+    // atLeastOne: { fields: ['phone', 'email'] }: this field or one of the others must be filled in
+    R('atLeastOne', (v, r, env) => v !== '' || ruleFields(r).some(n => { const t = otherText(env, n); return t !== undefined && t !== ''; }), { runOnEmpty: true });
+    // sumEquals: { fields: ['b', 'c'], total: 100 }: this value plus the others add up to the total (empty counts as 0)
+    R('sumEquals', (v, r, env) => {
+        const parts = [v].concat(ruleFields(r).map(n => otherText(env, n) || ''));
+        let sum = 0;
+        for (const p of parts) { if (p === '') continue; const x = num(p); if (isNaN(x)) return false; sum += x; }
+        return Math.abs(sum - Number(r.total)) < 1e-9;
+    }, { runOnEmpty: true });
     const targetOf = (r, env) => r.selector ? safeQuery(env.form, r.selector) : safeQuery(env.form, `[name="${esc(r.target)}"]`);
     R('notEqualTo', (v, r, env) => { const t = targetOf(r, env); return !t || v !== t.value.trim(); });
     R('equalTo', (v, r, env) => {
@@ -605,6 +650,7 @@
         startsWith: p => ({ value: p }), endsWith: p => ({ value: p }), contains: p => ({ value: p }),
         minWords: p => ({ min: +p }), maxWords: p => ({ max: +p }), minItems: p => ({ min: +p }), maxItems: p => ({ max: +p }),
         unique: p => (p && typeof p === 'object' ? p : {}),
+        requiredIf: p => ({ field: p }), dateAfter: p => ({ field: p }), dateBefore: p => ({ field: p }), atLeastOne: p => ({ fields: [].concat(p) }),
         equalTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
         notEqualTo: p => selectorLike(String(p)) ? { selector: p } : { target: p },
         minChecked: p => ({ min: +p }), maxChecked: p => ({ max: +p }), minFiles: p => ({ min: +p }), maxFiles: p => ({ max: +p }),
@@ -751,7 +797,8 @@
             _listeners: [],
             _timers: new Map(),
             _busy: false, _bypass: false, _submitted: false,
-            _pending: new Map(), fieldMessages
+            _pending: new Map(), fieldMessages,
+            _touched: new Set(), _initial: null, _submitCount: 0, _stateSubs: new Set()
         };
         Object.keys(opts.rules || {}).forEach(n => { inst.rules[n] = normalizeRules(opts.rules[n]); });
 
@@ -980,7 +1027,7 @@
 
         function removeError(unit) {
             const rec = inst._errors.get(unit.key);
-            if (rec) { rec.el.remove(); inst._errors.delete(unit.key); refreshSummary(); }
+            if (rec) { rec.el.remove(); inst._errors.delete(unit.key); refreshSummary(); scheduleState(); }
             const slot = valmsgFor(unit.fields[0]);
             if (slot) {
                 slot.classList.remove('field-validation-error'); slot.classList.add('field-validation-valid');
@@ -1013,6 +1060,7 @@
             place(err, unit);
             inst._errors.set(unit.key, { el: err, message, unit, code: code || 'custom' });
             refreshSummary();
+            scheduleState();
             unit.fields.forEach(f => {
                 if (isFn(cfg.highlight)) guard(cfg.highlight, undefined, f, unit);
                 if (cfg.invalidClass) cfg.invalidClass.split(/\s+/).forEach(c => c && f.classList.add(c));
@@ -1030,6 +1078,7 @@
             if (!cfg.pendingClass) return;
             const n = (inst._pending.get(unit.key) || 0) + (on ? 1 : -1);
             inst._pending.set(unit.key, Math.max(0, n));
+            scheduleState();
             if (on && n === 1) unit.fields.forEach(f => { cfg.pendingClass.split(/\s+/).forEach(c => c && f.classList.add(c)); f.setAttribute('aria-busy', 'true'); });
             if (!on && n <= 0) unit.fields.forEach(f => { cfg.pendingClass.split(/\s+/).forEach(c => c && f.classList.remove(c)); f.removeAttribute('aria-busy'); });
         }
@@ -1142,14 +1191,14 @@
         }
 
         async function validateAll(o) {
-            if (o && o.submit) inst._submitted = true;
+            if (o && o.submit) { inst._submitted = true; inst._submitCount++; scheduleState(); }
             const units = allUnits();
             const results = await Promise.all(units.map(u => validateUnit(u, o)));
             return finishAll(units, results, o);
         }
 
         function validateAllSync(o) {
-            if (o && o.submit) inst._submitted = true;
+            if (o && o.submit) { inst._submitted = true; inst._submitCount++; scheduleState(); }
             const units = allUnits();
             return finishAll(units, units.map(u => validateUnitSync(u, o)), o);
         }
@@ -1175,7 +1224,7 @@
                 const out = [];
                 Object.keys(inst.rules).forEach(n => {
                     const hit = r => ((r.type === 'equalTo' || r.type === 'notEqualTo') && (r.target === el.name || (r.selector && safeMatches(el, r.selector))))
-                        || (r.dependsOn && safeMatches(el, r.dependsOn));
+                        || (r.dependsOn && safeMatches(el, r.dependsOn)) || ruleTargetNames(r).indexOf(el.name) >= 0;
                     if (inst.rules[n].some(hit)) out.push(...unitsFor(n));
                 });
                 if (isFn(cfg.fieldRules)) { // rules that come from fieldRules() are not stored in inst.rules
@@ -1208,6 +1257,8 @@
                 const el = evt.target;
                 const type = evt.type === 'focusout' ? 'blur' : evt.type;
                 if (!el || !el.name) return;
+                if (type === 'blur') inst._touched.add(el.name);
+                scheduleState();
                 const unit = unitOf(el);
 
                 dependents(el).forEach(d => { // works even when `el` has no rules of its own
@@ -1279,10 +1330,44 @@
             }, true);
 
             listen(form, 'reset', () => setTimeout(() => inst.resetForm(), 0));
+            snapshotInitial();
             if (autoCfg) {
                 runAutoAttributes();
                 listen(form, 'focusin', e => { if (e.target && e.target.name) applyAutoAttributes([e.target]); });   // fields added later
             }
+        }
+
+        // ---- state: what a UI needs to know about the form (touched, dirty, pending, errors, submit count)
+        const textOf = v => JSON.stringify(v === undefined ? null : v);
+        let stateScheduled = false;
+        function scheduleState() {
+            if (!inst._stateSubs.size || stateScheduled) return;
+            stateScheduled = true;
+            Promise.resolve().then(() => { stateScheduled = false; const st = inst.getState(); Array.from(inst._stateSubs).forEach(fn => guard(fn, undefined, st)); });
+        }
+        function snapshotInitial() { inst._initial = {}; const vals = collectValues(); Object.keys(vals).forEach(k => { inst._initial[k] = textOf(vals[k]); }); }
+        function getState() {
+            if (!inst._initial) snapshotInitial();
+            const values = collectValues(), fields = {};
+            let dirty = false, touched = false, pending = false, errorCount = 0;
+            allUnits().forEach(u => {
+                const name = u.fields[0].name, err = inst._errors.get(u.key);
+                const isDirty = textOf(values[name]) !== (name in inst._initial ? inst._initial[name] : textOf(undefined));
+                const isTouched = inst._touched.has(name), isPending = (inst._pending.get(u.key) || 0) > 0;
+                if (err) errorCount++;
+                dirty = dirty || isDirty; touched = touched || isTouched; pending = pending || isPending;
+                fields[name] = { value: values[name], dirty: isDirty, pristine: !isDirty, touched: isTouched, pending: isPending, valid: !err, error: err ? err.message : null, code: err ? err.code : null };
+            });
+            return { valid: errorCount === 0, errorCount, dirty, pristine: !dirty, touched, validating: pending, submitCount: inst._submitCount, submitted: inst._submitCount > 0, fields };
+        }
+        /** The units of the fields inside a step: an element or selector (every field in it), or a list of field names. */
+        function unitsInScope(scope) {
+            if (Array.isArray(scope)) return [].concat(...scope.map(n => unitsFor(String(n))));
+            let el = scope;
+            if (typeof scope === 'string') el = safeQuery(form, scope) || safeQuery(root.document, scope);
+            if (el && el.jquery) el = el[0];
+            if (!el || !el.contains) return [];
+            return allUnits().filter(u => u.fields.some(f => el === f || el.contains(f)));
         }
 
         // ---- valid state: a class on fields that were checked and hold a valid value (reward early)
@@ -1596,6 +1681,19 @@
                 inst._listeners.push(stop);
                 return stop;
             },
+            /** What a UI needs: { valid, errorCount, dirty, pristine, touched, validating, submitCount, submitted, fields: { name: { value, dirty, pristine, touched, pending, valid, error, code } } } */
+            getState,
+            /** Calls fn(state) (once per tick) when errors, touched, dirty, pending or the submit count change. Returns the unsubscribe function. */
+            onStateChange: fn => { if (!isFn(fn)) return () => {}; inst._stateSubs.add(fn); return () => { inst._stateSubs.delete(fn); }; },
+            /**
+             * Wizards: checks only the fields inside a step. scope: an element, a selector or a list of names. Shows the messages, focuses the first invalid field,
+             * calls onError / fires fv:invalid for that step, and resolves to true when the step is valid. Fields in hidden steps are skipped as always.
+             */
+            validateStep: async (scope, o) => {
+                const units = unitsInScope(scope);
+                const results = await Promise.all(units.map(u => validateUnit(u, o)));
+                return finishAll(units, results, o);
+            },
             validateSync: o => validateAllSync(o),
             validateElementSync: (el, o) => { const u = unitOf(el); return u ? validateUnitSync(u, o) : true; },
             validateElement: (el, o) => { const u = unitOf(el); return u ? validateUnit(u, o) : Promise.resolve(true); },
@@ -1612,7 +1710,7 @@
             /** Rebuilds the error summary (errorSummary option) from the errors that show now; focus: true moves keyboard focus to it. */
             showSummary: focus => { if (summaryCfg) renderSummary(!!focus); return summaryEl; },
             clearError: name => unitsFor(name).forEach(removeError),
-            resetForm: () => { inst.clearErrors(); inst._submitted = false; inst._tokens.clear(); },
+            resetForm: () => { inst.clearErrors(); inst._submitted = false; inst._submitCount = 0; inst._touched.clear(); inst._tokens.clear(); snapshotInitial(); scheduleState(); },
             isSubmitted: () => inst._submitted,
             validateField: name => Promise.all(unitsFor(name).map(u => validateUnit(u))).then(r => r.every(Boolean)),
             clearErrors: () => { allUnits().forEach(removeError); Array.from(inst._errors.values()).forEach(r => removeError(r.unit)); },
@@ -1633,6 +1731,7 @@
             },
             attach
         });
+        Object.defineProperty(inst, 'state', { get: getState, enumerable: true });   // inst.state is getState() without the parentheses
         return inst;
     }
 
@@ -1806,7 +1905,7 @@
             const v = rule.type === 'pwcheck' ? raw : trimmed;
             const empty = v === '';
             if (!env) env = { value: v, empty, count: empty ? 0 : 1, files: null, field: null, fields: [], form: null, inst: null, badInput: false,
-                config: { passwordStrength: o.passwordStrength || {} }, context: o.context || {}, column: o.column, index: o.index, array: o.array };
+                config: { passwordStrength: o.passwordStrength || {} }, context: o.context || {}, column: o.column, index: o.index, array: o.array, values: o.values };
             else { env.value = v; env.empty = empty; env.count = empty ? 0 : 1; }
             if (isFn(rule.when) && !guard(rule.when, true, v, env)) continue;
             if (empty && !def.runOnEmpty && rule.type !== 'equalTo') continue;
@@ -1871,7 +1970,7 @@
     }
     function targetsIn(rules) {
         const list = [];
-        (Array.isArray(rules) ? rules : normalizeRules(rules)).forEach(r => { if ((r.type === 'equalTo' || r.type === 'notEqualTo') && r.target) list.push(String(r.target).replace(/^#/, '')); });
+        (Array.isArray(rules) ? rules : normalizeRules(rules)).forEach(r => { ruleTargetNames(r).forEach(t => list.push(t)); });
         return list;
     }
 
@@ -1884,6 +1983,34 @@
      * rules on a wildcard column may use `unique` ({ 'items[].sku': ['required', { type: 'unique', ignoreCase: true }] }).
      * equalTo / notEqualTo targets are looked up in the same row first ('items[].password' + target 'confirm'), then as an absolute path.
      */
+    /**
+     * Why does this value pass or fail? One entry per rule, in the order they run:
+     *   FormValidator.explain('ab', ['required', { type: 'minlength', min: 3 }, 'email'])
+     *   -> [{ rule: 'required', passed: true }, { rule: 'minlength', param: [3], passed: false, message: 'Please enter at least 3 characters.' }, { rule: 'email', passed: false, ... }]
+     * Unlike checkValue it does not stop at the first failure, and it says when a rule is skipped (empty value, a `when` that said no) or cannot run here.
+     * options: the same as checkValue (trim, values, messages, ...).
+     */
+    function explain(value, rules, options) {
+        const o = options || {};
+        return normalizeRules(rules).map(rule => {
+            const entry = { rule: rule.type, code: typeof rule.code === 'string' && rule.code ? rule.code : rule.type };
+            const ps = paramsOf(rule);
+            if (ps.length) entry.param = ps;
+            const def = validators[rule.type];
+            if (!def) return Object.assign(entry, { passed: null, skipped: 'unknown rule' });
+            if (def.remote || NEEDS_FORM.includes(rule.type)) return Object.assign(entry, { passed: null, skipped: 'needs a form, files or a server' });
+            const raw = value == null ? '' : String(value), trimmed = o.trim === false ? raw : raw.trim();
+            const v = rule.type === 'pwcheck' ? raw : trimmed;
+            if (isFn(rule.when) && !guard(rule.when, true, v, null)) return Object.assign(entry, { passed: null, skipped: 'its "when" condition is false' });
+            if (v === '' && !def.runOnEmpty && rule.type !== 'equalTo') return Object.assign(entry, { passed: true, skipped: 'empty value: only required-type rules check blanks' });
+            let r;
+            try { r = checkRules(value, [rule], o); } catch (e) { return Object.assign(entry, { passed: null, skipped: String(e && e.message) }); }
+            entry.passed = r.valid;
+            if (!r.valid) entry.message = r.message;
+            return entry;
+        });
+    }
+
     function checkValues(data, schema, options) { return runValues(data, schema, options || {}, false); }
 
     /** The work of checkValues. `normalized`: the rules per key are already lists of rule objects (schema() prepares them once). */
@@ -1900,7 +2027,7 @@
             const list = normalized ? schema[name] : normalizeRules(schema[name]);
             const m = meta ? meta.by[name] : null;
             const wantsArray = m ? m.wantsArray : list.some(r => r.type === 'minItems' || r.type === 'maxItems');
-            const needsValues = m ? m.needsValues : list.some(r => r.type === 'equalTo' || r.type === 'notEqualTo');
+            const needsValues = m ? m.needsValues : list.some(r => ruleTargetNames(r).length > 0);
             if (pathKeys.indexOf(name) < 0) {   // a plain field, like before
                 const val = data ? data[name] : undefined;
                 const opts = (needsValues || wantsArray) ? Object.assign({}, o, { values: needsValues ? baseValues() : o.values, array: wantsArray ? (Array.isArray(val) ? val : (val == null ? [] : null)) : undefined }) : o;
@@ -1966,7 +2093,7 @@
 
         const pathFields = fields.filter(f => hasPathChars(f));
         const meta = { keys: fields, pathKeys: pathFields, by: Object.create(null) };   // what runValues would otherwise work out on every call
-        fields.forEach(f => { meta.by[f] = { wantsArray: compiled[f].some(r => r.type === 'minItems' || r.type === 'maxItems'), needsValues: compiled[f].some(r => r.type === 'equalTo' || r.type === 'notEqualTo') }; });
+        fields.forEach(f => { meta.by[f] = { wantsArray: compiled[f].some(r => r.type === 'minItems' || r.type === 'maxItems'), needsValues: compiled[f].some(r => ruleTargetNames(r).length > 0) }; });
         function run(input) {
             if (input === null || typeof input !== 'object' || Array.isArray(input)) return { issues: [{ message: 'Expected an object.', path: [] }] };
             const data = Object.assign({}, input);
@@ -2373,13 +2500,14 @@
         ValidationError,
         checkValue,
         checkValues,
+        explain,       // (value, rules, options?) -> [{ rule, code, param, passed, message?, skipped? }]: why a value passes or fails, rule by rule
         registerRule,
         addMethod,
         format,
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.14.0'
+        version: '2.15.0'
     }, CORE ? {} : {
         init,
         unobtrusive,   // ASP.NET data-val-* support: unobtrusive.parse(scope), .auto(), .adapters.add / addBool / addSingleVal / addMinMax

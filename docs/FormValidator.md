@@ -1,4 +1,4 @@
-# FormValidator v2.14.0 — Documentation
+# FormValidator v2.15.0 — Documentation
 
 ## Overview
 
@@ -213,6 +213,43 @@ No DOM is needed, so this runs in Node, in tests and in the Angular validators. 
 - **Styling and scripting**: `.fv-error`, `fv-field[data-state="invalid"]`, `[data-shown]`, `input:user-invalid`, and `fv-field:state(user-invalid)` where the browser has custom states. Event `fv-validate` (`detail: { valid, rule, code, message, shown }`), methods `validate()`, `reportValidity()`, `reset()`, `setServerError(text)`. Language packs and message overrides (`messages='{"required":"Fill me"}'`) work as everywhere.
 - Like the native pseudo-classes, `checkValidity()` fires `invalid`, so a field that gets one shows its message.
 - Another tag name: `FormValidator.fieldElement.define('my-field')`.
+
+### Cross-field rules, state, wizard steps and explain
+
+**Rules that look at other fields** (the other values come from the form, or from `checkValue(value, rules, { values })`, or from the data in `checkValues` / `schema`, same row first):
+
+| Rule | Example | Meaning |
+| --- | --- | --- |
+| `requiredIf` | `{ requiredIf: 'country' }`, `{ requiredIf: { field: 'country', equals: 'US' } }`, `{ field, in: ['US', 'CA'] }`, `{ field, notEquals: 'x' }` | Required when the other field is filled in / equals / is one of / differs. A checkbox group counts as filled in when something is checked. |
+| `dateAfter`, `dateBefore` | `{ dateAfter: 'start' }`, `{ dateAfter: { field: 'start', inclusive: true, format: 'd/M/y' } }` | This date is later / earlier than the other field's (no opinion while the other is empty). |
+| `atLeastOne` | `{ atLeastOne: ['phone', 'email'] }` | This field or one of the listed fields is filled in. |
+| `sumEquals` | `{ sumEquals: { fields: ['p2', 'p3'], total: 100 } }` | This value plus the listed fields add up to `total` (empty counts as 0). |
+
+On a form, a field with such a rule is checked again when one of the fields it looks at changes. Messages exist in all 13 language packs (`requiredIf` says "required").
+
+**`inst.state`** (or `inst.getState()`): what a UI needs without keeping its own bookkeeping.
+
+```js
+inst.state;
+// { valid, errorCount, dirty, pristine, touched, validating, submitCount, submitted,
+//   fields: { email: { value, dirty, pristine, touched, pending, valid, error, code } } }
+const stop = inst.onStateChange(state => render(state));   // once per tick when errors, touched, dirty, pending or the submit count change
+```
+
+`dirty` compares with the value the form had when the validator started (or after `resetForm()`), so typing something and then back is pristine again; `touched` is set when the user leaves a field; `pending` while a remote check runs; `submitCount` counts submit attempts. `resetForm()` starts over.
+
+**Wizard steps**: `await inst.validateStep('#step1')` (an element, a selector or a list of field names) validates only the fields inside the step, shows the messages, focuses the first invalid one and answers `true` or `false`; it fires `onError` / `fv:invalid` for that step. Fields in hidden steps are skipped, so `validate()` at the end still checks everything.
+
+**`FormValidator.explain(value, rules, options)`** answers "why does this value fail?" rule by rule, without stopping at the first failure:
+
+```js
+FormValidator.explain('ab', ['required', { type: 'minlength', min: 3 }, 'email']);
+// [ { rule: 'required', code: 'required', passed: true },
+//   { rule: 'minlength', code: 'minlength', param: [3], passed: false, message: 'Please enter at least 3 characters.' },
+//   { rule: 'email', code: 'email', passed: false, message: 'Please enter a valid email address.' } ]
+```
+
+A rule that is skipped says why (`skipped: 'empty value: ...'`, a `when` that said no, `unknown rule`, a rule that needs a form).
 
 ### Smaller builds: the core and your own subset
 
@@ -940,6 +977,7 @@ The project is tested three ways. `npm test` runs about 370 tests in jsdom (ever
 
 The newest entries (each source file also keeps its own changelog in its header; the package changelog is `CHANGELOG.md`):
 
+- **2.15.0**: `requiredIf`, `dateAfter`, `dateBefore`, `atLeastOne`, `sumEquals`; `inst.state` / `getState()` / `onStateChange()`; `inst.validateStep()`; `FormValidator.explain()`.
 - **2.14.0**: field arrays and nested data: wildcard rule keys (`items[].qty`) and nested paths in `checkValues()` / `schema()` / forms, rules `unique`, `minItems`, `maxItems`; schema output is nested.
 - **element 1.0.0**: `<fv-field>`, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: `dist/formValidator.element.js`).
 - **2.13.0**: ASP.NET `data-val-*` (unobtrusive validation): `unobtrusive: true`, `FormValidator.unobtrusive.parse()` / `.auto()` / `.adapters`, `$.validator.unobtrusive` on the jQuery layer.

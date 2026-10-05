@@ -151,6 +151,14 @@ export interface InitOptions {
     messages?: Record<string, string | Record<string, string> | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
 }
 
+export interface FieldState { value: unknown; dirty: boolean; pristine: boolean; touched: boolean; pending: boolean; valid: boolean; error: string | null; code: string | null }
+export interface FormState {
+    valid: boolean; errorCount: number; dirty: boolean; pristine: boolean; touched: boolean; validating: boolean;
+    submitCount: number; submitted: boolean;
+    fields: Record<string, FieldState>;
+}
+export interface ExplainEntry { rule: string; code: string; param?: unknown[]; passed: boolean | null; message?: string; skipped?: string }
+
 export interface LintIssue { field: HTMLElement; name: string; code: 'autocomplete-off' | 'password-autocomplete' | 'type-number'; message: string; fix: string }
 export interface AttributeChange { field: HTMLElement; name: string; attribute: string; value: string }
 
@@ -206,6 +214,13 @@ export interface FormInstance {
     watchServer(url: string | (PrecognitionOptions & { url: string; delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }), options?: PrecognitionOptions & { delay?: number; exclude?: string[]; validateEmpty?: boolean; excludePasswords?: boolean }): () => void;
     /** Shows a message on a field. `code` (default 'server') is written to the message's data-code and to getErrors(). */
     setError(name: string, message: string, code?: string): boolean;
+    /** What a UI needs: validity, touched, dirty, pending, errors and the submit count, per field and for the form. Same as getState(). */
+    readonly state: FormState;
+    getState(): FormState;
+    /** Calls fn(state) (once per tick) when errors, touched, dirty, pending or the submit count change. Returns the unsubscribe function. */
+    onStateChange(fn: (state: FormState) => void): () => void;
+    /** Wizards: validates only the fields inside a step (element, selector or list of names), shows and focuses; true when the step is valid. */
+    validateStep(scope: string | Element | ArrayLike<string>, options?: { focus?: boolean }): Promise<boolean>;
     /** What in this form's markup browsers and password managers trip over (autocomplete="off" on logins, type="number" for codes ...). */
     lint(): LintIssue[];
     /** Applies autoAttributes to fields added after init (it also happens when such a field gets focus). Returns what it set. */
@@ -480,6 +495,8 @@ export interface FormValidatorStatic {
     readonly fieldElement?: FormValidatorFieldElement;
     /** ASP.NET MVC / Razor `data-val-*` support (a drop-in for jquery.validate.unobtrusive.js, no jQuery needed). */
     readonly unobtrusive: FormValidatorUnobtrusive;
+    /** Why a value passes or fails, rule by rule (no short circuit; skipped rules say why). */
+    explain(value: unknown, rules: RulesForField, options?: ValueCheckOptions): ExplainEntry[];
     /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */
     serverErrors(body: unknown, options?: { format?: ServerErrorFormat }): ServerErrorsResult;
     /** Asks your real endpoint whether the values would pass (Laravel Precognition protocol); nothing is saved. Never throws. */

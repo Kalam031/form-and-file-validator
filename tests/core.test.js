@@ -90,8 +90,8 @@ test('build-subset: the unminified output keeps readable source and marks what w
 
 // ---------------------------------------------------------------- size budget (gzip, bytes): raise a number only on purpose
 const BUDGET = {
-    'formValidator.core.min.js': 13500,
-    'formValidator.min.js': 29000,
+    'formValidator.core.min.js': 14500,
+    'formValidator.min.js': 30500,
     'fileValidator.min.js': 23000,
     'fileValidator.widget.min.js': 7500,
     'formValidator.jquery.min.js': 10500,

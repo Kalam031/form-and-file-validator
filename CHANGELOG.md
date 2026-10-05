@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.17.0
+- **Cross-field rules** (FormValidator 2.15.0): `requiredIf` (filled in / `equals` / `in` / `notEquals`), `dateAfter` / `dateBefore` (`inclusive`, `format`), `atLeastOne`, `sumEquals`. They read the other fields from the form, from `checkValue`'s `values`, or from the data in `checkValues` / `schema` (same row first in arrays), and a form re-checks the field when the fields it looks at change. Messages in all 13 language packs.
+- **`inst.state`** / `getState()` / `onStateChange(fn)`: per field and overall: value, dirty (against the starting value), pristine, touched, pending, valid, error, code; `submitCount`, `submitted`, `validating`, `errorCount`. `resetForm()` starts over.
+- **`inst.validateStep(scope)`** for wizards: validates only the fields inside a step, shows the messages, focuses the first invalid field; hidden steps are skipped.
+- **`FormValidator.explain(value, rules)`**: why a value passes or fails, rule by rule, with the reason when a rule is skipped.
+
 ## 3.16.0
 - **Svelte, Lit and Solid bindings**: `form-and-file-validator/svelte` (an action plus `errors` / `valid` / `submitting` stores that follow the store contract, for Svelte 3, 4 and 5), `form-and-file-validator/lit` (`FvFormController`, a ReactiveController, shadow or light DOM), `form-and-file-validator/solid` (`createFormValidator()` with reactive accessors). Each gives `handleSubmit`, `validate`, `getValues`, `setServerErrors` and `reset`, and updates while the user fixes fields. Tested on the real libraries (Svelte's `get()`, a LitElement in jsdom, Solid's reactive build).
 

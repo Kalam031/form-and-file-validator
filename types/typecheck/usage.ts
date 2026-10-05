@@ -350,3 +350,14 @@ import { FvFormController } from '../lit';
     const v: boolean | null = so.valid();
     void [pending, errs, v, FvFormController];
 }
+
+// ---------------------------------------------------------------- state, steps, explain
+{
+    const fi = FormValidator.init({ formId: 'w', rules: { a: { requiredIf: { field: 'b', equals: 'x' } }, c: { dateAfter: 'd' }, e: { atLeastOne: ['f'] }, g: { sumEquals: { fields: ['h'], total: 100 } } } });
+    const st = fi.state;
+    const dirty: boolean = st.fields.a.dirty;
+    const stop: () => void = fi.onStateChange(s => { const n: number = s.submitCount; void n; });
+    const step: Promise<boolean> = fi.validateStep('#step1');
+    const why = FormValidator.explain('x', ['required', 'email']).map(e => e.passed);
+    void [dirty, stop, step, why];
+}

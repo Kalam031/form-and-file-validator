@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.16.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.17.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -29,7 +29,7 @@
     </ul>
   </nav>
   <main id="content">
-<h1 id="formvalidator-v2140-documentation">FormValidator v2.14.0 — Documentation</h1>
+<h1 id="formvalidator-v2150-documentation">FormValidator v2.15.0 — Documentation</h1>
 <h2 id="overview">Overview</h2>
 <p>FormValidator checks an HTML form before it is submitted, shows a clear message under each bad field, and lets the form through only when everything is valid. It has no dependencies. jQuery, Select2 and Bootstrap are optional.</p>
 <p><strong>What it can do</strong></p>
@@ -454,6 +454,53 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 <li>Like the native pseudo-classes, <code>checkValidity()</code> fires <code>invalid</code>, so a field that gets one shows its message.</li>
 <li>Another tag name: <code>FormValidator.fieldElement.define(&#39;my-field&#39;)</code>.</li>
 </ul>
+<h3 id="cross-field-rules-state-wizard-steps-and-explain">Cross-field rules, state, wizard steps and explain</h3>
+<p><strong>Rules that look at other fields</strong> (the other values come from the form, or from <code>checkValue(value, rules, { values })</code>, or from the data in <code>checkValues</code> / <code>schema</code>, same row first):</p>
+<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Example</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>requiredIf</code></td>
+<td><code>{ requiredIf: &#39;country&#39; }</code>, <code>{ requiredIf: { field: &#39;country&#39;, equals: &#39;US&#39; } }</code>, <code>{ field, in: [&#39;US&#39;, &#39;CA&#39;] }</code>, <code>{ field, notEquals: &#39;x&#39; }</code></td>
+<td>Required when the other field is filled in / equals / is one of / differs. A checkbox group counts as filled in when something is checked.</td>
+</tr>
+<tr>
+<td><code>dateAfter</code>, <code>dateBefore</code></td>
+<td><code>{ dateAfter: &#39;start&#39; }</code>, <code>{ dateAfter: { field: &#39;start&#39;, inclusive: true, format: &#39;d/M/y&#39; } }</code></td>
+<td>This date is later / earlier than the other field&#39;s (no opinion while the other is empty).</td>
+</tr>
+<tr>
+<td><code>atLeastOne</code></td>
+<td><code>{ atLeastOne: [&#39;phone&#39;, &#39;email&#39;] }</code></td>
+<td>This field or one of the listed fields is filled in.</td>
+</tr>
+<tr>
+<td><code>sumEquals</code></td>
+<td><code>{ sumEquals: { fields: [&#39;p2&#39;, &#39;p3&#39;], total: 100 } }</code></td>
+<td>This value plus the listed fields add up to <code>total</code> (empty counts as 0).</td>
+</tr>
+</tbody></table></div>
+<p>On a form, a field with such a rule is checked again when one of the fields it looks at changes. Messages exist in all 13 language packs (<code>requiredIf</code> says &quot;required&quot;).</p>
+<p><strong><code>inst.state</code></strong> (or <code>inst.getState()</code>): what a UI needs without keeping its own bookkeeping.</p>
+<pre tabindex="0"><code class="language-js">inst.state;
+// { valid, errorCount, dirty, pristine, touched, validating, submitCount, submitted,
+//   fields: { email: { value, dirty, pristine, touched, pending, valid, error, code } } }
+const stop = inst.onStateChange(state =&gt; render(state));   // once per tick when errors, touched, dirty, pending or the submit count change
+</code></pre>
+<p><code>dirty</code> compares with the value the form had when the validator started (or after <code>resetForm()</code>), so typing something and then back is pristine again; <code>touched</code> is set when the user leaves a field; <code>pending</code> while a remote check runs; <code>submitCount</code> counts submit attempts. <code>resetForm()</code> starts over.</p>
+<p><strong>Wizard steps</strong>: <code>await inst.validateStep(&#39;#step1&#39;)</code> (an element, a selector or a list of field names) validates only the fields inside the step, shows the messages, focuses the first invalid one and answers <code>true</code> or <code>false</code>; it fires <code>onError</code> / <code>fv:invalid</code> for that step. Fields in hidden steps are skipped, so <code>validate()</code> at the end still checks everything.</p>
+<p><strong><code>FormValidator.explain(value, rules, options)</code></strong> answers &quot;why does this value fail?&quot; rule by rule, without stopping at the first failure:</p>
+<pre tabindex="0"><code class="language-js">FormValidator.explain(&#39;ab&#39;, [&#39;required&#39;, { type: &#39;minlength&#39;, min: 3 }, &#39;email&#39;]);
+// [ { rule: &#39;required&#39;, code: &#39;required&#39;, passed: true },
+//   { rule: &#39;minlength&#39;, code: &#39;minlength&#39;, param: [3], passed: false, message: &#39;Please enter at least 3 characters.&#39; },
+//   { rule: &#39;email&#39;, code: &#39;email&#39;, passed: false, message: &#39;Please enter a valid email address.&#39; } ]
+</code></pre>
+<p>A rule that is skipped says why (<code>skipped: &#39;empty value: ...&#39;</code>, a <code>when</code> that said no, <code>unknown rule</code>, a rule that needs a form).</p>
 <h3 id="smaller-builds-the-core-and-your-own-subset">Smaller builds: the core and your own subset</h3>
 <p>Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a <code>&lt;form&gt;</code>. Two ways to ship less:</p>
 <p><strong><code>form-and-file-validator/core</code></strong> (about 12 KB gzip against 27 KB for the form engine, 73 KB for the whole bundle): the DOM-free part with every rule that needs no form.</p>
@@ -614,7 +661,7 @@ if (!result.success) result.errors.email;       // string | undefined, a misspel
 <p>Passwords are never trimmed. All other values are trimmed before checking unless you set <code>config.trim</code> to <code>false</code>.</p>
 <h2 id="configuration-options">Configuration options</h2>
 <p><code>FormValidator.init</code> takes these top-level keys:</p>
-<div class="tablewrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
 <thead>
 <tr>
 <th>Key</th>
@@ -643,7 +690,7 @@ if (!result.success) result.errors.email;       // string | undefined, a misspel
 </tr>
 </tbody></table></div>
 <p>Options inside <code>config</code>:</p>
-<div class="tablewrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -857,7 +904,7 @@ if (!result.success) result.errors.email;       // string | undefined, a misspel
 <p>The message keys are the rule names: <code>required</code>, <code>email</code>, <code>url</code>, <code>number</code>, <code>digits</code>, <code>alpha</code>, <code>alphanumeric</code>, <code>phone</code>, <code>date</code>, <code>minDate</code>, <code>maxDate</code>, <code>creditcard</code>, <code>pattern</code>, <code>maxlength</code>, <code>minlength</code>, <code>rangelength</code>, <code>range</code>, <code>max</code>, <code>min</code>, <code>step</code>, <code>oneOf</code>, <code>notOneOf</code>, <code>integer</code>, <code>uuid</code>, <code>hexColor</code>, <code>slug</code>, <code>ipv4</code>, <code>ipv6</code>, <code>iban</code>, <code>time</code>, <code>domain</code>, <code>base64</code>, <code>mac</code>, <code>latitude</code>, <code>longitude</code>, <code>startsWith</code>, <code>endsWith</code>, <code>contains</code>, <code>minWords</code>, <code>maxWords</code>, <code>notEqualTo</code>, <code>equalTo</code>, <code>pwcheck</code>, <code>minChecked</code>, <code>maxChecked</code>, <code>minFiles</code>, <code>maxFiles</code>, <code>fileType</code>, <code>fileSize</code>, <code>file</code>, <code>remote</code>, <code>custom</code>, plus <code>badInput</code> for an unparseable number field.</p>
 <h2 id="error-display-and-accessibility">Error display and accessibility</h2>
 <p><strong>Where the message appears</strong></p>
-<div class="tablewrap" role="region" aria-label="Table 6" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
 <thead>
 <tr>
 <th>Field type</th>
@@ -915,7 +962,7 @@ FormValidator.init({ formId: &#39;signup&#39;, rules, config: { errorSummary: { 
 </ul>
 <h3 id="autoattributes-autofill-and-the-right-keyboard">autoAttributes: autofill and the right keyboard</h3>
 <p>Browsers fill forms and phones choose a keyboard from <code>type</code>, <code>inputmode</code> and <code>autocomplete</code>. Most forms get them wrong (<code>type=&quot;number&quot;</code> for a postcode, <code>autocomplete=&quot;off&quot;</code> on a login). <code>autoAttributes: true</code> sets them from your rules and the field names, and never replaces an attribute you wrote:</p>
-<div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
 <thead>
 <tr>
 <th>You have</th>
@@ -959,7 +1006,7 @@ FormValidator.init({ formId: &#39;signup&#39;, rules, config: { errorSummary: { 
 <p><strong>Lint.</strong> With <code>autoAttributes</code> on, one <code>console.warn</code> lists markup problems: <code>autocomplete=&quot;off&quot;</code> on logins, emails and addresses (browsers and password managers ignore it and it blocks autofill), a password field without <code>autocomplete</code>, and <code>type=&quot;number&quot;</code> on codes, zip codes, phone and card numbers. <code>inst.lint()</code> returns them as <code>{ field, name, code, message, fix }</code>; <code>autoAttributes: { lint: false }</code> silences the warning.</p>
 <h2 id="live-validation-and-dynamic-forms">Live validation and dynamic forms</h2>
 <p><strong>Reward early, punish late (<code>validateOn</code>).</strong> Research on form UX is consistent: show success as soon as it is true, show errors only when the user has moved on. That is the default (<code>&#39;smart&#39;</code>): nothing is said while a field is typed into, the check runs when the user leaves an edited field, and a field that already shows an error is re-checked as they type, so the message disappears the moment it is fixed. Choose another timing with a preset, or a list of events:</p>
-<div class="tablewrap" role="region" aria-label="Table 8" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
 <thead>
 <tr>
 <th><code>validateOn</code></th>
@@ -1007,7 +1054,7 @@ form.removeRules(&#39;coupon&#39;);
 </code></pre>
 <p><strong>Buttons that skip validation.</strong> A submit button with the <code>formnovalidate</code> attribute, such as &quot;Save draft&quot;, submits without validating.</p>
 <p><strong>Rules from HTML attributes.</strong> With <code>autoRules: true</code> the library also reads the markup:</p>
-<div class="tablewrap" role="region" aria-label="Table 9" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
 <thead>
 <tr>
 <th>Attribute</th>
@@ -1050,7 +1097,7 @@ form.removeRules(&#39;coupon&#39;);
 }
 </code></pre>
 <p>What the function may return:</p>
-<div class="tablewrap" role="region" aria-label="Table 10" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
 <thead>
 <tr>
 <th>Return value</th>
@@ -1094,7 +1141,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 }
 </code></pre>
 <p>By default it sends a <code>GET</code> request with the value in the query string (<code>/api/username-free?username=bob</code>), like jQuery Validation. For a <code>POST</code>, set <code>method: &#39;POST&#39;</code> on the rule: the body is JSON <code>{ &quot;username&quot;: &quot;bob&quot; }</code>, or a classic form body with <code>encoding: &#39;form&#39;</code>. To make <code>POST</code> the default for every remote rule, set <code>FormValidator.remoteDefaults.method = &#39;POST&#39;</code> (and <code>.encoding = &#39;form&#39;</code> if you want form bodies). The server answers with JSON:</p>
-<div class="tablewrap" role="region" aria-label="Table 11" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
 <thead>
 <tr>
 <th>Response</th>
@@ -1119,7 +1166,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 </tr>
 </tbody></table></div>
 <p>Options:</p>
-<div class="tablewrap" role="region" aria-label="Table 12" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -1188,7 +1235,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 <p>The first FileValidator message is shown under the field (with several files it starts with the file name, like <code>bad.exe: ...</code>), and the check also runs as soon as the user picks files. In the jQuery compatibility layer the same checks are available as the <code>fileValidator</code> method. The full FileValidator options are described in its own document (<a href="file.html">FileValidator.md</a>).</p>
 <h2 id="instance-api-callbacks-and-events">Instance API, callbacks and events</h2>
 <p><code>FormValidator.init(...)</code> returns an instance for one form, or an array when <code>formId</code> is an array.</p>
-<div class="tablewrap" role="region" aria-label="Table 13" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
 <thead>
 <tr>
 <th>Method</th>
@@ -1237,7 +1284,7 @@ FormValidator.init({ formId: &#39;f&#39;, rules: { qty: [&#39;required&#39;, &#3
 </tr>
 </tbody></table></div>
 <p>Static functions on <code>FormValidator</code>:</p>
-<div class="tablewrap" role="region" aria-label="Table 14" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 15" tabindex="0"><table>
 <thead>
 <tr>
 <th>Function</th>
@@ -1371,7 +1418,7 @@ $.validator.addMethod(&#39;even&#39;, function (value, element) { return this.op
 <p>It supports <code>$.fn.validate</code>, <code>valid</code> and <code>rules</code>, <code>$.validator.addMethod</code>, <code>addClassRules</code>, <code>setDefaults</code>, <code>format</code>, <code>messages</code> and <code>methods</code>, all built-in and additional methods, per-field messages, <code>data-rule-*</code>, <code>data-msg-*</code>, class and attribute rules, <code>depends</code>, <code>normalizer</code>, <code>remote</code>, and the options <code>errorPlacement</code>, <code>highlight</code>, <code>unhighlight</code>, <code>success</code>, <code>invalidHandler</code>, <code>submitHandler</code>, <code>onfocusout</code>, <code>onkeyup</code>, <code>onclick</code>, <code>ignore</code>, <code>focusCleanup</code>, <code>debug</code>, <code>errorContainer</code>, <code>errorLabelContainer</code> and <code>wrapper</code>. The <code>groups</code> and <code>showErrors</code> options are supported too. The full list, the differences, and a step-by-step migration are in <a href="migrating.html">Migrating-from-jQuery-Validate.md</a>.</p>
 <h2 id="migrating-from-v1">Migrating from v1</h2>
 <p>Existing pages keep working: <code>FormValidator.init({ formId, rules, config, context })</code>, <code>FormValidator.validate(id, rules)</code> and <code>form._manualValidate()</code> are unchanged. These behaviours are different, on purpose:</p>
-<div class="tablewrap" role="region" aria-label="Table 15" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 16" tabindex="0"><table>
 <thead>
 <tr>
 <th>Version 1</th>
@@ -1437,7 +1484,7 @@ $.validator.addMethod(&#39;even&#39;, function (value, element) { return this.op
 </tbody></table></div>
 <p>A rule without a message now shows a default English sentence (version 1 showed nothing useful). A message you write always wins.</p>
 <h2 id="troubleshooting-and-limits">Troubleshooting and limits</h2>
-<div class="tablewrap" role="region" aria-label="Table 16" tabindex="0"><table>
+<div class="tablewrap" role="region" aria-label="Table 17" tabindex="0"><table>
 <thead>
 <tr>
 <th>Symptom</th>
@@ -1500,6 +1547,7 @@ npm test
 <h2 id="version-history">Version history</h2>
 <p>The newest entries (each source file also keeps its own changelog in its header; the package changelog is <code>CHANGELOG.md</code>):</p>
 <ul>
+<li><strong>2.15.0</strong>: <code>requiredIf</code>, <code>dateAfter</code>, <code>dateBefore</code>, <code>atLeastOne</code>, <code>sumEquals</code>; <code>inst.state</code> / <code>getState()</code> / <code>onStateChange()</code>; <code>inst.validateStep()</code>; <code>FormValidator.explain()</code>.</li>
 <li><strong>2.14.0</strong>: field arrays and nested data: wildcard rule keys (<code>items[].qty</code>) and nested paths in <code>checkValues()</code> / <code>schema()</code> / forms, rules <code>unique</code>, <code>minItems</code>, <code>maxItems</code>; schema output is nested.</li>
 <li><strong>element 1.0.0</strong>: <code>&lt;fv-field&gt;</code>, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: <code>dist/formValidator.element.js</code>).</li>
 <li><strong>2.13.0</strong>: ASP.NET <code>data-val-*</code> (unobtrusive validation): <code>unobtrusive: true</code>, <code>FormValidator.unobtrusive.parse()</code> / <code>.auto()</code> / <code>.adapters</code>, <code>$.validator.unobtrusive</code> on the jQuery layer.</li>
