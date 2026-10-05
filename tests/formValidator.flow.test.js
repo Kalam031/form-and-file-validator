@@ -304,3 +304,30 @@ test('unknown rule warning names the field, suggests the closest rule and points
     assert.match(seen[0], /unknown rule "emial" on field "mail" \(did you mean "email"\?\)/);
     assert.match(seen[0], /rules passed at .*formValidator\.flow\.test\.js:\d+/);
 });
+
+test('htmx(): an invalid form cancels the request, a valid one goes through; swapped-in forms start and removed ones are destroyed', async () => {
+    globalThis.MutationObserver = w.MutationObserver;
+    document.body.innerHTML = '<div id="slot"><form id="hx" hx-post="/x"><input name="email" data-fv="required email"><button id="b">Go</button></form></div>';
+    const stopAuto = FormValidator.auto();
+    const stopHtmx = FormValidator.htmx();
+    try {
+        await settle(60);
+        const form = document.getElementById('hx');
+        assert.ok(form._fvInstance, 'auto() started the form');
+        const beforeRequest = elt => { const e = new w.CustomEvent('htmx:beforeRequest', { bubbles: true, cancelable: true, detail: { elt } }); document.body.dispatchEvent(e); return e; };
+        assert.equal(beforeRequest(document.getElementById('b')).defaultPrevented, true, 'empty required field: request cancelled');
+        assert.ok(err(form, 'email'), 'the message is shown');
+        form.elements.email.value = 'a@b.co';
+        assert.equal(beforeRequest(form).defaultPrevented, false, 'valid: request goes through');
+        assert.equal(beforeRequest(document.body).defaultPrevented, false, 'an element outside any form is ignored');
+        // swap: htmx replaces the content of #slot with a new form
+        const old = form, oldInst = form._fvInstance;
+        let destroyed = 0; const origDestroy = oldInst.destroy; oldInst.destroy = function () { destroyed++; return origDestroy.apply(this, arguments); };
+        document.getElementById('slot').innerHTML = '<form id="hx2"><input name="n" data-fv="required"></form>';
+        await settle(80);
+        assert.equal(destroyed, 1, 'the removed form was destroyed');
+        assert.ok(document.getElementById('hx2')._fvInstance, 'the swapped-in form started');
+        assert.equal(old.isConnected, false);
+    } finally { stopAuto(); stopHtmx(); }
+    assert.equal(FormValidator.htmx()(), undefined);
+});

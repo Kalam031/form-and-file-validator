@@ -2,6 +2,11 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.30.0
+- **Plain forms on the server** (`form-and-file-validator/server` 1.1.0): `validateRequest(request, rules)` for Web Request frameworks (Next.js, Remix, SvelteKit, Nuxt, Astro, Hono, Workers, Bun, Deno) reads JSON, multipart and urlencoded bodies and returns the validated data or a ready 422 `application/problem+json` response, with optional file rules per field; `bodyValidator(rules)` is the Express / Connect / Fastify middleware; `renderErrors(result)` builds the accessible, escaped error summary, field messages and `aria-*` attributes for pages that work without JavaScript. Tested against real Express, Fastify and Hono servers.
+- **HTMX and Turbo**: `FormValidator.htmx()` cancels the request of an invalid form; `auto()` now also destroys forms that a swap removed, so listeners do not pile up. Guide in docs/Server-and-Frameworks.md.
+- **Inputs add-on** (`formValidator.inputs.js`, in the bundle): `FormValidator.otp()` one-time-code boxes (paste and SMS autofill spread over the boxes, one posted field, optional WebOTP), `parseNumber()` / `parseDate()` that read numbers and dates the way each country writes them (separators and order from `Intl`), and the `localeNumber` / `localeDate` rules.
+
 ## 3.29.0
 - **ES module language packs**: `form-and-file-validator/locales/de.mjs` (all 18 languages) export the pack as plain data with no side effects, so a bundler ships only the languages you import: `locales.register('de', de)`.
 - **`onFieldStats`**: per-field analytics (focus count and time, edits, errors shown by code) delivered to your callback on submit and when the page is left unsent. Never contains values; nothing is sent by the library. `inst.getFieldStats()`.

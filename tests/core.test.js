@@ -99,6 +99,7 @@ const BUDGET = {
     'formValidator.additional.min.js': 5500,
     'formValidator.element.min.js': 5500,
     'formValidator.password.min.js': 4500,
+    'formValidator.inputs.min.js': 4500,
     'locale.min.js': 2600,
     'integrations/alpine.min.js': 1500,
     'validator.min.js': 97500

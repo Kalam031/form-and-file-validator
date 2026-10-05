@@ -958,6 +958,48 @@ form.addEventListener('fv:valid', () => console.log('valid'));
 
 `FormValidator.devtools(form, { container })` shows a live panel with every field's value, pristine / dirty / touched / pending state, error message and error code, plus the form's error count and submit count. It updates through `onStateChange`, only uses `textContent`, and `destroy()` removes it. Without a started form or a DOM, `element` is `null`. Use it in development only.
 
+## One-time codes, local numbers and dates
+
+Add-on in the bundle (`dist/formValidator.inputs.js` on its own, after `formValidator.js`; `form-and-file-validator/inputs`).
+
+### One-time-code boxes: `FormValidator.otp`
+
+```html
+<div id="code"></div>
+<script>
+  const otp = FormValidator.otp('#code', {
+    length: 6,                 // 1 to 12 boxes
+    name: 'code',              // the form posts ONE field with the whole code
+    numeric: true,             // false: letters and digits
+    webotp: true,              // also ask the browser for the SMS code (Chrome on Android); ignored elsewhere
+    onComplete: code => form.requestSubmit()
+  });
+  FormValidator.init({ form: 'login', rules: { code: { required: true, digits: true, minlength: 6 } } });
+</script>
+```
+
+- Boxes are created (or reuse the `<input>`s already in the container). They get `inputmode="numeric"`, `autocomplete="one-time-code"` on the first box (so iOS and Android offer the SMS code), an `aria-label` ("Digit 3 of 6", change it with `label(i, n)`) and the container gets `role="group"`.
+- Typing moves forward, **Backspace** on an empty box goes back, arrows, Home and End move. A **paste**, or an autofill that puts the whole code in one box, is spread over the boxes; spaces, dashes and other characters are dropped and extra characters are cut.
+- The holder input `name` is a visually hidden text field (not `type="hidden"`, which validators skip) that always holds the whole code, so rules, error messages and the posted form see one field.
+- `onComplete(code)` runs once when the last box is filled. `getValue()`, `setValue(text)`, `clear()`, `focus()`, `destroy()` (removes listeners, the created boxes and aborts the WebOTP request).
+
+### Numbers and dates the way the visitor writes them
+
+```js
+FormValidator.parseNumber('1.234,56', 'de');     // 1234.56    ('1,234.56' with 'en', '1 234,56' with 'fr', Arabic-Indic digits with 'ar-EG')
+FormValidator.parseNumber('1.5', 'de');          // NaN: in German "1.5" is not a number (a point groups thousands)
+FormValidator.parseDate('22.11.2033', 'de');     // '2033-11-22'
+FormValidator.parseDate('11/22/2033', 'en-US');  // '2033-11-22'   (en-GB reads 22/11/2033; ja-JP reads 2033/11/22)
+FormValidator.parseDate('31.02.2033', 'de');     // null           (not a real day)
+
+rules: {
+  price: { localeNumber: { locale: 'de', min: 0, max: 5000, decimals: 2, integer: false } },
+  born:  { localeDate: { locale: 'en-GB', min: '1900-01-01', max: '2010-01-01' } }
+}
+```
+
+The separators and the order of day, month and year come from the browser's `Intl`, so nothing is shipped per country. Parsing is strict: group separators only between groups of three digits (two for `en-IN`), one decimal separator, no exponents, no stray text; two-digit years use a pivot (`pivot: 50`: up to 50 is 20xx) or are refused with `twoDigitYear: false`. Without `locale` the current `FVLocales` language, the page's `<html lang>` and then the browser language are used. The error text is the translated `number` / `date` / `min` / `max` message.
+
 ### Field analytics: `onFieldStats`
 
 ```js

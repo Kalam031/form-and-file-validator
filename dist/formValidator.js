@@ -1,7 +1,8 @@
 /*!
- * FormValidator v2.17.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.18.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.18.0 FormValidator.htmx() cancels the HTMX request of an invalid form; auto() destroys the forms a swap removed.
  *   2.17.0 onFieldStats option and inst.getFieldStats(); unknown-rule warnings name the field, suggest the closest rule and point at the init() call.
  *   2.16.0 FormValidator.devtools(form): a live panel (value, pristine/dirty/touched/pending, error and code per field).
  *   2.15.0 registerRule(name, fn, { raw: true }) keeps a value untrimmed (pwcheck and the password add-on use it). Rules requiredIf, dateAfter, dateBefore, atLeastOne, sumEquals (other fields come from the form, options.values or the data). inst.state / getState() / onStateChange():
@@ -2194,6 +2195,7 @@
 
     // ------------------------------------------------------------------ declarative: <input name="email" data-fv="required email"> on any page, no script of your own
     const DECLARATIVE_FORMS = new WeakSet();
+    const AUTO_STARTED = new Set();   // forms started by auto(): destroyed when a swap removes them from the page
     /**
      * FormValidator.auto(config) starts a validator on every form that has data-fv (the form itself, or fields inside it):
      *   <form data-fv>  <input name="email" data-fv="required email">  <input name="zip" data-fv="required digits minlength:5" data-fv-mask="99999">
@@ -2253,10 +2255,12 @@
                 const masks = [];
                 Array.from(form.querySelectorAll('[data-fv-mask]')).forEach(el => { if (el.name || el.id) masks.push(mask(el, el.getAttribute('data-fv-mask'))); });
                 const inst = init({ form, rules, config: Object.assign({ autoRules: false }, config, formConfig) });
+                AUTO_STARTED.add(form);
                 inst._listeners.push(() => masks.forEach(m => m.destroy()));
             });
         };
-        const run = () => setup();
+        const sweep = () => AUTO_STARTED.forEach(f => { if (f.isConnected === false) { AUTO_STARTED.delete(f); DECLARATIVE_FORMS.delete(f); if (f._fvInstance) f._fvInstance.destroy(); } });
+        const run = () => { sweep(); setup(); };
         if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run, { once: true }); else run();
         let mo = null, timer = null;
         if (typeof root.MutationObserver === 'function' && doc.body) {
@@ -2266,6 +2270,29 @@
             doc.addEventListener('DOMContentLoaded', () => { if (!mo && doc.body) { mo = new root.MutationObserver(() => { clearTimeout(timer); timer = setTimeout(run, 20); }); mo.observe(doc.body, { childList: true, subtree: true }); } }, { once: true });
         }
         return () => { if (mo) mo.disconnect(); clearTimeout(timer); doc.removeEventListener('DOMContentLoaded', run); };
+    }
+
+    /**
+     * HTMX: a request is only sent when its form is valid.   FormValidator.htmx();
+     * Listens to htmx:beforeRequest on the document, runs the form's rules (messages and focus as for a normal submit) and cancels the request when they fail.
+     * Fields added by a swap are picked up by auto() (data-fv) or by calling init() in htmx:load. Returns the function that stops listening.
+     * Turbo needs nothing: the form's own submit handler already stops an invalid submit before Turbo looks at it.
+     */
+    function htmx(options) {
+        const doc = root.document;
+        if (!doc || !doc.addEventListener) return () => {};
+        const o = options || {};
+        const handler = e => {
+            const elt = e.detail && e.detail.elt;
+            const form = elt && (elt.tagName === 'FORM' ? elt : (elt.closest ? elt.closest('form') : null));
+            const inst = form && form._fvInstance;
+            if (!inst || (o.skip && guard(o.skip, false, form, e))) return;
+            let ok;
+            try { ok = inst.validateSync({ submit: true }); } catch (err) { return; }   // a form with remote or file rules is left to its own submit handling
+            if (ok === false) e.preventDefault();
+        };
+        doc.addEventListener('htmx:beforeRequest', handler);
+        return () => doc.removeEventListener('htmx:beforeRequest', handler);
     }
 
     /**
@@ -3366,11 +3393,12 @@
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.17.0'
+        version: '2.18.0'
     }, CORE ? {} : {
         init,
         initFromUrl,   // async (formId, url, { config, messages }) -> instance: load() the rules and start the form
         mask,          // (input, '(999) 999-9999', { onComplete, trailing }) -> { value, raw, complete, update, destroy }: format while typing
+        htmx,          // (options?) -> stop: cancel HTMX requests of invalid forms
         auto,          // (config?) -> stop: start validators from data-fv attributes, now and for forms added later
         unobtrusive,   // ASP.NET data-val-* support: unobtrusive.parse(scope), .auto(), .adapters.add / addBool / addSingleVal / addMinMax
         validate,      // async (form, rules?) -> true / false (waits for remote and file checks)

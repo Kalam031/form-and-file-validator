@@ -23,6 +23,7 @@ const PARTS = [
     { name: 'formValidator', file: 'formValidator.js' },
     { name: 'formValidator.element', file: 'formValidator.element.js' },
     { name: 'formValidator.password', file: 'formValidator.password.js' },
+    { name: 'formValidator.inputs', file: 'formValidator.inputs.js' },
     { name: 'formValidator.jquery', file: 'formValidator.jquery.js' },
     { name: 'formValidator.additional', file: 'formValidator.additional.js' },
     { name: 'locale', file: 'locale.js' }
@@ -64,6 +65,7 @@ ${wrapped}
     var FormValidator = run('formValidator');
     run('formValidator.element');                // <fv-field> (registers itself when the browser has custom elements)
     run('formValidator.password');               // passwordStrength(), pwned(), the pwscore and pwned rules (before the locale registry, so its messages are translated)
+    run('formValidator.inputs');                 // otp() one-time-code boxes, parseNumber(), parseDate(), the localeNumber and localeDate rules
     var locales = run('locale');                  // language packs: FVLocales.use('de')
     FormValidator.locales = locales; FileValidator.locales = locales;
 

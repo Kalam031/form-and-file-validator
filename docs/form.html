@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.29.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.30.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -1446,6 +1446,40 @@ form.addEventListener(&#39;fv:valid&#39;, () =&gt; console.log(&#39;valid&#39;))
 <p><strong>Submitting.</strong> With no <code>submitHandler</code>, a valid form is submitted with <code>form.requestSubmit()</code>, so the button that was clicked, its name and value, and your other submit listeners are all preserved. With <code>submitHandler</code>, only your function runs.</p>
 <h3 id="devtools-panel">Devtools panel</h3>
 <p><code>FormValidator.devtools(form, { container })</code> shows a live panel with every field&#39;s value, pristine / dirty / touched / pending state, error message and error code, plus the form&#39;s error count and submit count. It updates through <code>onStateChange</code>, only uses <code>textContent</code>, and <code>destroy()</code> removes it. Without a started form or a DOM, <code>element</code> is <code>null</code>. Use it in development only.</p>
+<h2 id="one-time-codes-local-numbers-and-dates">One-time codes, local numbers and dates</h2>
+<p>Add-on in the bundle (<code>dist/formValidator.inputs.js</code> on its own, after <code>formValidator.js</code>; <code>form-and-file-validator/inputs</code>).</p>
+<h3 id="one-time-code-boxes-formvalidatorotp">One-time-code boxes: <code>FormValidator.otp</code></h3>
+<pre tabindex="0"><code class="language-html">&lt;div id=&quot;code&quot;&gt;&lt;/div&gt;
+&lt;script&gt;
+  const otp = FormValidator.otp(&#39;#code&#39;, {
+    length: 6,                 // 1 to 12 boxes
+    name: &#39;code&#39;,              // the form posts ONE field with the whole code
+    numeric: true,             // false: letters and digits
+    webotp: true,              // also ask the browser for the SMS code (Chrome on Android); ignored elsewhere
+    onComplete: code =&gt; form.requestSubmit()
+  });
+  FormValidator.init({ form: &#39;login&#39;, rules: { code: { required: true, digits: true, minlength: 6 } } });
+&lt;/script&gt;
+</code></pre>
+<ul>
+<li>Boxes are created (or reuse the <code>&lt;input&gt;</code>s already in the container). They get <code>inputmode=&quot;numeric&quot;</code>, <code>autocomplete=&quot;one-time-code&quot;</code> on the first box (so iOS and Android offer the SMS code), an <code>aria-label</code> (&quot;Digit 3 of 6&quot;, change it with <code>label(i, n)</code>) and the container gets <code>role=&quot;group&quot;</code>.</li>
+<li>Typing moves forward, <strong>Backspace</strong> on an empty box goes back, arrows, Home and End move. A <strong>paste</strong>, or an autofill that puts the whole code in one box, is spread over the boxes; spaces, dashes and other characters are dropped and extra characters are cut.</li>
+<li>The holder input <code>name</code> is a visually hidden text field (not <code>type=&quot;hidden&quot;</code>, which validators skip) that always holds the whole code, so rules, error messages and the posted form see one field.</li>
+<li><code>onComplete(code)</code> runs once when the last box is filled. <code>getValue()</code>, <code>setValue(text)</code>, <code>clear()</code>, <code>focus()</code>, <code>destroy()</code> (removes listeners, the created boxes and aborts the WebOTP request).</li>
+</ul>
+<h3 id="numbers-and-dates-the-way-the-visitor-writes-them">Numbers and dates the way the visitor writes them</h3>
+<pre tabindex="0"><code class="language-js">FormValidator.parseNumber(&#39;1.234,56&#39;, &#39;de&#39;);     // 1234.56    (&#39;1,234.56&#39; with &#39;en&#39;, &#39;1 234,56&#39; with &#39;fr&#39;, Arabic-Indic digits with &#39;ar-EG&#39;)
+FormValidator.parseNumber(&#39;1.5&#39;, &#39;de&#39;);          // NaN: in German &quot;1.5&quot; is not a number (a point groups thousands)
+FormValidator.parseDate(&#39;22.11.2033&#39;, &#39;de&#39;);     // &#39;2033-11-22&#39;
+FormValidator.parseDate(&#39;11/22/2033&#39;, &#39;en-US&#39;);  // &#39;2033-11-22&#39;   (en-GB reads 22/11/2033; ja-JP reads 2033/11/22)
+FormValidator.parseDate(&#39;31.02.2033&#39;, &#39;de&#39;);     // null           (not a real day)
+
+rules: {
+  price: { localeNumber: { locale: &#39;de&#39;, min: 0, max: 5000, decimals: 2, integer: false } },
+  born:  { localeDate: { locale: &#39;en-GB&#39;, min: &#39;1900-01-01&#39;, max: &#39;2010-01-01&#39; } }
+}
+</code></pre>
+<p>The separators and the order of day, month and year come from the browser&#39;s <code>Intl</code>, so nothing is shipped per country. Parsing is strict: group separators only between groups of three digits (two for <code>en-IN</code>), one decimal separator, no exponents, no stray text; two-digit years use a pivot (<code>pivot: 50</code>: up to 50 is 20xx) or are refused with <code>twoDigitYear: false</code>. Without <code>locale</code> the current <code>FVLocales</code> language, the page&#39;s <code>&lt;html lang&gt;</code> and then the browser language are used. The error text is the translated <code>number</code> / <code>date</code> / <code>min</code> / <code>max</code> message.</p>
 <h3 id="field-analytics-onfieldstats">Field analytics: <code>onFieldStats</code></h3>
 <pre tabindex="0"><code class="language-js">FormValidator.init({ form: &#39;signup&#39;, rules, config: {
     onFieldStats: stats =&gt; navigator.sendBeacon(&#39;/analytics/forms&#39;, JSON.stringify(stats))   // you decide where it goes

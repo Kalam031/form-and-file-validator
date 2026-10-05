@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.29.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.30.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -78,6 +78,91 @@ const result = await validate(body.files, rules);
 <li>The languages of the messages: see <a href="languages.html">Languages</a>, <code>require(&#39;form-and-file-validator/server&#39;).locales</code>.</li>
 <li>Never trust the browser&#39;s MIME type. The companion checks the content, not only the name.</li>
 </ul>
+<h2 id="plain-form-values-on-the-server">Plain form values on the server</h2>
+<p>The same rules object that runs in the browser can run on the server, so the two can never disagree. Three helpers in <code>form-and-file-validator/server</code>:</p>
+<div class="tablewrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Helper</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>validateRequest(request, rules, options)</code></td>
+<td>Fetch-API frameworks: Next.js, Remix / React Router, SvelteKit, Nuxt (H3), Astro, Hono, Cloudflare Workers, Bun, Deno</td>
+</tr>
+<tr>
+<td><code>bodyValidator(rules, options)</code></td>
+<td>Express, Connect and Fastify middleware</td>
+</tr>
+<tr>
+<td><code>renderErrors(result)</code></td>
+<td>pages that must work without JavaScript</td>
+</tr>
+</tbody></table></div>
+<pre tabindex="0"><code class="language-js">import { validateRequest } from &#39;form-and-file-validator/server&#39;;
+import { signupRules } from &#39;./rules.js&#39;;          // the same object the browser form uses
+
+export async function POST(request) {              // Next.js route handler, SvelteKit +server.js, Astro endpoint, Hono, Workers ...
+  const result = await validateRequest(request, signupRules);
+  if (!result.ok) return result.response();        // 422 application/problem+json; read it back in the browser with FormValidator.serverErrors()
+  await createUser(result.data);                   // trimmed text, nested like the field names (&#39;user.name&#39; -&gt; { user: { name } })
+  return Response.json({ ok: true });
+}
+</code></pre>
+<p><code>request</code> can be a Web <code>Request</code> (JSON, <code>multipart/form-data</code> or <code>application/x-www-form-urlencoded</code>), <code>FormData</code>, <code>URLSearchParams</code>, a string or an already parsed object. An unreadable body gives <strong>400</strong>, an unsupported content type <strong>415</strong>, invalid values <strong>422</strong>; nothing throws. Keys such as <code>__proto__</code> are dropped. File fields: <code>{ files: { avatar: { allowedExtensions: [&#39;.png&#39;], maxFileSizeMB: 1 } } }</code> checks the uploaded <code>File</code>s in that field with the same rules as <code>FileValidator</code>; the result is in <code>result.files.avatar</code> and a failure adds <code>errors.avatar</code>.</p>
+<p>Result: <code>{ ok, status, data, values, errors, issues, files, problem, response(), html() }</code>. Options: <code>status</code>, <code>files</code>, <code>lang</code> (messages in another language for this call), <code>omit</code>, <code>title</code>.</p>
+<pre tabindex="0"><code class="language-js">// Express
+app.post(&#39;/signup&#39;, express.json(), express.urlencoded({ extended: true }), bodyValidator(signupRules), (req, res) =&gt; res.json(req.validated));
+
+// Fastify (with @fastify/formbody for urlencoded)
+app.post(&#39;/signup&#39;, { preHandler: (req, reply, done) =&gt; bodyValidator(signupRules)(req, reply, done) }, async req =&gt; req.validated);
+</code></pre>
+<p><code>bodyValidator</code> answers <strong>422 <code>application/problem+json</code></strong> and puts the result on <code>req.validation</code>; <code>{ respond(req, res, result) }</code> sends your own answer, <code>{ source: &#39;query&#39; }</code> validates the query string.</p>
+<h3 id="without-javascript-rendererrors">Without JavaScript: <code>renderErrors</code></h3>
+<pre tabindex="0"><code class="language-js">const result = await validateRequest(request, rules);
+if (!result.ok) {
+  const e = result.html();                       // or renderErrors(result, { idPrefix: &#39;f-&#39; })
+  return html(`
+    &lt;form method=&quot;post&quot; novalidate&gt;
+      ${e.summary}                               &lt;!-- role=&quot;alert&quot;, links to every invalid field, focus it with the id fv-summary --&gt;
+      &lt;label for=&quot;email&quot;&gt;Email&lt;/label&gt;
+      &lt;input id=&quot;email&quot; name=&quot;email&quot; value=&quot;${e.value(&#39;email&#39;)}&quot;${e.attrs(&#39;email&#39;)}&gt;
+      ${e.error(&#39;email&#39;)}
+    &lt;/form&gt;`, 422);
+}
+</code></pre>
+<p>Everything is HTML-escaped, <code>value()</code> puts the visitor&#39;s input back (never for password, token, card, otp or pin fields, and not for names in <code>options.omit</code>), and <code>attrs()</code> gives <code>aria-invalid</code> and <code>aria-describedby</code> that point at the message.</p>
+<h3 id="framework-recipes">Framework recipes</h3>
+<pre tabindex="0"><code class="language-js">// Next.js server action (React 19): the same rules for the browser, JavaScript or not
+&#39;use server&#39;;
+export async function signup(prev, formData) {
+  const r = await validateRequest(formData, signupRules);
+  return r.ok ? { ok: true } : { ok: false, errors: r.errors };
+}
+
+// Remix / React Router action
+export async function action({ request }) {
+  const r = await validateRequest(request, signupRules);
+  return r.ok ? redirect(&#39;/welcome&#39;) : r.response();
+}
+
+// SvelteKit form action
+export const actions = { default: async ({ request }) =&gt; {
+  const r = await validateRequest(request, signupRules);
+  return r.ok ? { success: true } : fail(r.status, { errors: r.errors, values: r.values });
+} };
+
+// Nuxt / H3
+export default defineEventHandler(async event =&gt; {
+  const r = await validateRequest(toWebRequest(event), signupRules);
+  if (!r.ok) throw createError({ statusCode: r.status, data: r.problem });
+  return r.data;
+});
+
+// Astro endpoint
+export async function POST({ request }) { const r = await validateRequest(request, signupRules); return r.ok ? Response.json(r.data) : r.response(); }
+</code></pre>
 <h2 id="net-aspnet-core">.NET (ASP.NET Core)</h2>
 <p>The NuGet package <code>FormAndFileValidator</code> (folder <code>dotnet/</code>) runs the <strong>same form rules with the same answers</strong> as the browser. Both sides are tested against <code>spec/form-rules.vectors.json</code>, so a form the browser accepts is accepted by your API, and the other way round.</p>
 <pre tabindex="0"><code class="language-csharp">using FormAndFileValidator;
@@ -221,6 +306,22 @@ if (!result.IsValid) return BadRequest(result.Summary());
 <p>Or put <code>[FileRules(Extensions = &quot;png,jpg&quot;, MaxSizeMB = 5, Required = true)]</code> on the model property and <code>ModelState.IsValid</code> covers it; <code>ModelFileRules.ToJson&lt;T&gt;()</code> (MVC 5: <code>Html.FileRulesJson()</code>) gives the matching browser configuration. Details in <code>dotnet/FormAndFileValidator/README.md</code>.</p>
 <h3 id="photos-strip-exif-and-gps-on-the-server">Photos: strip EXIF and GPS on the server</h3>
 <p>Browsers can clean photos before upload (<code>stripMetadata</code> in the upload widget), but a server must not rely on that. In Node call <code>FileValidator.stripMetadata(file)</code> on the upload before you store it; in .NET use <code>PhotoPrivacy.Strip(UploadedFile.From(file))</code>. Both remove EXIF, GPS, XMP, IPTC and comments from JPEG, PNG and WebP without re-encoding the picture, keep the orientation, and give the same bytes (<code>spec/metadata-vectors.json</code>).</p>
+<h2 id="htmx-turbo-and-other-swapping-frameworks">HTMX, Turbo and other swapping frameworks</h2>
+<p>Pages that replace parts of the DOM (HTMX, Turbo, Unpoly, Livewire, Blazor enhanced navigation) need two things: forms that arrive later must start, and forms that leave must not leave listeners behind.</p>
+<pre tabindex="0"><code class="language-html">&lt;script src=&quot;dist/validator.min.js&quot; data-fv-auto&gt;&lt;/script&gt;      &lt;!-- starts every form with data-fv attributes now and after every swap --&gt;
+&lt;script&gt;FormValidator.htmx();&lt;/script&gt;                              &lt;!-- HTMX only: an invalid form cancels its request --&gt;
+
+&lt;form hx-post=&quot;/signup&quot; hx-target=&quot;#result&quot;&gt;
+  &lt;input name=&quot;email&quot; data-fv=&quot;required email&quot;&gt;
+  &lt;button&gt;Sign up&lt;/button&gt;
+&lt;/form&gt;
+</code></pre>
+<ul>
+<li><code>FormValidator.auto()</code> (or <code>data-fv-auto</code> on the script tag) watches the page: a swapped-in form is started, and a form that was removed is destroyed (its listeners and timers go with it).</li>
+<li><code>FormValidator.htmx()</code> listens to <code>htmx:beforeRequest</code>: the request is cancelled and the messages are shown when the form is invalid. Without it HTMX would send the request anyway.</li>
+<li>Turbo (Drive and Frames) needs nothing extra: an invalid submit is stopped by the form&#39;s own handler before Turbo sees it. For forms you start yourself with <code>FormValidator.init()</code>, call it again after each render (<code>turbo:load</code>, <code>htmx:load</code>); starting a form twice replaces the old validator.</li>
+<li>Server-side errors that come back as HTML: use <a href="#without-javascript-rendererrors"><code>renderErrors</code></a>. Errors that come back as JSON: <code>inst.setServerErrors(await response.json())</code>.</li>
+</ul>
 <h2 id="angular-signal-forms">Angular Signal Forms</h2>
 <p><code>form-and-file-validator/angular-signals</code> gives Signal Forms (<code>form()</code> from <code>@angular/forms/signals</code>, Angular 21+) the same rules, messages and language packs:</p>
 <pre tabindex="0"><code class="language-ts">import { signal } from &#39;@angular/core&#39;;

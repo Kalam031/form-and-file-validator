@@ -558,6 +558,12 @@ export interface FormValidatorStatic {
     parseRules(text: string | null | undefined): RulesForField | null;
     /** Starts validators from data-fv attributes (now and for forms added later); add data-fv-auto to the script tag to run it by itself. Returns the stop function. */
     auto(config?: Partial<FormConfig>): () => void;
+    /** Number typed the local way ('1.234,56' with 'de' -> 1234.56; NaN when it does not fit the language). Add-on: bundle or formValidator.inputs.js. */
+    parseNumber(text: unknown, locale?: string, options?: { group?: boolean }): number;
+    /** Date typed the local way ('22.11.2033' with 'de' -> '2033-11-22'; null for an impossible date). */
+    parseDate(text: unknown, locale?: string, options?: { pivot?: number; twoDigitYear?: boolean }): string | null;
+    /** A one-time-code field made of `length` boxes (paste and SMS autofill are spread over them, WebOTP optional); a hidden-looking input `name` holds the whole code. */
+    otp(target: string | HTMLElement, options?: OtpOptions): OtpField;
     /** An offline estimate of how hard a password is to guess (add-on: bundle or formValidator.password.js). */
     passwordStrength(password: unknown, options?: { userInputs?: unknown[] }): PasswordStrength;
     /** How often a password appeared in known breaches (Have I Been Pwned, k-anonymity: only 5 hash characters are sent); 0 = never, null = could not check. */
@@ -596,6 +602,8 @@ export interface FormValidatorStatic {
     /** Check an initialised form, or any form against ad-hoc rules. */
     validate(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): Promise<boolean>;
     getInstance(form: string | HTMLFormElement): FormInstance | null;
+    /** HTMX: cancel a request whose form is invalid (listens to htmx:beforeRequest). Returns the function that stops listening. `skip(form, event)` returning true leaves a request alone. */
+    htmx(options?: { skip?: (form: HTMLFormElement, event: Event) => boolean }): () => void;
     /** A live panel showing every field's value, state, error and error code. Needs a started form and a DOM; otherwise `element` is null. */
     devtools(form: string | HTMLFormElement, options?: { container?: HTMLElement }): { element: HTMLElement | null; refresh(): void; destroy(): void };
     /** jQuery valid() without jQuery: true / false right now (shows the errors). Remote and file checks count as valid until they answer; validate() waits for them. */
@@ -637,3 +645,6 @@ export { FormValidator };
 
 export interface FieldStat { field: string; focusCount: number; focusMs: number; changes: number; errorsShown: number; codes: Record<string, number>; lastCode: string | null; invalid: boolean }
 export interface FieldStats { form: string | null; durationMs: number; submitCount: number; reason?: 'submit' | 'abandon'; valid?: boolean | null; fields: Record<string, FieldStat> }
+
+export interface OtpOptions { length?: number; name?: string; numeric?: boolean; onComplete?: (code: string) => void; webotp?: boolean; groupLabel?: string; label?: (index: number, length: number) => string }
+export interface OtpField { inputs: HTMLInputElement[]; hidden: HTMLInputElement | null; length: number; getValue(): string; setValue(text: string): void; clear(): void; focus(): void; destroy(): void }

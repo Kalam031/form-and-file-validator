@@ -5,9 +5,9 @@
   "metadata": {
     "component": {
       "type": "library",
-      "bom-ref": "form-and-file-validator@3.29.0",
+      "bom-ref": "form-and-file-validator@3.30.0",
       "name": "form-and-file-validator",
-      "version": "3.29.0",
+      "version": "3.30.0",
       "licenses": [
         {
           "license": {
@@ -15,7 +15,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/form-and-file-validator@3.29.0"
+      "purl": "pkg:npm/form-and-file-validator@3.30.0"
     },
     "properties": [
       {
@@ -32,7 +32,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "10ac7698595ea57f6f5fe68c011812bc37b4a8aa8617c48b700353ad19ef7e96"
+          "content": "39e0c20a007ba0d015537887ed2f7ca008b37dea3c120793698b807390d6fa1b"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d6f001a272531ef12780ae41b47b9b6f1e5a02e85c879238ae97098398afe72d"
+          "content": "6c69c17d7ba5b9e5e89351cf81ddb5350bc2aec682dd476eaac401e253642c03"
         }
       ]
     },
@@ -142,7 +142,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "33e6945647b9f3c2ecfc62cda9a01dd2a195ba972efda0cb47bf33e25b7548d3"
+          "content": "fab7c33cff1d2412c67e7a4fbfb49f4720a5b4502f71735a1895534e1901068b"
         }
       ]
     },
@@ -165,6 +165,28 @@
         {
           "alg": "SHA-256",
           "content": "46334dac9fef91f805933aabc6d5cf013d8034f32dd10d0c847b9d024ac49a00"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.inputs.js",
+      "name": "dist/formValidator.inputs.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f0928819bca44803dc2ff7e36634fc5d73842783db18e2e82759e4ce931aa42"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/formValidator.inputs.min.js",
+      "name": "dist/formValidator.inputs.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0ffcc9cd7279a7c4a628ec0cbcd2abd822b6aea472db116b0c70912e7f8d23ae"
         }
       ]
     },
@@ -197,7 +219,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "001c854cc188cc4c44448c19148293e39a28a277639e60046fd767101aac8467"
+          "content": "e3f2fa9432f5a72d2e6cc33b4d6308de8c0188e0abd9d8753a699948c5230dfd"
         }
       ]
     },
@@ -208,7 +230,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "0b9f4440bba2fe427905ade1b78e30e1aa0414b23ec2f290b43a86432c324df9"
+          "content": "4bbfb9da31216db13768de7277b514bf04e0519a0291cc6541f6fe9445fe08b1"
         }
       ]
     },
@@ -989,7 +1011,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "99cbd83d04fcfff0d78af92927b7ef24f0188650bf46221196edae20006f29fd"
+          "content": "2136a5963612cc93416c588a36941198726adc428b7d9d6101e53f8cdf58cfd9"
         }
       ]
     },
@@ -1011,7 +1033,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "c7491d85b54e394d051311f115ed0079eb1c47ae5d8964df12a66171ad8904c7"
+          "content": "2a5e11e75b5c4f9e95b43bebc003b9d59b7984df7830788f5e3160086dce40b5"
         }
       ]
     },
@@ -1022,7 +1044,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "77e7962ad43ee893961da626ec11311c59b8e8c8a976191fc507c5f8a6729fff"
+          "content": "cb53a40e037f01955c9002882ef17ae3ce20998ba6ef7ae036ce582df569bf2c"
         }
       ]
     },
@@ -1033,7 +1055,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "be27e5a591ff673984698deb78633a0869312989f54219e5ba306d020fb3748a"
+          "content": "9da1d8b5e03b58bd9d1b4ab945d7a4c83f25f46e48581dd0956bd33b1d85df7d"
         }
       ]
     },
@@ -1044,7 +1066,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "05a321ba683192d5d8d2da6485f0f532935ce4f3cc80c099308588c81b5e254a"
+          "content": "9ad3bc0a1fa90c2e228d570d0841e0e8582393cca954d203618531386234a9ba"
         }
       ]
     },
@@ -1099,7 +1121,7 @@
   ],
   "dependencies": [
     {
-      "ref": "form-and-file-validator@3.29.0",
+      "ref": "form-and-file-validator@3.30.0",
       "dependsOn": []
     }
   ]

@@ -428,3 +428,13 @@ import { FvFormController } from '../lit';
     const loc: string = FormValidator.locale;
     void [m, t, s, loc];
 }
+
+// ---------------------------------------------------------------- server: plain forms
+import { validateRequest, bodyValidator, renderErrors } from "../server";
+async function serverForms(req: Request) {
+    const r = await validateRequest(req, { email: ['required', 'email'] }, { files: { avatar: { maxFileSizeMB: 1 } } });
+    if (!r.ok) { const res: Response = r.response(); const h = r.html(); const s: string = h.summary + h.error('email') + h.attrs('email') + h.value('email'); return [res, s]; }
+    const mw: (req: any, res: any, next: (e?: unknown) => void) => void = bodyValidator({ a: 'required' }, { source: 'query' });
+    return [r.data, mw, renderErrors({ email: 'x' }).ok];
+}
+void serverForms;
