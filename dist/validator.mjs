@@ -4440,32 +4440,36 @@ const api = (function (root) {
         return run;
     }
 
-    return {
-        init,
+    // `__FV_CORE__` does not exist in the normal build. The "core" build (dist/formValidator.core.min.js, tools/build-subset.js) defines it as true, which lets the
+    // minifier drop the whole form engine and everything only it uses: what is left checks values, schemas and server answers without a DOM.
+    const CORE = typeof __FV_CORE__ === 'boolean' && __FV_CORE__;
+    return Object.assign({
         parseFormData, // (formData | form | entries | object, { coerce? }) -> nested object: 'a.b[0].c' -> { a: { b: [{ c }] } }
-        unobtrusive,   // ASP.NET data-val-* support: unobtrusive.parse(scope), .auto(), .adapters.add / addBool / addSingleVal / addMinMax
         serverErrors,  // (response body, { format? }) -> { errors, all, form, format } from problem+json, Laravel, DRF, ASP.NET, FastAPI, Zod ...
         precognition,  // async (url, values, { only, method, ... }) -> { valid, errors, ... }: ask the real endpoint whether the values would pass
         action,        // (rules, serverFn) -> (prevState, formData) => state, for React 19 useActionState and Server Actions
         schema,        // (rules, options?) -> Standard Schema with parse / safeParse / check
         ValidationError,
-        validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
-        isValid,       // sync (form, rules?) -> true / false, like jQuery's valid()
         checkValue,
         checkValues,
         registerRule,
-        remoteDefaults: REMOTE_DEFAULTS,
         addMethod,
-        addClassRules,
         format,
-        setDefaults: obj => Object.assign(DEFAULTS, obj),
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        defaults: DEFAULTS,             // mutable global defaults
-        getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; },
         version: '2.14.0'
-    };
+    }, CORE ? {} : {
+        init,
+        unobtrusive,   // ASP.NET data-val-* support: unobtrusive.parse(scope), .auto(), .adapters.add / addBool / addSingleVal / addMinMax
+        validate,      // async (form, rules?) -> true / false (waits for remote and file checks)
+        isValid,       // sync (form, rules?) -> true / false, like jQuery's valid()
+        remoteDefaults: REMOTE_DEFAULTS,
+        addClassRules,
+        setDefaults: obj => Object.assign(DEFAULTS, obj),
+        defaults: DEFAULTS,             // mutable global defaults
+        getInstance: t => { const f = resolveForm(t); return f ? f._fvInstance || null : null; }
+    });
 });
 
     };

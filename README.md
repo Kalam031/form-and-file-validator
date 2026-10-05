@@ -303,14 +303,14 @@ The packs are machine-quality translations: please have a native speaker check t
 Always pin the exact version and keep the `integrity` attribute, so the file your visitors load can never change:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.13.0/dist/validator.min.js"
-        integrity="sha384-CEwYKGqZBLy4fYQceKHyNmDz0ZRRTdBls4Fk7myllWuJBQMV2loTf62MZrSdlvpM" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.13.0/dist/locales/de.min.js"
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.14.0/dist/validator.min.js"
+        integrity="sha384-CRJ9YT0LfTtPWTaq+XXomQavZ68qjJTiV26sxWH92GYZSmUZd5HP6UtGrSHHG1hI" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.14.0/dist/locales/de.min.js"
         integrity="sha384-5kTd4XVvAfzqtfngPwfy6yxyNKanSRVX2T9iX24J/WVKBg+Ag4Z8KpAXLXcWFUWM" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>
 ```
 
-Hashes for every file are in `dist/SRI.json` (they are for version 3.13.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
+Hashes for every file are in `dist/SRI.json` (they are for version 3.14.0; new releases get new hashes). Available languages: `locales/<code>.min.js` for de, fr, es, pt, it, nl, tr, ru, pl, ar, hi, zh, ja, or `locales/all.min.js`.
 
 ## Contributing
 

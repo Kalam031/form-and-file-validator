@@ -165,6 +165,14 @@ async function build(options) {
                 fs.writeFileSync(path.join(DIST, 'integrations', 'alpine.min.js'), min);
                 result.files['integrations/alpine.min.js'] = min.length;
             }
+            // the DOM-free core of FormValidator (checkValue, checkValues, schema, serverErrors, precognition, action, parseFormData; all rules that need no form)
+            const { build: buildSubset } = require('./tools/build-subset.js');
+            for (const format of ['umd', 'esm']) {
+                const core = await buildSubset({ rules: '*', engine: false, format });
+                const name = format === 'esm' ? 'formValidator.core.min.mjs' : 'formValidator.core.min.js';
+                fs.writeFileSync(path.join(DIST, name), core.code);
+                result.files[name] = core.code.length;
+            }
             for (const p of PARTS) {
                 const src = read(p.file);
                 fs.writeFileSync(path.join(DIST, p.file), src);

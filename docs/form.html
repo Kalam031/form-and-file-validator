@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.13.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.14.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -453,6 +453,18 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 <li>Like the native pseudo-classes, <code>checkValidity()</code> fires <code>invalid</code>, so a field that gets one shows its message.</li>
 <li>Another tag name: <code>FormValidator.fieldElement.define(&#39;my-field&#39;)</code>.</li>
 </ul>
+<h3 id="smaller-builds-the-core-and-your-own-subset">Smaller builds: the core and your own subset</h3>
+<p>Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a <code>&lt;form&gt;</code>. Two ways to ship less:</p>
+<p><strong><code>form-and-file-validator/core</code></strong> (about 12 KB gzip against 27 KB for the form engine, 73 KB for the whole bundle): the DOM-free part with every rule that needs no form.</p>
+<pre tabindex="0"><code class="language-js">import { checkValue, checkValues, schema, action, serverErrors, precognition, parseFormData } from &#39;form-and-file-validator/core&#39;;
+</code></pre>
+<p>It has no <code>init()</code>, <code>validate()</code>, <code>isValid()</code>, <code>unobtrusive</code> and no jQuery layer, and leaves out the rules that need a form, files or a server (<code>file</code>, <code>fileType</code>, <code>fileSize</code>, <code>minFiles</code>, <code>maxFiles</code>, <code>minChecked</code>, <code>maxChecked</code>, <code>remote</code>). Everything else gives the same answers as the full build (the shared vectors are run against both). A script-tag version is <code>dist/formValidator.core.min.js</code>.</p>
+<p><strong>Your own subset</strong>: keep only the rules you use.</p>
+<pre tabindex="0"><code class="language-sh">npm i -D terser acorn          # the builder needs them; the library itself has no dependencies
+node node_modules/form-and-file-validator/tools/build-subset.js --rules=required,email,minlength,pattern --no-engine --format=esm --out=src/fv.min.mjs
+node node_modules/form-and-file-validator/tools/build-subset.js --list      # every rule name
+</code></pre>
+<p>Options: <code>--rules=a,b,c</code> (default all), <code>--no-engine</code> (drop the form engine), <code>--format=umd|esm</code>, <code>--out=file</code>. From code: <code>const { build } = require(&#39;form-and-file-validator/tools/build-subset.js&#39;); const { code, rules, size, gzip } = await build({ rules: [...], engine: false })</code>. A rule you leave out answers <code>unknown rule &quot;name&quot;</code>. Size is guarded in the test suite (gzip budgets for every file of <code>dist/</code>), so a release cannot grow without anyone noticing.</p>
 <h3 id="aspnet-mvc-and-razor-data-val--unobtrusive-validation">ASP.NET MVC and Razor: data-val-* (unobtrusive validation)</h3>
 <p>Drop-in for <code>jquery.validate.unobtrusive.js</code>, without jQuery. Razor renders the model&#39;s attributes (<code>[Required]</code>, <code>[StringLength]</code>, <code>[Range]</code>, <code>[EmailAddress]</code>, <code>[Compare]</code>, <code>[RegularExpression]</code>, <code>[Remote]</code> ...) as <code>data-val-*</code> attributes and <code>data-valmsg-for</code> / <code>data-valmsg-summary</code> placeholders; this reads them, so a Razor form validates in the browser with the messages from your model and no JavaScript of your own.</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;~/Scripts/validator.min.js&quot;&gt;&lt;/script&gt;

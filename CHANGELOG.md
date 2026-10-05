@@ -2,6 +2,10 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.14.0
+- **Smaller builds**: `form-and-file-validator/core` is the DOM-free FormValidator (about 12 KB gzip, the form engine is 27 KB): `checkValue`, `checkValues`, `schema`, `action`, `serverErrors`, `precognition`, `parseFormData` and every rule that needs no form, with the same answers as the full build (the shared vectors run against both). `tools/build-subset.js` builds your own file with only the rules you use (`--rules=required,email --no-engine --format=esm`, needs `terser` and `acorn` as dev dependencies). The minifier drops the form engine through a build flag, so no source is duplicated.
+- **Size budget in the test suite**: every minified file of `dist/` has a gzip budget, so growth cannot slip in unnoticed.
+
 ## 3.13.0
 - **Field arrays and nested data** (FormValidator 2.14.0): rule keys can be paths and wildcards, `'user.email'`, `'items[].qty'` (also `items.*.qty`), in `checkValues()`, `schema()` and on forms with repeated rows (rows added later are covered, removed rows stop counting). New rules: `unique` (no two rows share a value, `ignoreCase` optional, works live on a form), `minItems`, `maxItems` (in all 13 language packs). `schema()` output is nested like the input; issues carry token paths (`['items', 1, 'qty']`) and `errors` are keyed by the concrete path (`items[1].qty`). `parseFormData()` + `schema()` validates a repeater form end to end. Flat schemas behave exactly as before.
 

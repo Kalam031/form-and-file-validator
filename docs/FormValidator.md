@@ -214,6 +214,28 @@ No DOM is needed, so this runs in Node, in tests and in the Angular validators. 
 - Like the native pseudo-classes, `checkValidity()` fires `invalid`, so a field that gets one shows its message.
 - Another tag name: `FormValidator.fieldElement.define('my-field')`.
 
+### Smaller builds: the core and your own subset
+
+Most servers, serverless functions, React Server Actions and tests only need to check values, not drive a `<form>`. Two ways to ship less:
+
+**`form-and-file-validator/core`** (about 12 KB gzip against 27 KB for the form engine, 73 KB for the whole bundle): the DOM-free part with every rule that needs no form.
+
+```js
+import { checkValue, checkValues, schema, action, serverErrors, precognition, parseFormData } from 'form-and-file-validator/core';
+```
+
+It has no `init()`, `validate()`, `isValid()`, `unobtrusive` and no jQuery layer, and leaves out the rules that need a form, files or a server (`file`, `fileType`, `fileSize`, `minFiles`, `maxFiles`, `minChecked`, `maxChecked`, `remote`). Everything else gives the same answers as the full build (the shared vectors are run against both). A script-tag version is `dist/formValidator.core.min.js`.
+
+**Your own subset**: keep only the rules you use.
+
+```sh
+npm i -D terser acorn          # the builder needs them; the library itself has no dependencies
+node node_modules/form-and-file-validator/tools/build-subset.js --rules=required,email,minlength,pattern --no-engine --format=esm --out=src/fv.min.mjs
+node node_modules/form-and-file-validator/tools/build-subset.js --list      # every rule name
+```
+
+Options: `--rules=a,b,c` (default all), `--no-engine` (drop the form engine), `--format=umd|esm`, `--out=file`. From code: `const { build } = require('form-and-file-validator/tools/build-subset.js'); const { code, rules, size, gzip } = await build({ rules: [...], engine: false })`. A rule you leave out answers `unknown rule "name"`. Size is guarded in the test suite (gzip budgets for every file of `dist/`), so a release cannot grow without anyone noticing.
+
 ### ASP.NET MVC and Razor: data-val-* (unobtrusive validation)
 
 Drop-in for `jquery.validate.unobtrusive.js`, without jQuery. Razor renders the model's attributes (`[Required]`, `[StringLength]`, `[Range]`, `[EmailAddress]`, `[Compare]`, `[RegularExpression]`, `[Remote]` ...) as `data-val-*` attributes and `data-valmsg-for` / `data-valmsg-summary` placeholders; this reads them, so a Razor form validates in the browser with the messages from your model and no JavaScript of your own.

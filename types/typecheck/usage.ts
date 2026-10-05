@@ -321,3 +321,16 @@ void verdict;
     else { const t: any = r.data.items; void t; }
     FormValidator.checkValues({}, { 'user.email': 'required', 'rows[].x': { unique: true } });
 }
+
+// ---------------------------------------------------------------- core (no DOM)
+import { checkValue as coreCheck, schema as coreSchema, FormValidator as CoreFV } from '../core';
+{
+    const r = coreCheck('x', ['required', 'email']);
+    const ok: boolean = r.valid;
+    const s = coreSchema({ email: ['required', 'email'] });
+    const parsed = s.safeParse({});
+    const names: string[] = CoreFV.ruleNames();
+    // @ts-expect-error the core has no form engine
+    CoreFV.init;
+    void [ok, parsed, names];
+}
