@@ -2,7 +2,7 @@
  * FormValidator v2.15.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
- *   2.15.0 Rules requiredIf, dateAfter, dateBefore, atLeastOne, sumEquals (other fields come from the form, options.values or the data). inst.state / getState() / onStateChange():
+ *   2.15.0 registerRule(name, fn, { raw: true }) keeps a value untrimmed (pwcheck and the password add-on use it). Rules requiredIf, dateAfter, dateBefore, atLeastOne, sumEquals (other fields come from the form, options.values or the data). inst.state / getState() / onStateChange():
  *          touched, dirty, pending, errors, submit count. inst.validateStep(scope) for wizards. FormValidator.explain(value, rules): why a value passes or fails, rule by rule.
  *   2.14.0 Field arrays and nested data: path keys ('user.email', 'items[0].qty') and wildcards ('items[].qty') in checkValues / schema / forms; rules unique, minItems, maxItems;
  *          schema output is nested like the input; ValidationError.errors are keyed by the concrete path.
@@ -415,7 +415,7 @@
     const validators = {};
     function registerRule(name, fn, opts) {
         if (!isFn(fn)) throw new Error('registerRule: validator must be a function');
-        validators[name] = { fn, runOnEmpty: !!(opts && opts.runOnEmpty), remote: !!(opts && opts.remote) };
+        validators[name] = { fn, runOnEmpty: !!(opts && opts.runOnEmpty), remote: !!(opts && opts.remote), raw: !!(opts && opts.raw) };   // raw: the value is not trimmed (passwords)
     }
 
     const R = (name, fn, o) => registerRule(name, fn, o);
@@ -537,7 +537,7 @@
         if (c.requireSpecialChar && !/[^\p{L}\p{N}\s]/u.test(v)) return false;   // anything that is not a letter, number or space
         if (c.noWhitespace && /\s/.test(v)) return false;
         return true;
-    });
+    }, { raw: true });
 
     R('minChecked', (v, r, env) => env.count >= r.min, { runOnEmpty: true });
     R('maxChecked', (v, r, env) => env.count <= r.max);
@@ -1902,7 +1902,7 @@
             const def = validators[rule.type];
             if (!def) throw new Error('checkValue: unknown rule "' + rule.type + '"');
             if (def.remote || NEEDS_FORM.includes(rule.type)) throw new Error('checkValue: the "' + rule.type + '" rule needs a form, files or a server and cannot run on a plain value');
-            const v = rule.type === 'pwcheck' ? raw : trimmed;
+            const v = def.raw ? raw : trimmed;
             const empty = v === '';
             if (!env) env = { value: v, empty, count: empty ? 0 : 1, files: null, field: null, fields: [], form: null, inst: null, badInput: false,
                 config: { passwordStrength: o.passwordStrength || {} }, context: o.context || {}, column: o.column, index: o.index, array: o.array, values: o.values };
@@ -2000,7 +2000,7 @@
             if (!def) return Object.assign(entry, { passed: null, skipped: 'unknown rule' });
             if (def.remote || NEEDS_FORM.includes(rule.type)) return Object.assign(entry, { passed: null, skipped: 'needs a form, files or a server' });
             const raw = value == null ? '' : String(value), trimmed = o.trim === false ? raw : raw.trim();
-            const v = rule.type === 'pwcheck' ? raw : trimmed;
+            const v = def.raw ? raw : trimmed;
             if (isFn(rule.when) && !guard(rule.when, true, v, null)) return Object.assign(entry, { passed: null, skipped: 'its "when" condition is false' });
             if (v === '' && !def.runOnEmpty && rule.type !== 'equalTo') return Object.assign(entry, { passed: true, skipped: 'empty value: only required-type rules check blanks' });
             let r;
@@ -2088,7 +2088,7 @@
         const rules = rulesMap && typeof rulesMap === 'object' ? rulesMap : {};
         const fields = Object.keys(rules);
         const keepsRaw = Object.create(null), compiled = Object.create(null);
-        fields.forEach(f => { compiled[f] = normalizeRules(rules[f]); keepsRaw[f] = compiled[f].some(r => r.type === 'pwcheck'); });   // rules are read once; passwords are never trimmed
+        fields.forEach(f => { compiled[f] = normalizeRules(rules[f]); keepsRaw[f] = compiled[f].some(r => { const d = validators[r.type]; return !!(d && d.raw); }); });   // rules are read once; passwords are never trimmed
         const o = options || {};
 
         const pathFields = fields.filter(f => hasPathChars(f));

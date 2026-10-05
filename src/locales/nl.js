@@ -52,6 +52,8 @@
         minItems: "Voeg er minstens {min} toe.",
         maxItems: "Voeg er maximaal {max} toe.",
         requiredIf: "Dit veld is verplicht.",
+        pwscore: "Kies een sterker wachtwoord.",
+        pwned: "Dit wachtwoord is in een datalek opgedoken. Kies een ander wachtwoord.",
         dateAfter: "Voer een latere datum in.",
         dateBefore: "Voer een eerdere datum in.",
         atLeastOne: "Vul minstens één van deze velden in.",

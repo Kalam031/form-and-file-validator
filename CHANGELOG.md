@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.19.0
+- **Password add-on** (`dist/formValidator.password.js` 1.0.0, in the bundle, `form-and-file-validator/password`): `FormValidator.passwordStrength()` is an offline estimate (score 0 to 4, bits, feedback codes; keyboard runs, repeats, years, common passwords with l33t substitutions and what the site knows about the user), `watchPasswordStrength(input, fn)` feeds a meter, `pwned(password)` asks Have I Been Pwned's range API with k-anonymity (only 5 hash characters are sent, never the password; a built-in SHA-1 covers pages without `crypto.subtle`), and the rules `pwscore` (minimum score, `userFields`) and `pwned` (`maxCount`, `timeout`, `failOpen`) are asynchronous where needed and never trim a password. Messages in all 13 language packs. `registerRule(name, fn, { raw: true })` keeps a value untrimmed for your own rules.
+
 ## 3.18.0
 - **Polyglots** (FileValidator 2.11.0): a script, program or archive hidden inside a picture is now `DANGEROUS_CONTENT`: `<?php`, `<script`, `<html`, a shebang, a DOS or ELF program, a PDF, an appended ZIP / JAR (GIFAR) in the head and tail of a PNG, JPEG, GIF, WebP and other pictures, and GIFs that are also JavaScript (`GIF89a/*...`). `polyglot: false` turns it off, `'all'` covers audio, video, fonts and PDFs, `polyglotScanKB` sets the window (256). The patterns are long enough not to fire on picture data, checked on 200 KB of random bytes. New message fragment "hidden extra data" in all 13 language packs.
 - **`FileValidator.safeName(name, options)`**: a name that is safe to store and show (no path, control or bidi characters, no reserved Windows names, bounded length with the extension kept, only the last dot so `invoice.php.jpg` cannot be run as PHP). Idempotent.

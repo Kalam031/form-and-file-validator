@@ -369,3 +369,12 @@ import { FvFormController } from '../lit';
     const cfg: FileValidatorConfig = { polyglot: 'all', polyglotScanKB: 512 };
     void [safe, cfg];
 }
+
+// ---------------------------------------------------------------- passwords
+{
+    const st = FormValidator.passwordStrength('x', { userInputs: ['bob'] });
+    const sc: 0 | 1 | 2 | 3 | 4 = st.score;
+    FormValidator.pwned('x').then(c => { const n: number | null = c; void n; });
+    const stop: () => void = FormValidator.watchPasswordStrength(document.createElement('input'), r => { const l: string = r.label; void l; });
+    void [sc, stop];
+}

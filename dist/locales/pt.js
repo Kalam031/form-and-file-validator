@@ -52,6 +52,8 @@
         minItems: "Adicione pelo menos {min}.",
         maxItems: "Adicione no máximo {max}.",
         requiredIf: "Este campo é obrigatório.",
+        pwscore: "Escolha uma senha mais forte.",
+        pwned: "Esta senha apareceu em um vazamento de dados. Escolha outra.",
         dateAfter: "Insira uma data posterior.",
         dateBefore: "Insira uma data anterior.",
         atLeastOne: "Preencha pelo menos um destes campos.",

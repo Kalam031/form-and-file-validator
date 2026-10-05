@@ -151,6 +151,16 @@ export interface InitOptions {
     messages?: Record<string, string | Record<string, string> | ((field: HTMLElement, rule: RuleObject, env: RuleEnv) => string)>;
 }
 
+export interface PasswordStrength {
+    /** 0 very weak, 1 weak, 2 fair, 3 good, 4 strong. */
+    score: 0 | 1 | 2 | 3 | 4;
+    label: 'very weak' | 'weak' | 'fair' | 'good' | 'strong';
+    bits: number;
+    length: number;
+    /** 'too-short' | 'common' | 'sequence' | 'repeated' | 'user-input' | 'only-letters' | 'only-digits' | 'add-length' */
+    feedback: string[];
+}
+
 export interface FieldState { value: unknown; dirty: boolean; pristine: boolean; touched: boolean; pending: boolean; valid: boolean; error: string | null; code: string | null }
 export interface FormState {
     valid: boolean; errorCount: number; dirty: boolean; pristine: boolean; touched: boolean; validating: boolean;
@@ -495,6 +505,12 @@ export interface FormValidatorStatic {
     readonly fieldElement?: FormValidatorFieldElement;
     /** ASP.NET MVC / Razor `data-val-*` support (a drop-in for jquery.validate.unobtrusive.js, no jQuery needed). */
     readonly unobtrusive: FormValidatorUnobtrusive;
+    /** An offline estimate of how hard a password is to guess (add-on: bundle or formValidator.password.js). */
+    passwordStrength(password: unknown, options?: { userInputs?: unknown[] }): PasswordStrength;
+    /** How often a password appeared in known breaches (Have I Been Pwned, k-anonymity: only 5 hash characters are sent); 0 = never, null = could not check. */
+    pwned(password: string, options?: { url?: string; timeout?: number; fetch?: (url: string, init?: any) => Promise<{ ok: boolean; text(): Promise<string> }>; signal?: AbortSignal }): Promise<number | null>;
+    /** Calls fn(strength) for the password input now and on every input. Returns the stop function. */
+    watchPasswordStrength(input: HTMLInputElement, fn: (result: PasswordStrength) => void, options?: { userInputs?: unknown[] | (() => unknown[]) }): () => void;
     /** Why a value passes or fails, rule by rule (no short circuit; skipped rules say why). */
     explain(value: unknown, rules: RulesForField, options?: ValueCheckOptions): ExplainEntry[];
     /** Reads any backend's validation answer into { errors, all, form }: problem+json, ASP.NET, Laravel/Rails, Django REST, FastAPI, Zod, JSON:API ... Never throws. */

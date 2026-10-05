@@ -214,6 +214,30 @@ No DOM is needed, so this runs in Node, in tests and in the Angular validators. 
 - Like the native pseudo-classes, `checkValidity()` fires `invalid`, so a field that gets one shows its message.
 - Another tag name: `FormValidator.fieldElement.define('my-field')`.
 
+### Password strength and breached passwords
+
+`FormValidator.passwordStrength(password, { userInputs })` is a fast, **offline** estimate for a strength meter or a minimum (about 1 KB of common passwords; nothing is downloaded or sent):
+
+```js
+FormValidator.passwordStrength('Tr0ub4dor&3', { userInputs: [email, name] });
+// { score: 3, label: 'good', bits: 72.3, length: 11, feedback: [] }       score 0 very weak ... 4 strong
+FormValidator.passwordStrength('P@ssw0rd');   // { score: 0, feedback: ['common', 'add-length'], ... }
+FormValidator.watchPasswordStrength(input, r => { meter.value = r.score; hint.textContent = r.label; }, { userInputs: () => [email.value] });   // returns stop()
+```
+
+Characters in a keyboard run (`qwerty`, `12345`, `abcd`), a repeat, a year or a piece of what the site knows about the user count as about one bit; a common password, also written with substitutions (`P@ssw0rd`) or a few characters added, scores 0. Feedback codes: `too-short`, `common`, `sequence`, `repeated`, `user-input`, `only-letters`, `only-digits`, `add-length` (translate them in your UI). It has no dictionary of ordinary words, so it is a guide, not a guarantee.
+
+As rules (the add-on is in the bundle; `dist/formValidator.password.js` on its own):
+
+```js
+rules: { password: { pwcheck: { minLength: 8 }, pwscore: 3, pwned: true } }
+rules: { password: { pwscore: { min: 3, userFields: ['email', 'name'] } } }   // those fields' values do not count as secret
+```
+
+- **`pwscore`** needs at least that score (default 3, "good"); messages in all 13 language packs.
+- **`pwned`** asks Have I Been Pwned's range API whether the password appeared in a known breach. **Only the first 5 characters of the SHA-1 hash are sent** (k-anonymity), never the password, and the request asks for padded answers. It is asynchronous: a form waits for it on submit and skips it while typing; `checkValue` cannot run it (use `await FormValidator.pwned(password)` on a server: it answers the count, `0`, or `null` when it could not check). Options: `maxCount` (allowed times seen, default 0), `timeout` (5000 ms), `failOpen` (default `true`: when the service cannot be reached the user is not blocked; `false` blocks), `url` for your own mirror.
+- Passwords are never trimmed by any of these rules, in `checkValue` and `schema()` too.
+
 ### Cross-field rules, state, wizard steps and explain
 
 **Rules that look at other fields** (the other values come from the form, or from `checkValue(value, rules, { values })`, or from the data in `checkValues` / `schema`, same row first):
@@ -979,6 +1003,7 @@ The newest entries (each source file also keeps its own changelog in its header;
 
 - **2.15.0**: `requiredIf`, `dateAfter`, `dateBefore`, `atLeastOne`, `sumEquals`; `inst.state` / `getState()` / `onStateChange()`; `inst.validateStep()`; `FormValidator.explain()`.
 - **2.14.0**: field arrays and nested data: wildcard rule keys (`items[].qty`) and nested paths in `checkValues()` / `schema()` / forms, rules `unique`, `minItems`, `maxItems`; schema output is nested.
+- **password add-on 1.0.0**: `passwordStrength()`, `pwned()`, `watchPasswordStrength()`, rules `pwscore` and `pwned` (`dist/formValidator.password.js`).
 - **element 1.0.0**: `<fv-field>`, FormValidator rules as native constraint validation in plain HTML (not a FormValidator version: `dist/formValidator.element.js`).
 - **2.13.0**: ASP.NET `data-val-*` (unobtrusive validation): `unobtrusive: true`, `FormValidator.unobtrusive.parse()` / `.auto()` / `.adapters`, `$.validator.unobtrusive` on the jQuery layer.
 - **2.12.0**: `validateOn` presets (`'smart'`, `'blur'`, `'input'`, `'submit'`, `'all'`; an `'input'` entry now works) and `validClass` (reward early, punish late); stable error codes (`data-code`, `code` in `getErrors()`, `checkValue`, schema issues, a rule's own `code`); `errorSummary` (accessible list with links and focus); `autoAttributes` and `inst.lint()`.

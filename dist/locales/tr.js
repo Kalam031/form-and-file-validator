@@ -52,6 +52,8 @@
         minItems: "Lütfen en az {min} ekleyin.",
         maxItems: "Lütfen en fazla {max} ekleyin.",
         requiredIf: "Bu alan zorunludur.",
+        pwscore: "Lütfen daha güçlü bir parola seçin.",
+        pwned: "Bu parola bir veri ihlalinde ortaya çıktı. Lütfen başka bir parola seçin.",
         dateAfter: "Lütfen daha ileri bir tarih girin.",
         dateBefore: "Lütfen daha önceki bir tarih girin.",
         atLeastOne: "Lütfen bu alanlardan en az birini doldurun.",
