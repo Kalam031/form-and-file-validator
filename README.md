@@ -24,7 +24,7 @@ TypeScript types are included.
 
 ## Compatibility
 
-| | Tested in CI |
+| Runtime | Tested in CI |
 | --- | --- |
 | Node | 18, 20, 22, 24, 26 |
 | Browsers | Chromium (Chrome, Edge), Firefox, WebKit (Safari) with real browser tests |
@@ -316,7 +316,7 @@ Always pin the exact version and keep the `integrity` attribute, so the file you
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/validator.min.js"
-        integrity="sha384-ngZfSqvII0GYWsac0olOSl2GE47lMR64noDG9/fCUCtlVsn6NUv9oD1Caj7LLjqR" crossorigin="anonymous"></script>
+        integrity="sha384-wMubjpkVv6xdf+GAhLAnkg5NdeibQeBouSSqiPq3EtA2TN2O+SF4km5Oll5TcJ7K" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/locales/de.min.js"
         integrity="sha384-mmSW5mVYaC+rhElftx/0QVwLyq0VSIOLlmUzwkOjvzKCUJXHIEaGTfS0K0bB96ln" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>

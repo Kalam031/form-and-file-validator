@@ -35,7 +35,7 @@ test('the bundle is much smaller minified, keeps the version banner, and has no 
     const { code, minCode, versions } = await getBuilt();
     assert.ok(minCode.length < code.length * 0.65);
     assert.match(minCode, /^\/\*! FormValidator \d+\.\d+\.\d+ \+ FileValidator \d+\.\d+\.\d+/);
-    assert.equal(Object.keys(versions).length, 10);
+    assert.equal(Object.keys(versions).length, 11);
     for (const v of Object.values(versions)) assert.match(v, /^\d+\.\d+\.\d+$/);
 });
 
@@ -157,7 +157,7 @@ test('the bundle and the separate files agree (same versions, same public API su
     assert.equal(m.exports.FormValidator.version, FormSep.version);
     assert.equal(m.exports.FileValidator.version, FileSep.version);
     assert.deepEqual(Object.keys(m.exports.FormValidator).sort(), Object.keys(FormSep).filter(k => k !== 'fieldElement').concat(['bundled', 'fieldElement', 'locales', 'otp', 'parseDate', 'parseNumber', 'passwordStrength', 'pwned', 'useJQuery', 'watchPasswordStrength']).sort());
-    assert.deepEqual(Object.keys(m.exports.FileValidator).sort(), Object.keys(FileSep).concat(['locales', 'upload', 'UploadError']).sort());
+    assert.deepEqual(Object.keys(m.exports.FileValidator).sort(), Object.keys(FileSep).concat(['locales', 'upload', 'UploadError', 'transformImage', 'convertImage', 'convertHeic', 'cropper', 'capture', 'isHeic']).sort());
     assert.equal(versions.formValidator, FormSep.version);
 });
 

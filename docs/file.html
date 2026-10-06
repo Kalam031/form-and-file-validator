@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.30.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.31.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -907,6 +907,21 @@ $(&#39;#avatar&#39;).rules(&#39;add&#39;, { fileValidator: { accept: &#39;image/
 <p><strong>Previews.</strong> <code>FileValidator.createPreview(file)</code> returns <code>{ url, kind, revoke() }</code>: a small thumbnail for images, an object URL for video and audio, and a badge label for documents. The widget revokes them when files are removed.</p>
 <p><strong>Helpers you can use alone:</strong> <code>FileValidator.filesFromDrop(dataTransfer)</code> (call it inside the drop handler), <code>filesFromClipboard(clipboardData)</code> (names unnamed screenshots <code>pasted-2025-01-31T12-00-00.png</code>), <code>resizeImage</code>, <code>createPreview</code>.</p>
 <p><strong>Accessibility.</strong> The list, the live regions, the remove buttons and the focus handling are covered in <code>Accessibility.md</code>. Keep the file input available: dragging is not possible with a keyboard.</p>
+<h2 id="photos-from-phones-heic-crop-rotate-and-camera">Photos from phones: HEIC, crop, rotate and camera</h2>
+<p>The image add-on (<code>dist/fileValidator.image.js</code>, in the one-file bundle, or <code>form-and-file-validator/image</code>) works on the person&#39;s device; nothing is uploaded.</p>
+<pre tabindex="0"><code class="language-js">const jpeg    = await FileValidator.convertHeic(file);                           // iPhone HEIC -&gt; JPEG; other files come back untouched
+const small   = await FileValidator.transformImage(file, { rotate: 90, maxWidth: 1600, quality: 0.85 });
+const square  = await FileValidator.cropper(file, { aspectRatio: 1, maxWidth: 512 });   // a dialog; a File, or null when cancelled
+const photo   = await FileValidator.capture({ camera: &#39;environment&#39;, maxWidth: 2000 }); // call from a click
+
+FileValidator.widget(&#39;#drop&#39;, rules, { convert: true, crop: { aspectRatio: 1 } });     // the widget does both for every file
+</code></pre>
+<ul>
+<li><strong>HEIC</strong> converts where the browser can decode it (Safari, and Chromium with the system codec). Elsewhere pass <code>decoder: async file =&gt; blob</code> and plug in a library such as <code>heic-to</code>. With no decoder an undecodable file throws <code>{ code: &#39;IMAGE_DECODE_FAILED&#39; }</code> (<code>onFail: &#39;keep&#39;</code> returns the original instead; the widget does this, so the normal checks decide).</li>
+<li><code>transformImage</code> always re-encodes (EXIF rotation is applied, metadata is dropped). SVG and GIF are returned unchanged. The result is a <code>File</code> with <code>fvTransformed</code> (<code>from</code>, <code>to</code>, <code>type</code>).</li>
+<li><strong>The cropper</strong> is a real dialog (<code>role=&quot;dialog&quot;</code>, <code>aria-modal</code>, focus kept inside, focus returned afterwards): drag the frame and corner handles, or use the arrow keys (Shift = bigger steps), <code>+</code> / <code>-</code> to resize, Enter to apply, Esc to cancel. Buttons rotate, flip and reset. Pass <code>texts</code> to translate it.</li>
+<li>In the widget, entries get <code>converted</code> and <code>cropped</code>; cancelling the crop skips that file.</li>
+</ul>
 <h2 id="uploading-progress-cancel-retry-direct-to-storage-and-resumable">Uploading: progress, cancel, retry, direct-to-storage and resumable</h2>
 <p>A file that passed validation still has to get there. <code>FileValidator.upload(file, options)</code> (the upload add-on, part of the bundle; <code>dist/fileValidator.upload.js</code> on its own) sends it and returns a Promise with <code>abort()</code>:</p>
 <pre tabindex="0"><code class="language-js">const up = FileValidator.upload(file, {

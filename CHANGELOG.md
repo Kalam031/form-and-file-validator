@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.31.0
+- **Image add-on** (`FileValidator.convertHeic` / `convertImage` / `transformImage` / `cropper` / `capture`, `dist/fileValidator.image.js` 1.0.0, in the bundle, `form-and-file-validator/image`): iPhone HEIC to JPEG where the browser decodes it (or through your own `decoder`), crop, rotate, flip and shrink on a canvas, an accessible keyboard-operable crop dialog, and a camera / chooser helper. The upload widget gets `convert` and `crop` options (entries report `converted` and `cropped`). Tested in Chromium, Firefox and WebKit.
+
 ## 3.30.0
 - **Plain forms on the server** (`form-and-file-validator/server` 1.1.0): `validateRequest(request, rules)` for Web Request frameworks (Next.js, Remix, SvelteKit, Nuxt, Astro, Hono, Workers, Bun, Deno) reads JSON, multipart and urlencoded bodies and returns the validated data or a ready 422 `application/problem+json` response, with optional file rules per field; `bodyValidator(rules)` is the Express / Connect / Fastify middleware; `renderErrors(result)` builds the accessible, escaped error summary, field messages and `aria-*` attributes for pages that work without JavaScript. Tested against real Express, Fastify and Hono servers.
 - **HTMX and Turbo**: `FormValidator.htmx()` cancels the request of an invalid form; `auto()` now also destroys forms that a swap removed, so listeners do not pile up. Guide in docs/Server-and-Frameworks.md.

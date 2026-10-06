@@ -1,5 +1,5 @@
 /*!
- * FileValidator upload widget v1.4.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
+ * FileValidator upload widget v1.5.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
  *
  * Load order:  fileValidator.js (2.5+)  →  fileValidator.widget.js.  No other dependencies.
  *
@@ -9,6 +9,8 @@
  *       statusElement: '#file-status', // polite live region: "2 files added. 3 selected." (for screen reader users)
  *       preview: true,                 // thumbnails for images
  *       resize: true,                  // shrink big images to the maxImageWidth/Height/maxFileSizeMB limits instead of rejecting them
+ *       convert: true,                 // HEIC / HEIF photos become JPEG where the browser can decode them (needs fileValidator.image.js, in the bundle)
+ *       crop: { aspectRatio: 1 },      // every accepted image opens in a crop dialog first (null result = the person cancelled: the file is not added)
  *       stripMetadata: true,           // remove EXIF / GPS / XMP / IPTC / comments from JPEG, PNG and WebP photos (orientation is kept)
  *       paste: true,                   // Ctrl+V of a screenshot
  *       folder: true,                  // accept dropped or picked folders, ignore .DS_Store / Thumbs.db
@@ -24,6 +26,7 @@
  * Helpers: FileValidator.filesFromDrop(dataTransfer), filesFromClipboard(clipboardData), resizeImage(file, options), createPreview(file, options).
  *
  * Changelog
+ *   1.5.0  `convert` and `crop` options (with the image add-on); entries get `converted` and `cropped`.
  *   1.4.0  `stripMetadata` option: photos are listed without EXIF, GPS, XMP, IPTC and comments (entries get `stripped`).
  *   1.3.0  Every sentence the widget writes (status line, "...and N more", remove button labels) goes through FileValidator.phrase(),
  *          so a language pack can translate it; plural forms follow the language.
@@ -348,7 +351,19 @@
             let total = running.reduce((s, f) => s + (f.size || 0), 0);
 
             for (let file of files) {
-                let resized = null;
+                let resized = null, converted = null, cropped = null;
+                if (opt.convert && isFn(FV.convertHeic)) {
+                    try {
+                        const out = await FV.convertHeic(file, Object.assign({ onFail: 'keep' }, opt.convert === true ? {} : opt.convert));
+                        if (out !== file) { file = out; converted = out.fvTransformed || { type: out.type }; }
+                    } catch (e) { /* keep the original */ }
+                }
+                if (opt.crop && isFn(FV.cropper) && FV.getCategory(file) === 'image' && !/svg|gif/i.test((file.type || '') + ' ' + (file.name || ''))) {
+                    let out = file;
+                    try { out = await FV.cropper(file, opt.crop === true ? {} : opt.crop); } catch (e) { out = file; }   // an image the browser cannot decode goes on to the normal checks
+                    if (out === null) continue;                 // the person cancelled: the file is not added
+                    if (out !== file) { file = out; cropped = out.fvTransformed || { type: out.type }; }
+                }
                 if (opt.resize) {
                     try {
                         const ro = opt.resize === true ? { maxWidth: cfg.maxImageWidth, maxHeight: cfg.maxImageHeight, maxSizeMB: cfg.maxFileSizeMB } : opt.resize;
@@ -379,7 +394,7 @@
                 const res = await FV.validateFile(file, config, { files: running.concat(file), index: running.length });
                 if (!res.isValid) { rejected.push({ file, path: FV.getPath(file), errors: res.errors, details: res.details, messages: res.details.map(d => d.message) }); continue; }
                 running.push(file); total += file.size;
-                accepted.push({ id: ++seq, file, path: FV.getPath(file), resized, stripped, preview: null });
+                accepted.push({ id: ++seq, file, path: FV.getPath(file), resized, stripped, converted, cropped, preview: null });
             }
 
             entries.push(...accepted);

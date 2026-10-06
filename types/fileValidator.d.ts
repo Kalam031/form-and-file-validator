@@ -278,6 +278,17 @@ export interface FileValidatorStatic {
     /** Sends a file: progress, cancel, retry, presigned and tus uploads (upload add-on: bundle or fileValidator.upload.js). Returns a Promise with abort() (and pause() / resume() for tus). */
     upload(file: File | Blob, options: UploadOptions): UploadTask;
     readonly UploadError: typeof UploadError;
+    /** Image add-on (bundle or fileValidator.image.js): crop, rotate, flip, shrink and re-encode. SVG and GIF come back unchanged. Rejects with code IMAGE_DECODE_FAILED. */
+    transformImage(file: File, options?: ImageTransformOptions): Promise<File>;
+    /** Re-encode as JPEG (or options.type), e.g. an iPhone HEIC photo. */
+    convertImage(file: File, options?: ConvertImageOptions): Promise<File>;
+    /** convertImage with onlyHeic: true. */
+    convertHeic(file: File, options?: ConvertImageOptions): Promise<File>;
+    /** A keyboard-friendly crop dialog. Resolves to the new File, or null when cancelled. */
+    cropper(file: File, options?: CropperOptions): Promise<File | null>;
+    /** Opens the phone camera (a file chooser on a computer). Call from a click. Resolves to a File, null when nothing was taken (an array with `multiple`). */
+    capture(options?: CaptureOptions): Promise<File | null>;
+    isHeic(file: { name?: string; type?: string }): boolean;
     detect(file: File): Promise<{ type: string; mime: string | null; extensions: string[]; executable: boolean } | null | undefined>;
     /** A file name that is safe to store and to show: no path, bidi / control characters or reserved names, bounded length, only the last dot. */
     safeName(name: unknown, options?: { replacement?: string; maxLength?: number; lowercase?: boolean; ascii?: boolean; dots?: 'replace' | 'keep'; fallback?: string; extensionMaxLength?: number }): string;
@@ -325,6 +336,43 @@ export interface ResizeOptions {
     render?: (source: unknown, width: number, height: number, type: string, quality: number) => Promise<Blob | null>;
 }
 
+export interface ImageTransformOptions {
+    /** Source pixels. Out-of-range values are clamped. */
+    crop?: { x?: number; y?: number; width?: number; height?: number };
+    /** Multiple of 90, clockwise. */
+    rotate?: number;
+    flipH?: boolean;
+    flipV?: boolean;
+    maxWidth?: number;
+    maxHeight?: number;
+    /** Output MIME type. Default: PNG / WebP stay, anything else becomes image/jpeg. */
+    type?: string;
+    /** 0..1, default 0.85. */
+    quality?: number;
+    /** Plug in a HEIC library: return a Blob, ImageBitmap or { source, width, height, close? }. */
+    decoder?: (file: File) => Promise<Blob | ImageBitmap | { source: CanvasImageSource; width: number; height: number; close?: () => void }>;
+}
+export interface ConvertImageOptions extends ImageTransformOptions {
+    /** true: files that are not HEIC / HEIF are returned untouched. */
+    onlyHeic?: boolean;
+    /** 'keep' returns the original when it cannot be decoded instead of throwing. */
+    onFail?: 'throw' | 'keep';
+}
+export interface CropperOptions extends ImageTransformOptions {
+    /** A number (1, 16 / 9) or 'free' (default). */
+    aspectRatio?: number | 'free';
+    texts?: Partial<Record<'title' | 'apply' | 'cancel' | 'rotateLeft' | 'rotateRight' | 'flip' | 'reset' | 'help', string>>;
+    parent?: HTMLElement;
+}
+export interface CaptureOptions extends ConvertImageOptions {
+    accept?: string;
+    camera?: 'environment' | 'user' | false;
+    multiple?: boolean;
+    /** false: return the files as picked. */
+    process?: boolean;
+}
+export interface ImageTransformInfo { from: { width: number; height: number; size: number }; to: { width: number; height: number; size: number }; type: string; rotate?: number; flipH?: boolean }
+
 export interface WidgetEntry {
     id: number;
     file: File;
@@ -334,6 +382,10 @@ export interface WidgetEntry {
     resized: { from: { width: number; height: number; size: number }; to: { width: number; height: number; size: number } } | null;
     /** Set when `stripMetadata` removed something: what was removed and the size before and after. */
     stripped: { removed: string[]; from: number; to: number } | null;
+    /** Set when `convert` turned the file (HEIC) into another format. */
+    converted: ImageTransformInfo | { type: string } | null;
+    /** Set when the person cropped it in the `crop` dialog. */
+    cropped: ImageTransformInfo | { type: string } | null;
 }
 
 export interface MetadataOptions {
@@ -392,6 +444,10 @@ export interface WidgetOptions {
     renderItem?: (entry: WidgetEntry, helpers: { remove(): void; formatBytes(bytes: number): string }) => HTMLElement;
     preview?: boolean | PreviewOptions;
     resize?: boolean | ResizeOptions;
+    /** HEIC / HEIF photos become JPEG where the browser (or `decoder`) can decode them. Needs the image add-on (in the bundle). */
+    convert?: boolean | ConvertImageOptions;
+    /** Every accepted image opens in a crop dialog first; cancelling skips the file. Needs the image add-on. */
+    crop?: boolean | CropperOptions;
     /** Remove EXIF / GPS / XMP / IPTC / comments from JPEG, PNG and WebP photos before they are listed. `true` or MetadataOptions. */
     stripMetadata?: boolean | MetadataOptions;
     maxShownMessages?: number;

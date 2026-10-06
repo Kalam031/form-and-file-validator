@@ -451,6 +451,132 @@ for (const b of BROWSERS) {
             assert.ok(r.after <= 0.2 * 1048576, 'shrunk to ' + r.after);
             assert.equal(r.type, 'image/jpeg');
         });
+        // ============================================================ image add-on: convert, transform, cropper, capture
+        const IMG_HELPERS = `
+            window.halves = async (w, h, type = 'image/png') => {      // left half red, right half blue
+                const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+                x.fillStyle = '#f00'; x.fillRect(0, 0, w / 2, h); x.fillStyle = '#00f'; x.fillRect(w / 2, h === 0 ? 0 : 0, w / 2, h);
+                const blob = await new Promise(r => c.toBlob(r, type, 0.95)); return new File([blob], 'halves.' + (type === 'image/png' ? 'png' : 'jpg'), { type });
+            };
+            window.pixel = async (file, px, py) => {
+                const b = await createImageBitmap(file); const c = document.createElement('canvas'); c.width = b.width; c.height = b.height;
+                const x = c.getContext('2d'); x.drawImage(b, 0, 0); const d = x.getImageData(px, py, 1, 1).data;
+                return { w: b.width, h: b.height, rgb: [d[0] > 128 ? 'R' : '-', d[1] > 128 ? 'G' : '-', d[2] > 128 ? 'B' : '-'].join('') };
+            };`;
+        it2('image add-on: transformImage crops, rotates, flips and shrinks on a real canvas', async page => {
+            await page.evaluate(IMG_HELPERS);
+            const r = await page.evaluate(async () => {
+                const src = await halves(300, 200);
+                const crop = await FileValidator.transformImage(src, { crop: { x: 0, y: 0, width: 100, height: 200 } });        // only the red part
+                const rot = await FileValidator.transformImage(src, { rotate: 90 });                                              // 200 x 300, red on top after a clockwise turn
+                const flip = await FileValidator.transformImage(src, { flipH: true });                                            // blue on the left now
+                const small = await FileValidator.transformImage(src, { maxWidth: 150 });
+                const jpg = await FileValidator.transformImage(src, { type: 'image/jpeg', quality: 0.9 });
+                const svg = new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], 'a.svg', { type: 'image/svg+xml' });
+                return {
+                    crop: await pixel(crop, 50, 100), rotTop: await pixel(rot, 100, 10), rotBottom: await pixel(rot, 100, 290), flipLeft: await pixel(flip, 10, 100),
+                    small: await pixel(small, 10, 10), jpgType: jpg.type, jpgName: jpg.name, meta: crop.fvTransformed, svgSame: (await FileValidator.transformImage(svg)) === svg
+                };
+            });
+            assert.deepEqual([r.crop.w, r.crop.h, r.crop.rgb], [100, 200, 'R--']);
+            assert.deepEqual([r.rotTop.w, r.rotTop.h, r.rotTop.rgb, r.rotBottom.rgb], [200, 300, 'R--', '--B']);
+            assert.equal(r.flipLeft.rgb, '--B');
+            assert.deepEqual([r.small.w, r.small.h], [150, 100]);
+            assert.equal(r.jpgType, 'image/jpeg'); assert.equal(r.jpgName, 'halves.jpg');
+            assert.equal(r.meta.from.width, 300); assert.equal(r.meta.to.width, 100);
+            assert.equal(r.svgSame, true);
+        });
+        it2('image add-on: convertImage / convertHeic re-encode, use a decoder for formats the browser cannot read, and fail with a clear code', async page => {
+            await page.evaluate(IMG_HELPERS);
+            const r = await page.evaluate(async () => {
+                const src = await halves(300, 200);
+                const toJpeg = await FileValidator.convertImage(src);
+                const png = await FileValidator.convertHeic(src);                     // not a HEIC file: untouched
+                const fakeHeic = new File([new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99, 0, 0, 0, 0])], 'IMG_0001.HEIC', { type: 'image/heic' });
+                let code = null; try { await FileValidator.convertHeic(fakeHeic); } catch (e) { code = e.code; }
+                const kept = await FileValidator.convertHeic(fakeHeic, { onFail: 'keep' });
+                const viaDecoder = await FileValidator.convertHeic(fakeHeic, { decoder: async () => src, maxWidth: 100 });   // a heic library would return a Blob like this
+                return { type: toJpeg.type, name: toJpeg.name, untouched: png === src, code, kept: kept === fakeHeic, dec: await pixel(viaDecoder, 10, 10), decType: viaDecoder.type, decName: viaDecoder.name, isHeic: FileValidator.isHeic(fakeHeic) };
+            });
+            assert.deepEqual([r.type, r.name, r.untouched], ['image/jpeg', 'halves.jpg', true]);
+            assert.equal(r.code, 'IMAGE_DECODE_FAILED');
+            assert.equal(r.kept, true);
+            assert.deepEqual([r.dec.w, r.dec.h, r.decType, r.decName, r.isHeic], [100, 67, 'image/jpeg', 'IMG_0001.jpg', true]);
+        });
+        it2('image add-on: the cropper dialog is accessible, moves with the keyboard, keeps the aspect ratio and returns the cropped File', async page => {
+            await page.evaluate(IMG_HELPERS);
+            await page.evaluate(async () => { window.__crop = FileValidator.cropper(await halves(400, 200), { aspectRatio: 1 }).then(f => { window.__result = f; return f; }); });
+            const dlg = page.locator('.fv-crop[role="dialog"]');
+            await dlg.waitFor();
+            assert.equal(await dlg.getAttribute('aria-modal'), 'true');
+            assert.equal(await page.evaluate(() => document.activeElement.className), 'fv-crop-box');
+            assert.ok(await page.evaluate(() => document.querySelector('.fv-crop').getAttribute('aria-labelledby')));
+            // 400 x 200 image, ratio 1: the box starts 160 x 160 px (80% of the height) and centred
+            const before = await page.evaluate(() => { const b = document.querySelector('.fv-crop-box'); return [b.style.left, b.style.top, b.style.width, b.style.height]; });
+            await page.keyboard.press('ArrowRight');
+            await page.keyboard.press('Shift+ArrowLeft');
+            const moved = await page.evaluate(() => { const b = document.querySelector('.fv-crop-box'); return [b.style.left, b.style.top, b.style.width, b.style.height]; });
+            assert.notDeepEqual(moved, before);
+            assert.equal(moved[2], before[2], 'moving does not resize');
+            await page.keyboard.press('-');
+            const smaller = await page.evaluate(() => document.querySelector('.fv-crop-box').style.width);
+            assert.ok(parseFloat(smaller) < parseFloat(before[2]));
+            await page.keyboard.press('Tab'); assert.equal(await page.evaluate(() => document.activeElement.tagName), 'BUTTON');
+            await page.keyboard.press('Shift+Tab'); assert.equal(await page.evaluate(() => document.activeElement.className), 'fv-crop-box');
+            await page.keyboard.press('Enter');
+            const r = await page.evaluate(async () => { const f = await window.__crop; return { ...(await pixel(f, 5, 5)), type: f.type, meta: f.fvTransformed, dialog: !!document.querySelector('.fv-crop') }; });
+            assert.equal(r.w, r.h, 'the ratio 1 gives a square');
+            assert.ok(r.w < 160 && r.w > 100, 'about 150 px, got ' + r.w);
+            assert.equal(r.dialog, false, 'the dialog is gone');
+            assert.equal(r.type, 'image/png');
+        });
+        it2('image add-on: the cropper cancels with Escape or Cancel, rotates, flips and resets', async page => {
+            await page.evaluate(IMG_HELPERS);
+            await page.evaluate(async () => { window.__p = FileValidator.cropper(await halves(400, 200)); });
+            await page.locator('.fv-crop').waitFor();
+            await page.keyboard.press('Escape');
+            assert.equal(await page.evaluate(() => window.__p), null);
+            assert.equal(await page.locator('.fv-crop').count(), 0);
+            await page.evaluate(async () => { window.__p = FileValidator.cropper(await halves(400, 200), { maxWidth: 100 }); });
+            await page.locator('.fv-crop').waitFor();
+            await page.click('text=Cancel');
+            assert.equal(await page.evaluate(() => window.__p), null);
+            // rotate right: the image is 200 x 400 now; applying gives a portrait result whose top is red (the left half turned up)
+            await page.evaluate(async () => { window.__p = FileValidator.cropper(await halves(400, 200), { texts: { apply: 'Use photo' } }); });
+            await page.locator('.fv-crop').waitFor();
+            await page.click('text=Rotate right');
+            await page.click('text=Use photo');
+            const r = await page.evaluate(async () => { const f = await window.__p; return { top: await pixel(f, f.fvTransformed.to.width / 2 | 0, 5), bottom: await pixel(f, f.fvTransformed.to.width / 2 | 0, f.fvTransformed.to.height - 5), rotate: f.fvTransformed.rotate }; });
+            assert.ok(r.top.h > r.top.w, 'portrait');
+            assert.equal(r.top.rgb, 'R--'); assert.equal(r.bottom.rgb, '--B'); assert.equal(r.rotate, 90);
+        });
+        it2('image add-on: the widget converts HEIC and opens the cropper for each image; cancelling skips the file', async page => {
+            await page.evaluate(IMG_HELPERS);
+            await setup(page, '<div id="zone"><input id="in" type="file" accept="image/*" multiple></div><ul id="list"></ul><div id="errors"></div>', `
+                window.zone = FileValidator.widget('#zone', { accept: 'image/*', maxFiles: 5 }, { list: '#list', messageElement: '#errors',
+                    convert: { decoder: async () => halves(80, 40) }, crop: { aspectRatio: 'free' } });`);
+            await page.evaluate(async () => {
+                const heic = new File([new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99])], 'IMG_9.heic', { type: 'image/heic' });
+                window.__add = zone.add([heic, await halves(60, 30)]);
+            });
+            await page.locator('.fv-crop').waitFor();
+            await page.evaluate(() => document.querySelector('.fv-crop').setAttribute('data-first', '1'));
+            await page.click('.fv-crop-apply');                 // first file (the converted HEIC) is accepted as cropped
+            await page.locator('.fv-crop:not([data-first])').waitFor();   // the second dialog, not the first one still closing
+            await page.keyboard.press('Escape');               // the second one is cancelled: not added
+            const r = await page.evaluate(async () => { const res = await window.__add; return { accepted: res.accepted.map(a => ({ name: a.file.name, type: a.file.type, converted: !!a.converted, cropped: !!a.cropped })), rejected: res.rejected.length }; });
+            assert.deepEqual(r.accepted, [{ name: 'IMG_9.jpg', type: 'image/jpeg', converted: true, cropped: true }]);
+            assert.equal(r.rejected, 0);
+        });
+        it2('image add-on: capture() opens the chooser (camera attribute on phones), converts on request and resolves to a File', async page => {
+            await setup(page, '<button id="cap">Take photo</button>', `document.getElementById('cap').onclick = () => { window.__cap = FileValidator.capture({ camera: 'user', maxWidth: 50, type: 'image/jpeg' }); };`);
+            const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#cap')]);
+            assert.equal(await page.evaluate(() => document.querySelector('input[type=file][capture]').getAttribute('capture')), 'user');
+            await chooser.setFiles({ name: 'cam.png', mimeType: 'image/png', buffer: Buffer.from(files.makePng(200, 100)) });
+            const r = await page.evaluate(async () => { const f = await window.__cap; const b = await createImageBitmap(f); return { name: f.name, type: f.type, w: b.width, h: b.height, left: document.querySelectorAll('input[type=file][capture]').length }; });
+            assert.deepEqual(r, { name: 'cam.jpg', type: 'image/jpeg', w: 50, h: 25, left: 0 });
+        });
+
         it2('previews: a real thumbnail is created and loads; it is revoked on remove', async page => {
             await widget(page, { accept: '.png' }, { preview: true });
             await page.evaluate(async b => { await zone.add([new File([new Uint8Array(b)], 'p.png', { type: 'image/png' })]); }, bytes(files.makePng(600, 400)));

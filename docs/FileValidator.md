@@ -425,6 +425,24 @@ Notes: the check is asynchronous, so `$('#avatar').valid()` counts it as valid u
 
 **Accessibility.** The list, the live regions, the remove buttons and the focus handling are covered in `Accessibility.md`. Keep the file input available: dragging is not possible with a keyboard.
 
+## Photos from phones: HEIC, crop, rotate and camera
+
+The image add-on (`dist/fileValidator.image.js`, in the one-file bundle, or `form-and-file-validator/image`) works on the person's device; nothing is uploaded.
+
+```js
+const jpeg    = await FileValidator.convertHeic(file);                           // iPhone HEIC -> JPEG; other files come back untouched
+const small   = await FileValidator.transformImage(file, { rotate: 90, maxWidth: 1600, quality: 0.85 });
+const square  = await FileValidator.cropper(file, { aspectRatio: 1, maxWidth: 512 });   // a dialog; a File, or null when cancelled
+const photo   = await FileValidator.capture({ camera: 'environment', maxWidth: 2000 }); // call from a click
+
+FileValidator.widget('#drop', rules, { convert: true, crop: { aspectRatio: 1 } });     // the widget does both for every file
+```
+
+- **HEIC** converts where the browser can decode it (Safari, and Chromium with the system codec). Elsewhere pass `decoder: async file => blob` and plug in a library such as `heic-to`. With no decoder an undecodable file throws `{ code: 'IMAGE_DECODE_FAILED' }` (`onFail: 'keep'` returns the original instead; the widget does this, so the normal checks decide).
+- `transformImage` always re-encodes (EXIF rotation is applied, metadata is dropped). SVG and GIF are returned unchanged. The result is a `File` with `fvTransformed` (`from`, `to`, `type`).
+- **The cropper** is a real dialog (`role="dialog"`, `aria-modal`, focus kept inside, focus returned afterwards): drag the frame and corner handles, or use the arrow keys (Shift = bigger steps), `+` / `-` to resize, Enter to apply, Esc to cancel. Buttons rotate, flip and reset. Pass `texts` to translate it.
+- In the widget, entries get `converted` and `cropped`; cancelling the crop skips that file.
+
 ## Uploading: progress, cancel, retry, direct-to-storage and resumable
 
 A file that passed validation still has to get there. `FileValidator.upload(file, options)` (the upload add-on, part of the bundle; `dist/fileValidator.upload.js` on its own) sends it and returns a Promise with `abort()`:

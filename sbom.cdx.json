@@ -5,9 +5,9 @@
   "metadata": {
     "component": {
       "type": "library",
-      "bom-ref": "form-and-file-validator@3.30.0",
+      "bom-ref": "form-and-file-validator@3.31.0",
       "name": "form-and-file-validator",
-      "version": "3.30.0",
+      "version": "3.31.0",
       "licenses": [
         {
           "license": {
@@ -15,7 +15,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/form-and-file-validator@3.30.0"
+      "purl": "pkg:npm/form-and-file-validator@3.31.0"
     },
     "properties": [
       {
@@ -32,7 +32,29 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "39e0c20a007ba0d015537887ed2f7ca008b37dea3c120793698b807390d6fa1b"
+          "content": "7ff3f3f5849b322b7f9808d43f092991b36a678e3ab3610406d5bf3237d4f5de"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.image.js",
+      "name": "dist/fileValidator.image.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3c160578779f0fcddebd1818d9477c3eaa72875ea6f5bb6c9bc56905f8f9d16b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:dist/fileValidator.image.min.js",
+      "name": "dist/fileValidator.image.min.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3a8daf9e7fc365577c74af588cf4ea53696cd586031b9421fcc04ef7a3e7e530"
         }
       ]
     },
@@ -87,7 +109,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "068202a4a41d798d277cdd78f081e60ba8118fd1c236b3e0c8adc82bab753b40"
+          "content": "40d5c54c16ec3c42fc6459ef9e29dbaf846c982db1e5423001dadd8e944fabbd"
         }
       ]
     },
@@ -98,7 +120,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "c0ac9ad254a071ff163fd26d9addb211b94ccba414e768d8bf92a3df2ecfde56"
+          "content": "54ddf8fb896017ae9d4e26536ea5dc5e1b2fcee3ca7cf10d00d4b54577ff0157"
         }
       ]
     },
@@ -1033,7 +1055,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "2a5e11e75b5c4f9e95b43bebc003b9d59b7984df7830788f5e3160086dce40b5"
+          "content": "f999569d7c2f45e8ea70dfbacc3ab8d3cb2585cc74689d65febaa59b1cd977be"
         }
       ]
     },
@@ -1044,7 +1066,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "cb53a40e037f01955c9002882ef17ae3ce20998ba6ef7ae036ce582df569bf2c"
+          "content": "dbea6093cd4941439154595b11391f718f11539f120d18f499fa130601676ba0"
         }
       ]
     },
@@ -1055,7 +1077,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "9da1d8b5e03b58bd9d1b4ab945d7a4c83f25f46e48581dd0956bd33b1d85df7d"
+          "content": "5096b8c1a009916d9fdce8f3772bd3f9079dd61d1f18f84b81a863e4a8919877"
         }
       ]
     },
@@ -1066,7 +1088,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "9ad3bc0a1fa90c2e228d570d0841e0e8582393cca954d203618531386234a9ba"
+          "content": "a490df1df88c6033da56634e9ca9b4b435306ff96e647f1bbe1926f0cc98395a"
         }
       ]
     },
@@ -1121,7 +1143,7 @@
   ],
   "dependencies": [
     {
-      "ref": "form-and-file-validator@3.30.0",
+      "ref": "form-and-file-validator@3.31.0",
       "dependsOn": []
     }
   ]
