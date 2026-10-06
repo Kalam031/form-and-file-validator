@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.34.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.35.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -1462,6 +1462,15 @@ form.addEventListener(&#39;fv:valid&#39;, () =&gt; console.log(&#39;valid&#39;))
 <p><strong>Submitting.</strong> With no <code>submitHandler</code>, a valid form is submitted with <code>form.requestSubmit()</code>, so the button that was clicked, its name and value, and your other submit listeners are all preserved. With <code>submitHandler</code>, only your function runs.</p>
 <h3 id="devtools-panel">Devtools panel</h3>
 <p><code>FormValidator.devtools(form, { container })</code> shows a live panel with every field&#39;s value, pristine / dirty / touched / pending state, error message and error code, plus the form&#39;s error count and submit count. It updates through <code>onStateChange</code>, only uses <code>textContent</code>, and <code>destroy()</code> removes it. Without a started form or a DOM, <code>element</code> is <code>null</code>. Use it in development only.</p>
+<p><strong>Rule trace.</strong> Why did this field fail, which rules ran, which were skipped? <code>config: { trace: true }</code> (or <code>inst.enableTrace()</code>, or <code>devtools(form, { trace: true })</code>) records every check:</p>
+<pre tabindex="0"><code class="language-js">const inst = FormValidator.init({ formId: &#39;signup&#39;, rules, config: { trace: { max: 200, values: true, snapshots: true } } });
+inst.getTrace().at(-1);
+// { seq: 12, field: &#39;email&#39;, trigger: &#39;blur&#39;, valid: false, code: &#39;email&#39;, message: &#39;...&#39;,
+//   steps: [{ rule: &#39;required&#39;, result: &#39;pass&#39;, ms: 0.01 }, { rule: &#39;email&#39;, result: &#39;fail&#39;, ms: 0.02 }] }
+inst.onTrace(entry =&gt; console.log(entry));          // live
+await inst.restoreTrace(12);                         // time travel (needs snapshots): the form goes back to that moment and is checked again
+</code></pre>
+<p>Step results are <code>pass</code>, <code>fail</code>, <code>skipped</code> (with <code>why</code>: the field is empty, <code>when()</code> was false, a server check waits for blur), <code>pending</code> (answers later) and <code>stale</code> (a newer check replaced it). Values are only kept with <code>values: true</code>, and password fields are always shown as bullets. The devtools panel lists the entries; click one for the rule-by-rule detail and a &quot;restore the form to this moment&quot; button.</p>
 <h2 id="one-time-codes-local-numbers-and-dates">One-time codes, local numbers and dates</h2>
 <p>Add-on in the bundle (<code>dist/formValidator.inputs.js</code> on its own, after <code>formValidator.js</code>; <code>form-and-file-validator/inputs</code>).</p>
 <h3 id="one-time-code-boxes-formvalidatorotp">One-time-code boxes: <code>FormValidator.otp</code></h3>

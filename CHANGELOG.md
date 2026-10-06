@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.35.0
+- **Rule trace and time travel**: `config.trace` / `inst.enableTrace()` records every check rule by rule (pass, fail, skipped with the reason, pending, stale, milliseconds, trigger, code), `getTrace()` / `onTrace()` / `clearTrace()`, optional values (passwords always hidden) and snapshots so `restoreTrace(entry)` puts the form back to that moment. `FormValidator.devtools(form, { trace: true })` shows it with click-for-detail and a restore button. Off by default.
+
 ## 3.34.0
 - **`<fv-form>`** (element add-on 1.1.0, in the bundle): wrap a form in HTML and it is validated, no init call. `rules` / `messages` / `config` attributes (JSON) plus `lang`, `validate-on`, `error-summary`, `valid-class`, `auto-attributes`, `data-fv` on fields, `fv-submit` / `fv-invalid` / `fv-valid` / `fv-ready` events, a script API (`validate()`, `errors`, `values`, `setErrors()`, ...), late-rendered forms and clean-up on removal.
 

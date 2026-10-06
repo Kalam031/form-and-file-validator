@@ -119,6 +119,8 @@ export interface FormConfig {
     draft?: boolean | { key?: string; storage?: 'session' | 'local'; exclude?: string[]; debounce?: number; maxAgeDays?: number };
     /** Called on every submit attempt and when the page is left without a successful submit, with per-field counts and times (focus, edits, errors by code). Never contains values; nothing is sent anywhere. */
     onFieldStats?: (stats: FieldStats) => void;
+    /** Record what every check did (see getTrace). true or { max: 200, values: false, snapshots: false }. */
+    trace?: boolean | TraceOptions;
     /** The browser asks before leaving a page with unsaved changes. */
     leaveWarning?: boolean | string;
     /** Read ASP.NET MVC / Razor data-val-* attributes (`required`, `length`, `range`, `regex`, `equalto`, `remote` ...), `data-valmsg-for`, `data-valmsg-summary` and the field-validation-* / input-validation-* classes. */
@@ -265,6 +267,16 @@ export interface FormInstance {
     /** Calls fn(state) (once per tick) when errors, touched, dirty, pending or the submit count change. Returns the unsubscribe function. */
     /** Per-field counts and times when `onFieldStats` is set (empty `fields` otherwise). */
     getFieldStats(): FieldStats;
+    /** Start recording every check (rule by rule). Same as config.trace. */
+    enableTrace(options?: TraceOptions): this;
+    disableTrace(): this;
+    /** The last recorded checks, oldest first. Empty while tracing is off. */
+    getTrace(): TraceEntry[];
+    clearTrace(): this;
+    /** Called after each recorded check; returns the function that unsubscribes. */
+    onTrace(listener: (entry: TraceEntry) => void): () => void;
+    /** Time travel: put the form back to what it held at that entry (needs `snapshots: true`) and check it again. Resolves to the number of fields restored. */
+    restoreTrace(entry: TraceEntry | number): Promise<number>;
     onStateChange(fn: (state: FormState) => void): () => void;
     /** Wizards: validates only the fields inside a step (element, selector or list of names), shows and focuses; true when the step is valid. */
     validateStep(scope: string | Element | ArrayLike<string>, options?: { focus?: boolean }): Promise<boolean>;
@@ -520,6 +532,27 @@ export interface FvFieldElement extends HTMLElement {
     setServerError(text: string): void;
 }
 export interface FvFieldValidateDetail { valid: boolean; rule: string | null; code: string | null; message: string; shown: boolean }
+export interface TraceOptions {
+    /** Entries kept (default 200). */
+    max?: number;
+    /** Also keep the value (passwords are always hidden). */
+    values?: boolean;
+    /** Keep every field's value at that moment so restoreTrace() can go back. Implies values. */
+    snapshots?: boolean;
+}
+export interface TraceStep { rule: string; code: string; result: 'pass' | 'fail' | 'skipped' | 'pending' | 'stale'; ms: number; why?: string }
+export interface TraceEntry {
+    seq: number;
+    at: number;
+    field: string;
+    trigger: 'input' | 'change' | 'blur' | 'submit' | 'api' | string;
+    steps: TraceStep[];
+    valid: boolean;
+    message: string;
+    code: string | null;
+    value?: unknown;
+    snapshot?: Record<string, string | boolean>;
+}
 export interface FormValidatorFieldElement {
     /** Registers the element under another tag name (default 'fv-field' is registered when the bundle loads). Returns null without custom elements. */
     define(name?: string): CustomElementConstructor | null;
@@ -627,7 +660,7 @@ export interface FormValidatorStatic {
     /** HTMX: cancel a request whose form is invalid (listens to htmx:beforeRequest). Returns the function that stops listening. `skip(form, event)` returning true leaves a request alone. */
     htmx(options?: { skip?: (form: HTMLFormElement, event: Event) => boolean }): () => void;
     /** A live panel showing every field's value, state, error and error code. Needs a started form and a DOM; otherwise `element` is null. */
-    devtools(form: string | HTMLFormElement, options?: { container?: HTMLElement }): { element: HTMLElement | null; refresh(): void; destroy(): void };
+    devtools(form: string | HTMLFormElement, options?: { container?: HTMLElement; trace?: boolean; traceRows?: number; snapshots?: boolean }): { element: HTMLElement | null; refresh(): void; destroy(): void };
     /** jQuery valid() without jQuery: true / false right now (shows the errors). Remote and file checks count as valid until they answer; validate() waits for them. */
     isValid(form: string | HTMLFormElement, rules?: Record<string, RulesForField>): boolean;
     /**

@@ -976,6 +976,19 @@ form.addEventListener('fv:valid', () => console.log('valid'));
 
 `FormValidator.devtools(form, { container })` shows a live panel with every field's value, pristine / dirty / touched / pending state, error message and error code, plus the form's error count and submit count. It updates through `onStateChange`, only uses `textContent`, and `destroy()` removes it. Without a started form or a DOM, `element` is `null`. Use it in development only.
 
+**Rule trace.** Why did this field fail, which rules ran, which were skipped? `config: { trace: true }` (or `inst.enableTrace()`, or `devtools(form, { trace: true })`) records every check:
+
+```js
+const inst = FormValidator.init({ formId: 'signup', rules, config: { trace: { max: 200, values: true, snapshots: true } } });
+inst.getTrace().at(-1);
+// { seq: 12, field: 'email', trigger: 'blur', valid: false, code: 'email', message: '...',
+//   steps: [{ rule: 'required', result: 'pass', ms: 0.01 }, { rule: 'email', result: 'fail', ms: 0.02 }] }
+inst.onTrace(entry => console.log(entry));          // live
+await inst.restoreTrace(12);                         // time travel (needs snapshots): the form goes back to that moment and is checked again
+```
+
+Step results are `pass`, `fail`, `skipped` (with `why`: the field is empty, `when()` was false, a server check waits for blur), `pending` (answers later) and `stale` (a newer check replaced it). Values are only kept with `values: true`, and password fields are always shown as bullets. The devtools panel lists the entries; click one for the rule-by-rule detail and a "restore the form to this moment" button.
+
 ## One-time codes, local numbers and dates
 
 Add-on in the bundle (`dist/formValidator.inputs.js` on its own, after `formValidator.js`; `form-and-file-validator/inputs`).

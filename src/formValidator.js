@@ -180,6 +180,7 @@
         disableOnSubmit: false,           // true: submit buttons are disabled (and the form gets .fv-submitting) while your onSubmit / handleSubmit function runs
         draft: false,                     // true | { key, storage: 'session' | 'local', exclude: [names], debounce: 400, maxAgeDays: 7 }: keep what the user typed (never passwords or files) and restore it
         onFieldStats: null,               // function(stats): per-field analytics on submit and when the page is left unsent (counts and times only, never values; nothing is sent anywhere)
+        trace: false,                     // true | { max: 200, values: false, snapshots: false }: record what every check did (inst.getTrace(), FormValidator.devtools shows it)
         leaveWarning: false,              // true: the browser asks before leaving a page with unsaved changes
         unobtrusive: false,               // read ASP.NET data-val-* attributes (MVC / Razor), use data-valmsg-for / data-valmsg-summary and the field-validation-* classes; see FormValidator.unobtrusive
         autoAttributes: false             // true | { type, inputmode, autocomplete, ariaRequired, lint }: set type / inputmode / autocomplete / aria-required from the rules and field names, and warn about autocomplete="off" and type="number" misuse
@@ -1169,6 +1170,27 @@
             if (!on && n <= 0) unit.fields.forEach(f => { cfg.pendingClass.split(/\s+/).forEach(c => c && f.classList.remove(c)); f.removeAttribute('aria-busy'); });
         }
 
+        // ---- trace: what every check did (rule by rule), for debugging and the devtools panel. Off unless asked (config.trace or inst.enableTrace()).
+        function traceBegin(unit, o, env) {
+            const t = inst._trace;
+            if (!t) return null;
+            const first = unit.fields[0], secret = first.type === 'password';
+            const entry = { seq: ++t.seq, at: Date.now(), field: first.name, trigger: o.event || (o.submit ? 'submit' : 'api'), value: t.values ? (secret ? '\u2022\u2022\u2022' : (env.value === undefined ? '' : env.value)) : undefined, steps: [], valid: true, message: '', code: null, pending: false };
+            if (t.snapshots) { entry.snapshot = {}; Array.from(form.elements).forEach(el => { if (el.name && !/^(password|file|submit|button|reset|image)$/i.test(el.type) && el.type !== 'hidden' && !(el.type === 'checkbox' || el.type === 'radio') ) entry.snapshot[el.name] = el.value; else if (el.name && (el.type === 'checkbox' || el.type === 'radio')) { entry.snapshot[el.name + '::' + el.value] = el.checked; } }); }
+            return entry;
+        }
+        function traceStep(entry, rule, result, ms, why) { if (entry) entry.steps.push({ rule: rule.type, code: codeOf(rule), result, ms, why }); }
+        function traceEnd(entry, valid, message, code) {
+            if (!entry) return;
+            entry.valid = valid; entry.message = message || ''; entry.code = code || null;
+            const t = inst._trace;
+            if (!t) return;
+            t.entries.push(entry);
+            if (t.entries.length > t.max) t.entries.splice(0, t.entries.length - t.max);
+            Array.from(t.subs).forEach(fn => guard(fn, undefined, entry));
+        }
+        const now = () => (root.performance && isFn(root.performance.now) ? root.performance.now() : Date.now());
+
         async function validateUnit(unit, o) {
             o = o || {};
             const rules = rulesFor(unit);
@@ -1178,29 +1200,33 @@
 
             if (!isActive(unit)) { removeError(unit); return true; }
             const env = readEnv(unit);
+            const tr = traceBegin(unit, o, env);
 
-            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); return false; }
+            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); traceEnd(tr, false, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); return false; }
 
             let pending = false;
             try {
                 for (const rule of rules) {
                     const def = validators[rule.type];
-                    if (!def) { warnUnknownRule(unit, rule); continue; }
-                    if (isFn(rule.when) && !guard(rule.when, true, env.value, env)) continue;   // a throwing `when` counts as "applies"
-                    if (env.empty && !def.runOnEmpty) continue;
-                    if (def.remote && o.event === 'input') continue;
+                    if (!def) { warnUnknownRule(unit, rule); traceStep(tr, rule, 'skipped', 0, 'unknown rule'); continue; }
+                    if (isFn(rule.when) && !guard(rule.when, true, env.value, env)) { traceStep(tr, rule, 'skipped', 0, 'when() is false'); continue; }   // a throwing `when` counts as "applies"
+                    if (env.empty && !def.runOnEmpty) { traceStep(tr, rule, 'skipped', 0, 'the field is empty'); continue; }
+                    if (def.remote && o.event === 'input') { traceStep(tr, rule, 'skipped', 0, 'server check waits until the user leaves the field'); continue; }
 
                     let res;
+                    const t0 = tr ? now() : 0;
                     try {
                         res = def.fn(valueFor(rule, env), rule, env);
                         if (res && isFn(res.then)) { if (!pending) { pending = true; setPending(unit, true); } res = await res; }
                     } catch (e) { if (root.console) console.error(e); res = false; }
 
-                    if (inst._tokens.get(unit.key) !== token) return !inst._errors.has(unit.key); // a newer run owns the state
+                    if (inst._tokens.get(unit.key) !== token) { traceStep(tr, rule, 'stale', tr ? now() - t0 : 0, 'a newer check replaced this one'); traceEnd(tr, !inst._errors.has(unit.key), '', null); return !inst._errors.has(unit.key); } // a newer run owns the state
 
                     const r = normalizeResult(res);
-                    if (!r.valid) { showError(unit, resolveMessage(rule, env, r.message), codeOf(rule)); return false; }
+                    traceStep(tr, rule, r.valid ? 'pass' : 'fail', tr ? now() - t0 : 0);
+                    if (!r.valid) { const m = resolveMessage(rule, env, r.message); showError(unit, m, codeOf(rule)); traceEnd(tr, false, m, codeOf(rule)); return false; }
                 }
+                traceEnd(tr, true, '', null);
                 removeError(unit);
                 if (!env.empty) markValid(unit, true);
                 if (isFn(cfg.onFieldValid)) guard(cfg.onFieldValid, undefined, unit.fields[0], unit);
@@ -1221,20 +1247,23 @@
 
             if (!isActive(unit)) { removeError(unit); return true; }
             const env = readEnv(unit);
-            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); return false; }
+            const tr = traceBegin(unit, o, env);
+            if (env.badInput) { showError(unit, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); traceEnd(tr, false, cfg.messages.badInput || DEFAULT_MESSAGES.badInput, 'badInput'); return false; }
 
             for (const rule of rules) {
                 const def = validators[rule.type];
-                if (!def) { warnUnknownRule(unit, rule); continue; }
-                if (isFn(rule.when) && !guard(rule.when, true, env.value, env)) continue;   // a throwing `when` counts as "applies"
-                if (env.empty && !def.runOnEmpty) continue;
-                if (def.remote && o.event === 'input') continue;
+                if (!def) { warnUnknownRule(unit, rule); traceStep(tr, rule, 'skipped', 0, 'unknown rule'); continue; }
+                if (isFn(rule.when) && !guard(rule.when, true, env.value, env)) { traceStep(tr, rule, 'skipped', 0, 'when() is false'); continue; }   // a throwing `when` counts as "applies"
+                if (env.empty && !def.runOnEmpty) { traceStep(tr, rule, 'skipped', 0, 'the field is empty'); continue; }
+                if (def.remote && o.event === 'input') { traceStep(tr, rule, 'skipped', 0, 'server check waits until the user leaves the field'); continue; }
 
                 let res;
+                const t0 = tr ? now() : 0;
                 try { res = def.fn(valueFor(rule, env), rule, env); }
                 catch (e) { if (root.console) console.error(e); res = false; }
 
                 if (res && isFn(res.then)) {
+                    traceStep(tr, rule, 'pending', tr ? now() - t0 : 0, 'answers later; counted as valid for now');
                     res.then(late => {
                         if (inst._tokens.get(unit.key) !== token) return;
                         const lr = normalizeResult(late);
@@ -1243,8 +1272,10 @@
                     continue;
                 }
                 const r = normalizeResult(res);
-                if (!r.valid) { showError(unit, resolveMessage(rule, env, r.message), codeOf(rule)); return false; }
+                traceStep(tr, rule, r.valid ? 'pass' : 'fail', tr ? now() - t0 : 0);
+                if (!r.valid) { const m = resolveMessage(rule, env, r.message); showError(unit, m, codeOf(rule)); traceEnd(tr, false, m, codeOf(rule)); return false; }
             }
+            traceEnd(tr, true, '', null);
             removeError(unit);
             if (!env.empty) markValid(unit, true);
             if (isFn(cfg.onFieldValid)) guard(cfg.onFieldValid, undefined, unit.fields[0], unit);
@@ -1975,6 +2006,35 @@
             getState,
             /** Per-field counts and times (focus count and ms, edits, errors shown by code) when the onFieldStats option is set; never values. */
             getFieldStats,
+            /**
+             * Records what every check did: { seq, at, field, trigger ('input' | 'change' | 'blur' | 'submit' | 'api'), steps: [{ rule, code, result: 'pass' | 'fail' | 'skipped' | 'pending' | 'stale', ms, why }], valid, message, code }.
+             * options: { max: 200, values: false (also keep the value; passwords are always hidden), snapshots: false (keep every field's value at that moment, for restoreTrace) }. Same as config.trace.
+             */
+            enableTrace: topts => {
+                const o = topts && typeof topts === 'object' ? topts : {};
+                inst._trace = inst._trace || { seq: 0, entries: [], subs: new Set(), max: 200, values: false, snapshots: false };
+                if (typeof o.max === 'number' && o.max > 0) inst._trace.max = Math.floor(o.max);
+                if (o.values !== undefined) inst._trace.values = !!o.values;
+                if (o.snapshots !== undefined) { inst._trace.snapshots = !!o.snapshots; if (o.snapshots) inst._trace.values = true; }
+                return inst;
+            },
+            disableTrace: () => { inst._trace = null; return inst; },
+            getTrace: () => (inst._trace ? inst._trace.entries.slice() : []),
+            clearTrace: () => { if (inst._trace) inst._trace.entries.length = 0; return inst; },
+            /** fn(entry) after every recorded check; returns the function that unsubscribes. */
+            onTrace: fn => { if (!inst._trace) inst.enableTrace(); inst._trace.subs.add(fn); return () => { if (inst._trace) inst._trace.subs.delete(fn); }; },
+            /** Time travel: put the form back to what it held when `entry` (or its seq number) was recorded (needs trace: { snapshots: true }) and check it again. Resolves to the number of fields restored. */
+            restoreTrace: async which => {
+                const e = typeof which === 'number' ? (inst._trace && inst._trace.entries.find(x => x.seq === which)) : which;
+                if (!e || !e.snapshot) return 0;
+                let n = 0;
+                Array.from(form.elements).forEach(el => {
+                    if (!el.name) return;
+                    if ((el.type === 'checkbox' || el.type === 'radio')) { const k = el.name + '::' + el.value; if (k in e.snapshot) { el.checked = !!e.snapshot[k]; n++; el.dispatchEvent(new root.Event('change', { bubbles: true })); } return; }
+                    if (el.name in e.snapshot && el.value !== e.snapshot[el.name]) { el.value = e.snapshot[el.name]; n++; el.dispatchEvent(new root.Event('input', { bubbles: true })); el.dispatchEvent(new root.Event('change', { bubbles: true })); }
+                });
+                return n;
+            },
             /** Calls fn(state) (once per tick) when errors, touched, dirty, pending or the submit count change. Returns the unsubscribe function. */
             onStateChange: fn => { if (!isFn(fn)) return () => {}; inst._stateSubs.add(fn); return () => { inst._stateSubs.delete(fn); }; },
             /**
@@ -2038,6 +2098,7 @@
             attach
         });
         Object.defineProperty(inst, 'state', { get: getState, enumerable: true });   // inst.state is getState() without the parentheses
+        if (cfg.trace) inst.enableTrace(cfg.trace);
         return inst;
     }
 
@@ -2213,11 +2274,13 @@
         el.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:2147483647;max-width:90vw;max-height:50vh;overflow:auto;background:#111;color:#eee;font:12px/1.4 monospace;padding:8px;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.5)';
         const cell = (tr, text, color) => { const td = document.createElement('td'); td.textContent = text; td.style.cssText = 'padding:1px 8px;white-space:nowrap' + (color ? ';color:' + color : ''); tr.appendChild(td); };
         const show = v => { try { const t = typeof v === 'string' ? v : JSON.stringify(v); return t === undefined ? '' : (t.length > 40 ? t.slice(0, 40) + '…' : t); } catch (e) { return String(v); } };
+        let pendingRefresh = false;
+        const scheduleRefresh = () => { if (pendingRefresh) return; pendingRefresh = true; Promise.resolve().then(() => { pendingRefresh = false; refresh(); }); };
         function refresh() {
             const st = inst.getState();
             el.textContent = '';
             const head = document.createElement('div');
-            head.textContent = (st.valid ? 'valid' : st.errorCount + ' error(s)') + ' · submits: ' + st.submitCount + (st.validating ? ' · validating…' : '') + (st.dirty ? ' · dirty' : '');
+            head.textContent = (st.valid ? 'valid' : st.errorCount + ' error(s)') + ' \u00b7 submits: ' + st.submitCount + (st.validating ? ' \u00b7 validating…' : '') + (st.dirty ? ' \u00b7 dirty' : '');
             head.style.cssText = 'font-weight:bold;margin-bottom:4px;color:' + (st.valid ? '#7ee787' : '#ff7b72');
             el.appendChild(head);
             const table = document.createElement('table');
@@ -2229,13 +2292,40 @@
                 table.appendChild(tr);
             });
             el.appendChild(table);
+            if (opts.trace !== false && inst._trace) {                 // the rule trace: click an entry for the rule-by-rule detail, "restore" puts the form back to that moment
+                const h = document.createElement('div');
+                h.textContent = 'Trace (' + inst._trace.entries.length + ')';
+                h.style.cssText = 'margin-top:6px;font-weight:bold;color:#d2a8ff';
+                el.appendChild(h);
+                inst._trace.entries.slice(-(opts.traceRows || 12)).reverse().forEach(en => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'padding:1px 0;cursor:pointer';
+                    row.textContent = '#' + en.seq + ' ' + en.field + ' [' + en.trigger + '] ' + (en.valid ? 'ok' : (en.code || 'invalid')) + '  ' + en.steps.map(x => x.rule + (x.result === 'pass' ? '\u2713' : x.result === 'fail' ? '\u2717' : '\u00b7')).join(' ');
+                    row.style.color = en.valid ? '#7ee787' : '#ff7b72';
+                    row.setAttribute('role', 'button'); row.tabIndex = 0;
+                    const toggle = () => {
+                        const open = row._detail;
+                        if (open) { open.remove(); row._detail = null; return; }
+                        const d = document.createElement('div');
+                        d.style.cssText = 'margin:2px 0 4px 12px;color:#c9d1d9;white-space:pre-wrap';
+                        d.textContent = (en.value !== undefined ? 'value: ' + show(en.value) + '\n' : '') + en.steps.map(x => x.rule + ': ' + x.result + (x.ms ? ' (' + x.ms.toFixed(2) + ' ms)' : '') + (x.why ? ' - ' + x.why : '')).join('\n') + (en.message ? '\nmessage: ' + en.message : '');
+                        if (en.snapshot) { const b = document.createElement('button'); b.type = 'button'; b.textContent = 'restore the form to this moment'; b.style.cssText = 'display:block;margin-top:2px'; b.addEventListener('click', ev => { ev.stopPropagation(); inst.restoreTrace(en); }); d.appendChild(b); }
+                        row.after(d); row._detail = d;
+                    };
+                    row.addEventListener('click', toggle);
+                    row.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(); } });
+                    el.appendChild(row);
+                });
+            }
         }
+        if (opts.trace) inst.enableTrace({ values: true, snapshots: opts.snapshots !== false });
         refresh();
         const off = inst.onStateChange(refresh);
+        const offTrace = inst._trace ? inst.onTrace(() => scheduleRefresh()) : () => {};
         const parent = opts.container || document.body;
         if (opts.container) el.style.position = 'static';
         parent.appendChild(el);
-        return { element: el, refresh, destroy() { off(); if (el.parentNode) el.parentNode.removeChild(el); } };
+        return { element: el, refresh, destroy() { off(); offTrace(); if (el.parentNode) el.parentNode.removeChild(el); } };
     }
 
     function auto(config) {

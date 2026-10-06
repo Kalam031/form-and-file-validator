@@ -316,7 +316,7 @@ Always pin the exact version and keep the `integrity` attribute, so the file you
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/validator.min.js"
-        integrity="sha384-IzTB07oPW1Bbyzs1wc0pbbsHK3J7NNaTknYbhMJE836CEQJUcw4CSghyrU2w+aFz" crossorigin="anonymous"></script>
+        integrity="sha384-Itx2hKYckUG3UQkJ1ZO8ofZPVW6MbSpQJs/KEyCNo31NAEdLPyOwg7GYk0AyWuqn" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/locales/de.min.js"
         integrity="sha384-mmSW5mVYaC+rhElftx/0QVwLyq0VSIOLlmUzwkOjvzKCUJXHIEaGTfS0K0bB96ln" crossorigin="anonymous"></script>
 <script>FVLocales.use('de');</script>
