@@ -94,7 +94,7 @@ const BUDGET = {
     'formValidator.min.js': 39000,
     'fileValidator.min.js': 23000,
     'fileValidator.widget.min.js': 7500,
-    'fileValidator.upload.min.js': 4500,
+    'fileValidator.upload.min.js': 6500,
     'fileValidator.image.min.js': 6000,
     'formValidator.jquery.min.js': 10500,
     'formValidator.additional.min.js': 5500,
@@ -103,7 +103,7 @@ const BUDGET = {
     'formValidator.inputs.min.js': 4500,
     'locale.min.js': 2600,
     'integrations/alpine.min.js': 1500,
-    'validator.min.js': 103500
+    'validator.min.js': 105500
 };
 for (const f of Object.keys(BUDGET)) {
     test('size budget: ' + f + ' stays under ' + (BUDGET[f] / 1024).toFixed(1) + ' KB gzip', () => {

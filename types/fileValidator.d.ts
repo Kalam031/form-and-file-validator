@@ -228,6 +228,47 @@ export interface UploadOptions {
     validate?: FileValidatorConfig;
     fetch?: (url: string, init?: any) => Promise<any>;
 }
+export type QueueStatus = 'queued' | 'uploading' | 'offline' | 'retrying' | 'done' | 'failed' | 'aborted' | 'changed';
+export interface UploadQueueOptions extends Omit<UploadOptions, 'onProgress'> {
+    /** Uploads in flight at once. Default 2. */
+    concurrency?: number;
+    /** Default navigator.onLine. */
+    isOnline?: () => boolean;
+    /** Object that fires 'online' events. Default window / self. */
+    onlineEvent?: EventTarget;
+    /** false: skip the "did the file change or vanish" check. */
+    checkFile?: boolean;
+    onChange?: (item: QueueItem, items: QueueItem[]) => void;
+    onProgress?: (progress: UploadProgress, item: QueueItem) => void;
+}
+export interface QueueItem {
+    readonly id: number;
+    file: File | Blob;
+    status: QueueStatus;
+    progress: UploadProgress | null;
+    error: UploadError | null;
+    result: UploadResult | null;
+    /** Resolves with the result, rejects with an UploadError (codes include FILE_CHANGED and FILE_UNREADABLE). */
+    promise: Promise<UploadResult>;
+    abort(): void;
+    /** Queue a failed / aborted / changed item again. false when it is not in one of those states. */
+    retry(): boolean;
+    /** The person chose the file again: same item, new content. */
+    replace(file: File | Blob): QueueItem;
+}
+export interface UploadQueue {
+    add(file: File | Blob, overrides?: Partial<UploadQueueOptions>): QueueItem;
+    readonly items: QueueItem[];
+    readonly online: boolean;
+    pause(): void;
+    resume(): void;
+    retryFailed(): number;
+    abortAll(): void;
+    /** Removes finished items (done, failed, aborted, changed). */
+    clear(): void;
+    whenIdle(): Promise<QueueItem[]>;
+    destroy(): void;
+}
 export interface UploadTask extends Promise<UploadResult> {
     abort(): void;
     /** tus only. */
@@ -278,6 +319,8 @@ export interface FileValidatorStatic {
     /** Sends a file: progress, cancel, retry, presigned and tus uploads (upload add-on: bundle or fileValidator.upload.js). Returns a Promise with abort() (and pause() / resume() for tus). */
     upload(file: File | Blob, options: UploadOptions): UploadTask;
     readonly UploadError: typeof UploadError;
+    /** Upload many files with a limit; waits while offline (not counted as a failure), retries, notices a file that changed or vanished (upload add-on). */
+    uploadQueue(options: UploadQueueOptions): UploadQueue;
     /** Image add-on (bundle or fileValidator.image.js): crop, rotate, flip, shrink and re-encode. SVG and GIF come back unchanged. Rejects with code IMAGE_DECODE_FAILED. */
     transformImage(file: File, options?: ImageTransformOptions): Promise<File>;
     /** Re-encode as JPEG (or options.type), e.g. an iPhone HEIC photo. */

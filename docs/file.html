@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.31.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.32.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -952,6 +952,17 @@ await t;                   // { url, size, offset }
 </code></pre>
 <p>  The upload is created with <code>Upload-Length</code> and metadata, sent in <code>PATCH</code> chunks, and each chunk is retried at the offset the server reports (a 409 is answered with a <code>HEAD</code>). The location is remembered in <code>localStorage</code> under a fingerprint of the file (name, size, date, type, endpoint), so after a closed tab, a crash or a reload the same file <strong>continues where it stopped</strong>; an upload the server no longer knows (404 / 410) starts over, and the entry is removed after success. <code>resume: false</code> keeps it to the current page; <code>headers</code> can be a function (fresh tokens); <code>onChunkComplete(bytes, offset, total)</code>.</p>
 <p>For a whole selection, call <code>upload()</code> for each accepted file (the upload widget&#39;s <code>zone.files</code>), limit the concurrency yourself, and use <code>signal</code> to cancel them together. Remember the server decides: see the upload security checklist.</p>
+<h3 id="many-files-bad-connections-uploadqueue">Many files, bad connections: <code>uploadQueue</code></h3>
+<pre tabindex="0"><code class="language-js">const q = FileValidator.uploadQueue({ url: &#39;/upload&#39;, concurrency: 2, retries: 3, onChange: (item) =&gt; render(item) });
+const item = q.add(file);              // item.status: queued | uploading | offline | retrying | done | failed | aborted | changed
+await item.promise;                    // the result, or an UploadError
+q.retryFailed();  q.pause();  q.resume();  q.abortAll();  await q.whenIdle();
+</code></pre>
+<ul>
+<li><strong>Offline:</strong> while <code>navigator.onLine</code> is false (or your <code>isOnline()</code>), items wait with status <code>offline</code> and start again when the browser fires <code>online</code>. A network error that happens because the connection dropped is not counted as a failed attempt; <code>retries</code> only counts real failures (5xx, 408, 429, timeouts while online) with exponential backoff and <code>Retry-After</code>.</li>
+<li><strong>The file changed on disk:</strong> before every attempt the queue checks that the size and date are unchanged and that the file can still be read. Otherwise the item stops with status <code>changed</code> and <code>error.code</code> <code>FILE_CHANGED</code> (edited after it was chosen) or <code>FILE_UNREADABLE</code> (moved, deleted or locked), instead of sending a half-old file. Ask the person to pick it again and call <code>item.replace(newFile)</code>.</li>
+<li>Works with every <code>upload()</code> option (<code>tus</code>, <code>presign</code>, <code>headers</code> ...); tus uploads resume from the server&#39;s offset after each retry.</li>
+</ul>
 <h2 id="photos-and-privacy">Photos and privacy</h2>
 <p>A photo from a phone carries more than the picture: the camera and phone model, the exact time, often the <strong>GPS position</strong> where it was taken, sometimes the name of the person who edited it. If you store or publish uploads, strip it first. <code>FileValidator</code> does it on the bytes of the file, without re-encoding, so the picture stays identical and there is no quality loss. It works for JPEG, PNG and WebP, in the browser and in Node.</p>
 <pre tabindex="0"><code class="language-js">const meta = await FileValidator.readMetadata(file);

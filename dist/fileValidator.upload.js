@@ -1,5 +1,5 @@
 /*!
- * FileValidator upload add-on v1.0.0 — send a validated file: progress, cancel, retry, direct-to-storage and resumable (tus) uploads.
+ * FileValidator upload add-on v1.1.0 — send a validated file: progress, cancel, retry, direct-to-storage and resumable (tus) uploads, and a queue that waits offline.
  *
  *   const up = FileValidator.upload(file, { url: '/upload', onProgress: p => bar.value = p.percent, retries: 3 });
  *   up.abort();                                  // cancel
@@ -13,9 +13,14 @@
  *   const t = FileValidator.upload(file, { tus: { endpoint: '/files/', chunkSize: 5 * 1024 * 1024 } });
  *   t.pause(); t.resume();                       // also survives a closed tab: the same file continues where it stopped
  *
+ *   // many files, flaky wifi: waits while offline, carries on when the connection is back, notices a file that changed or vanished
+ *   const q = FileValidator.uploadQueue({ url: '/upload', concurrency: 2, onChange: (item) => render(item) });   // item.status: queued | uploading | offline | retrying | done | failed | changed
+ *   const item = q.add(file);  await item.promise;  item.replace(newFile);  q.retryFailed();
+ *
  * Works in the browser (XMLHttpRequest for real upload progress, fetch when there is none) and in Node 18+ (fetch). Validate first with FileValidator.validateFile().
  *
  * Changelog
+ *   1.1.0  uploadQueue(): concurrency, waits offline (not counted as a failure), FILE_CHANGED / FILE_UNREADABLE detection with replace(), retryFailed().
  *   1.0.0  First release.
  */
 (function (root, factory) {
@@ -254,9 +259,145 @@
         promise.resume = () => { state.paused = false; state.resumeWaiters.splice(0).forEach(r => r()); };
         return promise;
     }
+    // ---------------------------------------------------------------- the upload queue: offline waiting, retries, "the file changed on disk"
+    const isOnline = () => !(root.navigator && root.navigator.onLine === false);
+    /** Throws UploadError FILE_CHANGED (size / date differ from when it was queued) or FILE_UNREADABLE (it was moved, deleted or locked). */
+    async function checkFileStillThere(file, snap) {
+        if (file.size !== snap.size || (file.lastModified || 0) !== snap.lastModified) throw new UploadError('FILE_CHANGED', 'The file "' + (file.name || '') + '" changed after it was chosen. Choose it again.');
+        if (isFn(file.slice) && file.size > 0) {
+            try { await file.slice(0, 1).arrayBuffer(); }
+            catch (e) { throw new UploadError('FILE_UNREADABLE', 'The file "' + (file.name || '') + '" cannot be read any more (moved, deleted or locked). Choose it again.'); }
+        }
+    }
+    /**
+     * FileValidator.uploadQueue(options) -> { add(file, overrides), items, pause(), resume(), retryFailed(), clear(), abortAll(), whenIdle(), destroy() }.
+     * Several uploads with a limit, that wait while the device is offline and carry on when it is back, retry with backoff, and notice a file that changed or vanished.
+     * options: every upload() option (url, headers, tus, presign, ...) plus concurrency (2), retries (3, only counts real failures; waiting offline is free),
+     *   onChange(item, items), isOnline() (default navigator.onLine), onlineEvent (target with online / offline events, default window), checkFile (true).
+     * An item: { id, file, status, progress, error, result, promise, abort(), retry(), replace(newFile) }.
+     *   status: 'queued' | 'uploading' | 'offline' | 'retrying' | 'done' | 'failed' | 'aborted' | 'changed' (the file changed or vanished: replace() it, then it is queued again).
+     */
+    function uploadQueue(options) {
+        const o = options || {};
+        const limit = Math.max(1, typeof o.concurrency === 'number' ? Math.floor(o.concurrency) : 2);
+        const online = isFn(o.isOnline) ? o.isOnline : isOnline;
+        const target = o.onlineEvent || (typeof root.addEventListener === 'function' ? root : null);
+        const items = [];
+        let paused = false, destroyed = false, seq = 0, running = 0;
+        const idle = [];
+        const waitingOnline = new Set();
+        const wake = () => { if (online()) Array.from(waitingOnline).forEach(f => { waitingOnline.delete(f); f(); }); pump(); };
+        const onOnline = () => wake();
+        if (target && isFn(target.addEventListener)) { target.addEventListener('online', onOnline); }
+
+        const emit = it => { if (isFn(o.onChange)) { try { o.onChange(it, items.slice()); } catch (e) { /* your callback must not break the queue */ } } };
+        const setStatus = (it, status, extra) => { it.status = status; if (extra) Object.assign(it, extra); emit(it); };
+        const checkIdle = () => { if (!items.some(it => it.status === 'queued' || it.status === 'uploading' || it.status === 'offline' || it.status === 'retrying')) idle.splice(0).forEach(r => r(items.slice())); };
+
+        function waitForOnline(it) {
+            return new Promise((resolve, reject) => {
+                const go = () => { it._reject = null; resolve(); };
+                it._reject = reject;
+                waitingOnline.add(go);
+            });
+        }
+        async function process(it) {
+            const snap = { size: it.file.size, lastModified: it.file.lastModified || 0 };
+            let failures = 0;
+            const max = typeof o.retries === 'number' ? o.retries : 3;
+            for (;;) {
+                if (it._aborted) throw abortError();
+                if (!online()) { setStatus(it, 'offline'); await waitForOnline(it); if (it._aborted) throw abortError(); }
+                if (o.checkFile !== false) await checkFileStillThere(it.file, snap);
+                setStatus(it, 'uploading');
+                const opts = Object.assign({}, o, it._overrides, { retries: 0, onRetry: undefined, concurrency: undefined, onChange: undefined, isOnline: undefined, onlineEvent: undefined, checkFile: undefined });
+                const userProgress = (it._overrides && it._overrides.onProgress) || o.onProgress;
+                opts.onProgress = p => { it.progress = p; if (isFn(userProgress)) userProgress(p, it); emit(it); };
+                const task = upload(it.file, opts);
+                it._task = task;
+                try { return await task; }
+                catch (e) {
+                    if (e && e.aborted) throw e;
+                    if (o.checkFile !== false && e && (e.code === 'NETWORK' || e.code === 'TIMEOUT')) await checkFileStillThere(it.file, snap);   // a vanished file looks like a network error to the browser
+                    const should = isFn(o.retryOn) ? o.retryOn(e, failures) : retryable(e);
+                    if (!should) throw e;
+                    if (e.code === 'NETWORK' && !online()) continue;           // offline: wait for the connection, this is not a failed attempt
+                    if (failures >= max) throw e;
+                    const ra = e.response && e.response.headers && Number(e.response.headers['retry-after']);
+                    const base = typeof o.retryDelayMs === 'number' ? o.retryDelayMs : 1000;
+                    const wait = ra && isFinite(ra) ? Math.min(ra * 1000, 60000) : Math.min(base * Math.pow(2, failures), 30000) * (0.75 + Math.random() * 0.5);
+                    failures++;
+                    if (isFn(o.onRetry)) o.onRetry({ attempt: failures, delayMs: wait, error: e, item: it });
+                    setStatus(it, 'retrying', { error: e });
+                    await new Promise((res, rej) => { const t = setTimeout(res, wait); it._reject = err => { clearTimeout(t); rej(err); }; });
+                    it._reject = null;
+                } finally { it._task = null; }
+            }
+        }
+        function start(it) {
+            running++;
+            it._settle = null;
+            process(it).then(result => { setStatus(it, 'done', { result, error: null }); it._done(result); },
+                e => {
+                    const status = e && e.aborted ? 'aborted' : (e && (e.code === 'FILE_CHANGED' || e.code === 'FILE_UNREADABLE')) ? 'changed' : 'failed';
+                    setStatus(it, status, { error: e });
+                    it._fail(e);
+                }).then(() => { running--; pump(); checkIdle(); });
+        }
+        function pump() {
+            if (paused || destroyed) return;
+            for (const it of items) { if (running >= limit) break; if (it.status === 'queued') start(it); }
+        }
+        function arm(it) {
+            it.promise = new Promise((resolve, reject) => { it._done = resolve; it._fail = reject; });
+            it.promise.catch(() => { /* a rejected item is reported through status and error; await item.promise yourself to handle it */ });
+        }
+        function add(file, overrides) {
+            if (destroyed) throw new Error('uploadQueue: destroyed');
+            if (!file || typeof file.size !== 'number') throw new UploadError('PROTOCOL', 'uploadQueue.add: pass a File.');
+            const it = { id: ++seq, file, status: 'queued', progress: null, error: null, result: null, promise: null, _overrides: overrides || {}, _aborted: false, _task: null, _reject: null };
+            it.abort = () => {
+                if (['done', 'failed', 'aborted', 'changed'].indexOf(it.status) >= 0) return;
+                it._aborted = true;
+                if (it._task) it._task.abort();
+                if (it._reject) it._reject(abortError());
+                if (it.status === 'queued') { setStatus(it, 'aborted', { error: abortError() }); it._fail(it.error); checkIdle(); }
+            };
+            it.retry = () => {
+                if (it.status !== 'failed' && it.status !== 'aborted' && it.status !== 'changed') return false;
+                it._aborted = false; arm(it); setStatus(it, 'queued', { error: null, progress: null }); pump(); return true;
+            };
+            it.replace = newFile => {            // the person picked the file again after it changed: same slot, new content
+                if (!newFile || typeof newFile.size !== 'number') throw new UploadError('PROTOCOL', 'replace: pass a File.');
+                if (it.status === 'uploading' || it.status === 'offline' || it.status === 'retrying') { it._aborted = true; if (it._task) it._task.abort(); if (it._reject) it._reject(abortError()); }
+                it.file = newFile; it._aborted = false;
+                if (['failed', 'aborted', 'changed'].indexOf(it.status) >= 0) { arm(it); setStatus(it, 'queued', { error: null, progress: null }); pump(); }
+                return it;
+            };
+            arm(it);
+            items.push(it);
+            emit(it);
+            pump();
+            return it;
+        }
+        return {
+            add, items,
+            pause() { paused = true; },
+            resume() { paused = false; pump(); },
+            retryFailed() { return items.filter(it => it.retry()).length; },
+            abortAll() { items.slice().forEach(it => it.abort()); },
+            clear() { for (let i = items.length - 1; i >= 0; i--) if (['done', 'failed', 'aborted', 'changed'].indexOf(items[i].status) >= 0) items.splice(i, 1); },
+            whenIdle() { return new Promise(res => { idle.push(res); checkIdle(); }); },
+            get online() { return online(); },
+            destroy() { destroyed = true; this.abortAll(); if (target && isFn(target.removeEventListener)) { target.removeEventListener('online', onOnline); } waitingOnline.clear(); }
+        };
+    }
+    uploadQueue.checkFile = checkFileStillThere;
+
     upload.UploadError = UploadError;
 
     FV.upload = upload;
+    FV.uploadQueue = uploadQueue;
     FV.UploadError = UploadError;
     return upload;
 });

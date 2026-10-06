@@ -481,6 +481,19 @@ await t;                   // { url, size, offset }
 
 For a whole selection, call `upload()` for each accepted file (the upload widget's `zone.files`), limit the concurrency yourself, and use `signal` to cancel them together. Remember the server decides: see the upload security checklist.
 
+### Many files, bad connections: `uploadQueue`
+
+```js
+const q = FileValidator.uploadQueue({ url: '/upload', concurrency: 2, retries: 3, onChange: (item) => render(item) });
+const item = q.add(file);              // item.status: queued | uploading | offline | retrying | done | failed | aborted | changed
+await item.promise;                    // the result, or an UploadError
+q.retryFailed();  q.pause();  q.resume();  q.abortAll();  await q.whenIdle();
+```
+
+- **Offline:** while `navigator.onLine` is false (or your `isOnline()`), items wait with status `offline` and start again when the browser fires `online`. A network error that happens because the connection dropped is not counted as a failed attempt; `retries` only counts real failures (5xx, 408, 429, timeouts while online) with exponential backoff and `Retry-After`.
+- **The file changed on disk:** before every attempt the queue checks that the size and date are unchanged and that the file can still be read. Otherwise the item stops with status `changed` and `error.code` `FILE_CHANGED` (edited after it was chosen) or `FILE_UNREADABLE` (moved, deleted or locked), instead of sending a half-old file. Ask the person to pick it again and call `item.replace(newFile)`.
+- Works with every `upload()` option (`tus`, `presign`, `headers` ...); tus uploads resume from the server's offset after each retry.
+
 ## Photos and privacy
 
 A photo from a phone carries more than the picture: the camera and phone model, the exact time, often the **GPS position** where it was taken, sometimes the name of the person who edited it. If you store or publish uploads, strip it first. `FileValidator` does it on the bytes of the file, without re-encoding, so the picture stays identical and there is no quality loss. It works for JPEG, PNG and WebP, in the browser and in Node.

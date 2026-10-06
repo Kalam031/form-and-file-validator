@@ -157,7 +157,7 @@ test('the bundle and the separate files agree (same versions, same public API su
     assert.equal(m.exports.FormValidator.version, FormSep.version);
     assert.equal(m.exports.FileValidator.version, FileSep.version);
     assert.deepEqual(Object.keys(m.exports.FormValidator).sort(), Object.keys(FormSep).filter(k => k !== 'fieldElement').concat(['bundled', 'fieldElement', 'locales', 'otp', 'parseDate', 'parseNumber', 'passwordStrength', 'pwned', 'useJQuery', 'watchPasswordStrength']).sort());
-    assert.deepEqual(Object.keys(m.exports.FileValidator).sort(), Object.keys(FileSep).concat(['locales', 'upload', 'UploadError', 'transformImage', 'convertImage', 'convertHeic', 'cropper', 'capture', 'isHeic']).sort());
+    assert.deepEqual(Object.keys(m.exports.FileValidator).sort(), Object.keys(FileSep).concat(['locales', 'upload', 'uploadQueue', 'UploadError', 'transformImage', 'convertImage', 'convertHeic', 'cropper', 'capture', 'isHeic']).sort());
     assert.equal(versions.formValidator, FormSep.version);
 });
 

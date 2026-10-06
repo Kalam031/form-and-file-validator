@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.32.0
+- **`FileValidator.uploadQueue()`** (upload add-on 1.1.0): many uploads with a concurrency limit that wait while the device is offline and carry on when it is back (offline waiting is not a failed attempt), retry with backoff, and stop with `FILE_CHANGED` / `FILE_UNREADABLE` when a file was edited, moved or deleted after it was chosen (`item.replace(newFile)` to continue). Items report `queued | uploading | offline | retrying | done | failed | aborted | changed`.
+
 ## 3.31.0
 - **Image add-on** (`FileValidator.convertHeic` / `convertImage` / `transformImage` / `cropper` / `capture`, `dist/fileValidator.image.js` 1.0.0, in the bundle, `form-and-file-validator/image`): iPhone HEIC to JPEG where the browser decodes it (or through your own `decoder`), crop, rotate, flip and shrink on a canvas, an accessible keyboard-operable crop dialog, and a camera / chooser helper. The upload widget gets `convert` and `crop` options (entries report `converted` and `cropped`). Tested in Chromium, Firefox and WebKit.
 
