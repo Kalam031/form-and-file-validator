@@ -553,3 +553,14 @@ test('widget with stripMetadata: a photo is listed without its EXIF and GPS data
     assert.equal(r2.accepted[0].file, photo, 'without the option the file is untouched');
     plain.destroy();
 });
+
+test('exifOrientation() reads the EXIF tag of a photo, 1 for everything else', async () => {
+    require('./helpers/shim.js');
+    const tiff = [0x49, 0x49, 0x2a, 0, 8, 0, 0, 0, 1, 0, 0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0];
+    const body = [0x45, 0x78, 0x69, 0x66, 0, 0].concat(tiff), len = body.length + 2;
+    const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe1, len >> 8, len & 255, ...body, 0xff, 0xda, 0, 2, 0xff, 0xd9]);
+    assert.equal(await FV.exifOrientation(new File([jpg], 'a.jpg', { type: 'image/jpeg' })), 6);
+    assert.equal(await FV.exifOrientation(new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], 'b.jpg', { type: 'image/jpeg' })), 1);
+    assert.equal(await FV.exifOrientation(new File(['hello'], 'c.txt', { type: 'text/plain' })), 1);
+    assert.equal(await FV.exifOrientation(new File([new Uint8Array([1, 2, 3])], 'd.png', { type: 'image/png' })), 1);
+});

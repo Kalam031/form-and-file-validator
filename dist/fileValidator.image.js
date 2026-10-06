@@ -38,6 +38,9 @@
             if (!input) throw fail('The decoder returned nothing for "' + (file && file.name) + '".', 'IMAGE_DECODE_FAILED');
             if (input.source && input.width > 0 && input.height > 0) return { source: input.source, width: input.width, height: input.height, close: input.close || (() => {}) };
         }
+        if (isFn(FV.readImage) && !isFn(o.decoder)) {          // the widget's reader: upright whether or not the browser applies EXIF
+            try { const info = await FV.readImage(input); if (info) return { source: info.source, width: info.width, height: info.height, close: info.close || (() => {}) }; } catch (e) { /* try the plain way below */ }
+        }
         if (typeof root.createImageBitmap === 'function') {
             let bmp = null;
             try { bmp = await root.createImageBitmap(input, { imageOrientation: 'from-image' }); }

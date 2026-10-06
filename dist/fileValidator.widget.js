@@ -1,5 +1,5 @@
 /*!
- * FileValidator upload widget v1.5.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
+ * FileValidator upload widget v1.6.0 — drag and drop, folders, paste, previews, resizing and a file list on top of FileValidator.
  *
  * Load order:  fileValidator.js (2.5+)  →  fileValidator.widget.js.  No other dependencies.
  *
@@ -26,6 +26,7 @@
  * Helpers: FileValidator.filesFromDrop(dataTransfer), filesFromClipboard(clipboardData), resizeImage(file, options), createPreview(file, options).
  *
  * Changelog
+ *   1.6.0  Thumbnails and resized copies are upright on every browser (EXIF orientation applied by us when the browser does not); FileValidator.readImage() and exifOrientation().
  *   1.5.0  `convert` and `crop` options (with the image add-on); entries get `converted` and `cropped`.
  *   1.4.0  `stripMetadata` option: photos are listed without EXIF, GPS, XMP, IPTC and comments (entries get `stripped`).
  *   1.3.0  Every sentence the widget writes (status line, "...and N more", remove button labels) goes through FileValidator.phrase(),
@@ -119,10 +120,60 @@
     }
 
     // ------------------------------------------------------------------ images: read, resize, preview
+    // EXIF orientation. Phones store a photo sideways plus a tag (1-8); current browsers apply it when decoding, a few older ones do not.
+    // A thumbnail or a resized copy must come out upright either way (the copy has no EXIF, so a sideways decode would be sideways forever).
+    const EXIF_MATRIX = { 2: [-1, 0, 0, 1, 1, 0], 3: [-1, 0, 0, -1, 1, 1], 4: [1, 0, 0, -1, 0, 1], 5: [0, 1, 1, 0, 0, 0], 6: [0, 1, -1, 0, 1, 0], 7: [0, -1, -1, 0, 1, 1], 8: [0, -1, 1, 0, 0, 1] };
+    let appliesExif = null;   // cached: does createImageBitmap rotate by the EXIF tag on this browser?
+    /** The EXIF Orientation (1-8) of a JPEG / WebP / PNG file, 1 when there is none or the file cannot be read. */
+    async function exifOrientation(file) {
+        try {
+            if (!/jpe?g|webp|png/i.test((file.type || '') + ' ' + (file.name || '')) || !isFn(FV.readMetadata)) return 1;
+            const m = await FV.readMetadata(file);
+            return m && m.orientation >= 1 && m.orientation <= 8 ? m.orientation : 1;
+        } catch (e) { return 1; }
+    }
+    async function browserAppliesExif() {
+        if (appliesExif !== null) return appliesExif;
+        appliesExif = true;                                  // no canvas to test with: assume a current browser
+        try {
+            if (typeof root.createImageBitmap !== 'function' || !(root.OffscreenCanvas || (doc() && doc().createElement))) return appliesExif;
+            const canvas = root.OffscreenCanvas ? new root.OffscreenCanvas(2, 1) : Object.assign(doc().createElement('canvas'), { width: 2, height: 1 });
+            canvas.getContext('2d').fillRect(0, 0, 2, 1);
+            const blob = await (canvas.convertToBlob ? canvas.convertToBlob({ type: 'image/jpeg' }) : new Promise(res => canvas.toBlob(res, 'image/jpeg')));
+            const jpg = new Uint8Array(await blob.arrayBuffer());
+            const tiff = [0x49, 0x49, 0x2a, 0, 8, 0, 0, 0, 1, 0, 0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0];
+            const body = [0x45, 0x78, 0x69, 0x66, 0, 0].concat(tiff), len = body.length + 2;
+            const withExif = new Uint8Array(jpg.length + body.length + 4);
+            withExif.set(jpg.subarray(0, 2), 0); withExif.set([0xff, 0xe1, len >> 8, len & 255].concat(body), 2); withExif.set(jpg.subarray(2), 6 + body.length);
+            const bmp = await root.createImageBitmap(new Blob([withExif], { type: 'image/jpeg' }), { imageOrientation: 'from-image' });
+            appliesExif = bmp.height === 2;                  // rotated 90 degrees: 2 x 1 became 1 x 2
+            if (bmp.close) bmp.close();
+        } catch (e) { appliesExif = true; }
+        return appliesExif;
+    }
+    /** Draws an image that was decoded sideways onto a canvas with the EXIF orientation applied. */
+    function orientCanvas(bmp, o) {
+        const swap = o >= 5, w = swap ? bmp.height : bmp.width, h = swap ? bmp.width : bmp.height;
+        const canvas = root.OffscreenCanvas ? new root.OffscreenCanvas(w, h) : Object.assign(doc().createElement('canvas'), { width: w, height: h });
+        const ctx = canvas.getContext('2d'), m = EXIF_MATRIX[o];
+        ctx.setTransform(m[0], m[1], m[2], m[3], m[4] * w, m[5] * h);
+        ctx.drawImage(bmp, 0, 0);
+        return canvas;
+    }
+    /**
+     * Decodes an image for drawing: { width, height, source, close, orientation }. Width and height are as the photo is DISPLAYED (a portrait phone photo is taller than wide)
+     * and `source` is upright, on every browser, whether or not it applies the EXIF tag itself. Returns null when nothing can decode it.
+     */
     async function defaultReadImage(file) {
         if (typeof root.createImageBitmap === 'function') {
-            const bmp = await root.createImageBitmap(file);
-            return { width: bmp.width, height: bmp.height, source: bmp, close: () => bmp.close && bmp.close() };
+            let bmp;
+            try { bmp = await root.createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) { bmp = await root.createImageBitmap(file); }
+            const o = await exifOrientation(file);
+            if (o > 1 && !(await browserAppliesExif())) {
+                try { const canvas = orientCanvas(bmp, o); if (bmp.close) bmp.close(); return { width: canvas.width, height: canvas.height, source: canvas, close() { }, orientation: o }; }
+                catch (e) { /* no canvas: use it as decoded */ }
+            }
+            return { width: bmp.width, height: bmp.height, source: bmp, close: () => bmp.close && bmp.close(), orientation: o };
         }
         if (!root.Image || !root.URL || !isFn(root.URL.createObjectURL)) return null;
         const url = root.URL.createObjectURL(file), img = new root.Image();
@@ -511,6 +562,6 @@
     }
     widget.__fv = true;
 
-    Object.assign(FV, { widget, dropzone: widget, filesFromDrop, filesFromClipboard, resizeImage, createPreview });
+    Object.assign(FV, { widget, dropzone: widget, filesFromDrop, filesFromClipboard, resizeImage, createPreview, readImage: defaultReadImage, exifOrientation });
     return FV;
 });

@@ -521,6 +521,10 @@ export interface FileValidatorStatic {
     filesFromDrop(dataTransfer: DataTransfer | null, options?: { maxFiles?: number; maxDepth?: number }): Promise<File[]>;
     filesFromClipboard(clipboardData: DataTransfer | null): File[];
     resizeImage(file: File, options?: ResizeOptions): Promise<File>;
+    /** Decodes an image the way it is DISPLAYED: width / height already follow the EXIF orientation and `source` is upright, on every browser. null when it cannot be decoded. */
+    readImage(file: File): Promise<{ width: number; height: number; source: CanvasImageSource; close(): void; orientation: number } | null>;
+    /** The EXIF Orientation (1-8) of a JPEG, WebP or PNG; 1 when there is none or the file cannot be read. */
+    exifOrientation(file: File): Promise<number>;
     createPreview(file: File, options?: PreviewOptions): Promise<Preview>;
 }
 

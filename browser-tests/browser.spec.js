@@ -577,6 +577,42 @@ for (const b of BROWSERS) {
             assert.deepEqual(r, { name: 'cam.jpg', type: 'image/jpeg', w: 50, h: 25, left: 0 });
         });
 
+        it2('EXIF: a phone photo stored sideways (orientation 6) gets an upright thumbnail and resized copy, also on a browser that ignores the tag', async page => {
+            await page.evaluate(IMG_HELPERS);
+            for (const ignoreTag of [false, true]) {
+                await page.reload();
+                await page.evaluate(IMG_HELPERS);
+                const r = await page.evaluate(async ignoreTag => {
+                    if (ignoreTag) {      // an older browser: decodes the pixels as stored and never reads the EXIF tag (simulated by dropping the APP1 segment before decoding)
+                        const orig = window.createImageBitmap.bind(window);
+                        window.createImageBitmap = async src => { const b = new Uint8Array(await src.arrayBuffer()); if (b[2] === 0xff && b[3] === 0xe1) src = new Blob([b.subarray(0, 2), b.subarray(4 + ((b[4] << 8) | b[5]))], { type: 'image/jpeg' }); return orig(src); };
+                    }
+                    // 200 x 100 picture, left half red, right half blue, with EXIF orientation 6 (shown turned clockwise: 100 x 200, red on top)
+                    const raw = await halves(200, 100, 'image/jpeg');
+                    const jpg = new Uint8Array(await raw.arrayBuffer());
+                    const tiff = [0x49, 0x49, 0x2a, 0, 8, 0, 0, 0, 1, 0, 0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0];
+                    const body = [0x45, 0x78, 0x69, 0x66, 0, 0].concat(tiff), len = body.length + 2;
+                    const out = new Uint8Array(jpg.length + body.length + 4);
+                    out.set(jpg.subarray(0, 2), 0); out.set([0xff, 0xe1, len >> 8, len & 255].concat(body), 2); out.set(jpg.subarray(2), 6 + body.length);
+                    const photo = new File([out], 'IMG_1.jpg', { type: 'image/jpeg' });
+                    const info = await FileValidator.readImage(photo);
+                    const dims = [info.width, info.height, info.orientation]; info.close();
+                    const small = await FileValidator.resizeImage(photo, { maxWidth: 50 });
+                    const prev = await FileValidator.createPreview(photo, { maxWidth: 80, maxHeight: 80 });
+                    const img = new Image(); await new Promise(res => { img.onload = res; img.src = prev.url; });
+                    const probe = (bitmapOrImg, w, h, x, y) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(bitmapOrImg, 0, 0); const d = g.getImageData(x, y, 1, 1).data; return d[0] > 128 ? 'R' : d[2] > 128 ? 'B' : '-'; };
+                    const sb = await createImageBitmap(small, { imageOrientation: 'none' });
+                    return { ignoreTag, dims, smallSize: [sb.width, sb.height], smallTop: probe(sb, sb.width, sb.height, 5, 5), smallBottom: probe(sb, sb.width, sb.height, 5, sb.height - 5),
+                        prev: [img.naturalWidth, img.naturalHeight], prevTop: probe(img, img.naturalWidth, img.naturalHeight, 5, 5), prevBottom: probe(img, img.naturalWidth, img.naturalHeight, 5, img.naturalHeight - 5) };
+                }, ignoreTag);
+                const tag = ' (browser ignores EXIF: ' + ignoreTag + ')';
+                assert.deepEqual(r.dims, [100, 200, 6], 'displayed size' + tag);
+                assert.ok(r.smallSize[1] > r.smallSize[0], 'resized copy is portrait' + tag);
+                assert.deepEqual([r.smallTop, r.smallBottom], ['R', 'B'], 'resized copy is upright' + tag);
+                assert.ok(r.prev[1] > r.prev[0], 'thumbnail is portrait' + tag);
+                assert.deepEqual([r.prevTop, r.prevBottom], ['R', 'B'], 'thumbnail is upright' + tag);
+            }
+        });
         it2('previews: a real thumbnail is created and loads; it is revoked on remove', async page => {
             await widget(page, { accept: '.png' }, { preview: true });
             await page.evaluate(async b => { await zone.add([new File([new Uint8Array(b)], 'p.png', { type: 'image/png' })]); }, bytes(files.makePng(600, 400)));

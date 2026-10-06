@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.32.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.33.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -963,6 +963,8 @@ q.retryFailed();  q.pause();  q.resume();  q.abortAll();  await q.whenIdle();
 <li><strong>The file changed on disk:</strong> before every attempt the queue checks that the size and date are unchanged and that the file can still be read. Otherwise the item stops with status <code>changed</code> and <code>error.code</code> <code>FILE_CHANGED</code> (edited after it was chosen) or <code>FILE_UNREADABLE</code> (moved, deleted or locked), instead of sending a half-old file. Ask the person to pick it again and call <code>item.replace(newFile)</code>.</li>
 <li>Works with every <code>upload()</code> option (<code>tus</code>, <code>presign</code>, <code>headers</code> ...); tus uploads resume from the server&#39;s offset after each retry.</li>
 </ul>
+<h3 id="phone-photos-are-upright">Phone photos are upright</h3>
+<p>Phones store a portrait photo sideways plus an EXIF &quot;orientation&quot; tag. Thumbnails (<code>preview</code>), <code>resizeImage()</code> and the image add-on draw the photo as it is <strong>displayed</strong>: when the browser applies the tag while decoding they use that, otherwise (an old browser, found by a one-time feature test) the library rotates and flips the pixels itself, so the copy you upload is upright even though it carries no EXIF. <code>FileValidator.readImage(file)</code> gives <code>{ width, height, source }</code> in display orientation and <code>FileValidator.exifOrientation(file)</code> the raw tag (1 to 8).</p>
 <h2 id="photos-and-privacy">Photos and privacy</h2>
 <p>A photo from a phone carries more than the picture: the camera and phone model, the exact time, often the <strong>GPS position</strong> where it was taken, sometimes the name of the person who edited it. If you store or publish uploads, strip it first. <code>FileValidator</code> does it on the bytes of the file, without re-encoding, so the picture stays identical and there is no quality loss. It works for JPEG, PNG and WebP, in the browser and in Node.</p>
 <pre tabindex="0"><code class="language-js">const meta = await FileValidator.readMetadata(file);

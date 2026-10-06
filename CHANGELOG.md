@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.33.0
+- **Upright photos everywhere**: thumbnails, `resizeImage()` copies and the image add-on now apply the EXIF orientation themselves when the browser does not (a feature test decides, once). A copy has no EXIF tag, so a sideways decode used to stay sideways. New `FileValidator.readImage(file)` (displayed width / height, upright source) and `FileValidator.exifOrientation(file)`. Widget 1.6.0. Tested in a real browser, including one that ignores the tag.
+
 ## 3.32.0
 - **`FileValidator.uploadQueue()`** (upload add-on 1.1.0): many uploads with a concurrency limit that wait while the device is offline and carry on when it is back (offline waiting is not a failed attempt), retry with backoff, and stop with `FILE_CHANGED` / `FILE_UNREADABLE` when a file was edited, moved or deleted after it was chosen (`item.replace(newFile)` to continue). Items report `queued | uploading | offline | retrying | done | failed | aborted | changed`.
 

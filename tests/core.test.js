@@ -93,7 +93,7 @@ const BUDGET = {
     'formValidator.core.min.js': 19000,
     'formValidator.min.js': 39000,
     'fileValidator.min.js': 23000,
-    'fileValidator.widget.min.js': 7500,
+    'fileValidator.widget.min.js': 8500,
     'fileValidator.upload.min.js': 6500,
     'fileValidator.image.min.js': 6000,
     'formValidator.jquery.min.js': 10500,

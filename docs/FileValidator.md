@@ -494,6 +494,10 @@ q.retryFailed();  q.pause();  q.resume();  q.abortAll();  await q.whenIdle();
 - **The file changed on disk:** before every attempt the queue checks that the size and date are unchanged and that the file can still be read. Otherwise the item stops with status `changed` and `error.code` `FILE_CHANGED` (edited after it was chosen) or `FILE_UNREADABLE` (moved, deleted or locked), instead of sending a half-old file. Ask the person to pick it again and call `item.replace(newFile)`.
 - Works with every `upload()` option (`tus`, `presign`, `headers` ...); tus uploads resume from the server's offset after each retry.
 
+### Phone photos are upright
+
+Phones store a portrait photo sideways plus an EXIF "orientation" tag. Thumbnails (`preview`), `resizeImage()` and the image add-on draw the photo as it is **displayed**: when the browser applies the tag while decoding they use that, otherwise (an old browser, found by a one-time feature test) the library rotates and flips the pixels itself, so the copy you upload is upright even though it carries no EXIF. `FileValidator.readImage(file)` gives `{ width, height, source }` in display orientation and `FileValidator.exifOrientation(file)` the raw tag (1 to 8).
+
 ## Photos and privacy
 
 A photo from a phone carries more than the picture: the camera and phone model, the exact time, often the **GPS position** where it was taken, sometimes the name of the person who edited it. If you store or publish uploads, strip it first. `FileValidator` does it on the bytes of the file, without re-encoding, so the picture stays identical and there is no quality loss. It works for JPEG, PNG and WebP, in the browser and in Node.
