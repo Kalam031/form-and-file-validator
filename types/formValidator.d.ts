@@ -526,6 +526,26 @@ export interface FormValidatorFieldElement {
     /** 'required minlength:3' or JSON -> rules. */
     parseRules(text: string): RulesForField | null;
 }
+export interface FvFormElement extends HTMLElement {
+    /** The FormValidator instance (null until the form inside has been found). */
+    readonly instance: FormInstance | null;
+    readonly form: HTMLFormElement | null;
+    /** A map field name -> rules ('required email' or a rules object). Setting it restarts the validator. */
+    rules: Record<string, unknown> | null;
+    readonly values: Record<string, any>;
+    readonly errors: Array<{ name: string; message: string; code: string | null }>;
+    readonly valid: boolean;
+    readonly state: unknown;
+    validate(options?: unknown): Promise<boolean>;
+    validateStep(step: number | string | Element): Promise<boolean>;
+    setErrors(map: Record<string, string | string[]>): unknown;
+    clearErrors(): void;
+    reset(): void;
+}
+export interface FormValidatorFormElement {
+    /** Registers <fv-form> under another tag name (default 'fv-form' is registered when the bundle loads). */
+    define(name?: string): CustomElementConstructor | null;
+}
 declare global {
     interface HTMLElementTagNameMap { 'fv-field': FvFieldElement }
     interface HTMLElementEventMap { 'fv-validate': CustomEvent<FvFieldValidateDetail> }
@@ -546,6 +566,8 @@ export interface FormValidatorStatic {
     parseFormData(input: HTMLFormElement | FormData | URLSearchParams | Iterable<readonly [string, unknown]> | Record<string, unknown> | null | undefined, options?: { coerce?: boolean }): Record<string, any>;
     /** The <fv-field> element (set when the bundle or formValidator.element.js is loaded). */
     readonly fieldElement?: FormValidatorFieldElement;
+    /** The <fv-form> element: wrap a form in HTML, no init call. */
+    readonly formElement?: FormValidatorFormElement;
     /** ASP.NET MVC / Razor `data-val-*` support (a drop-in for jquery.validate.unobtrusive.js, no jQuery needed). */
     readonly unobtrusive: FormValidatorUnobtrusive;
     /** Formats a text input while the user types: 9 digit, a letter, * letter or digit, \ escapes. Keeps the caret, handles paste, backspace over literals and IME composition. */

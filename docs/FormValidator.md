@@ -214,6 +214,24 @@ No DOM is needed, so this runs in Node, in tests and in the Angular validators. 
 - Like the native pseudo-classes, `checkValidity()` fires `invalid`, so a field that gets one shows its message.
 - Another tag name: `FormValidator.fieldElement.define('my-field')`.
 
+### `<fv-form>`: a whole form from HTML
+
+```html
+<fv-form rules='{"email":"required email","age":"required digits"}' lang="de" validate-on="blur" error-summary>
+  <form action="/signup" method="post">
+    <input name="email"> <input name="age" data-fv="min:18"> <button>Send</button>
+  </form>
+</fv-form>
+<script>
+  document.querySelector('fv-form').addEventListener('fv-submit', e => { e.preventDefault(); send(e.detail.values); });   // or leave it alone: the browser posts the form
+</script>
+```
+
+- **Attributes:** `rules` (JSON map of field name to rules; fields may also carry `data-fv` / `data-fv-mask`, the attribute wins), `messages` (JSON), `config` (JSON of any config option), and shortcuts `lang`, `validate-on`, `error-summary`, `valid-class`, `auto-attributes`. `form="#id"` picks the form when it is not the first one inside.
+- **Events** (they bubble): `fv-ready` `{ instance }`, `fv-invalid` `{ errors }`, `fv-valid`, and `fv-submit` `{ values, form, event }` once a valid form is submitted. Call `preventDefault()` to send the data yourself; otherwise the browser posts the form as usual.
+- **Script:** `el.instance`, `el.values`, `el.errors`, `el.valid`, `el.validate()`, `el.validateStep(n)`, `el.setErrors(map)`, `el.clearErrors()`, `el.reset()`, and `el.rules = {...}` (restarts).
+- A form that a framework renders later is picked up; removing the element destroys the validator. Another tag name: `FormValidator.formElement.define('my-form')`.
+
 ### Bots, double submits, drafts and unsaved changes
 
 Five opt-in protections in the form config. None of them changes a form that does not ask for it.

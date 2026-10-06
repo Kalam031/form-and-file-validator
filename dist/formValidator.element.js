@@ -1,5 +1,5 @@
 /*!
- * FormValidator element v1.0.0 — <fv-field>: any FormValidator rule as native constraint validation, in plain HTML, no init call.
+ * FormValidator element v1.1.0 — <fv-field> (any FormValidator rule as native constraint validation, in plain HTML, no init call) and <fv-form> (a whole form started from HTML).
  *
  *   <form>
  *     <fv-field rules="required email">
@@ -30,7 +30,18 @@
  *
  * Needs FormValidator (the bundle, or formValidator.js): registered as <fv-field> when it loads; FormValidator.fieldElement.define('my-field') uses another name.
  *
+ * <fv-form>: wrap a form, no script:
+ *   <fv-form rules='{"email":"required email","age":"required digits"}' lang="de" validate-on="blur" error-summary>
+ *     <form action="/signup" method="post">  <input name="email">  <input name="age" data-fv="min:18">  <button>Send</button>  </form>
+ *   </fv-form>
+ * Fields can also carry data-fv / data-fv-mask (the `rules` attribute wins). Attributes: rules (JSON map), messages (JSON), config (JSON of any FormValidator config),
+ * lang, validate-on, error-summary, valid-class, auto-attributes, form (CSS selector when the form is not the first one inside).
+ * Events (bubble): `fv-ready` { instance }, `fv-invalid` { errors }, `fv-valid`, and `fv-submit` { values, form, event } when a valid form is submitted: call
+ * preventDefault() to send it yourself (fetch ...); otherwise the browser posts it as usual. Properties / methods: instance, form, rules, values, errors, valid, state,
+ * validate(), validateStep(n), setErrors(map), clearErrors(), reset(). A form rendered later by a framework is picked up; moving or removing the element cleans up.
+ *
  * Changelog
+ *   1.1.0  <fv-form>.
  *   1.0.0  First release.
  */
 (function (root, factory) {
@@ -378,6 +389,128 @@
         },
         parseRules
     };
+    // ------------------------------------------------------------------ <fv-form>: a whole form, started from HTML
+    const FORM_NAME = 'fv-form';
+    const jsonAttr = (el, name, what) => {
+        const t = el.getAttribute(name);
+        if (t === null || t === '') return null;
+        try { return JSON.parse(t); } catch (e) { warnOnce(name + ':' + t, 'fv-form: the ' + name + ' attribute is not valid JSON and is ignored: ' + t); return null; }
+    };
+    function createFormClass() {
+        const Base = root.HTMLElement;
+        class FvForm extends Base {
+            static get observedAttributes() { return ['rules', 'messages', 'config', 'lang', 'validate-on', 'error-summary', 'valid-class', 'auto-attributes', 'form']; }
+            constructor() { super(); this._inst = null; this._form = null; this._rules = undefined; this._mo = null; this._starting = false; this._cleanups = []; }
+
+            connectedCallback() { this._schedule(); }
+            disconnectedCallback() { this._stop(); }
+            attributeChangedCallback(name, oldV, newV) { if (oldV !== newV && this.isConnected && this._inst) this._schedule(); }
+
+            _schedule() {
+                if (this._starting) return;
+                this._starting = true;
+                Promise.resolve().then(() => { this._starting = false; if (this.isConnected) this._start(); });   // children are parsed by now
+            }
+            _findForm() {
+                const sel = this.getAttribute('form');
+                if (sel) { const f = this.querySelector(sel) || (root.document && root.document.querySelector(sel)); return f && f.tagName === 'FORM' ? f : null; }
+                if (this.tagName === 'FORM') return this;
+                return this.querySelector('form') || (this.closest ? this.closest('form') : null);
+            }
+            /** rules: the `rules` attribute / property (a map name -> rules) plus every data-fv field inside; the attribute wins */
+            _collectRules(form) {
+                const out = {};
+                Array.from(form.querySelectorAll('[data-fv]')).forEach(el => { if (el !== form && el.name) { const r = parseRules(el.getAttribute('data-fv')); if (r) out[el.name] = r; } });
+                const given = this._rules !== undefined ? this._rules : jsonAttr(this, 'rules');
+                if (given && typeof given === 'object') Object.keys(given).forEach(k => { out[k] = typeof given[k] === 'string' ? (parseRules(given[k]) || given[k]) : given[k]; });
+                return out;
+            }
+            _config(form) {
+                const cfg = Object.assign({ autoRules: false }, jsonAttr(this, 'config'));
+                if (this.hasAttribute('lang')) cfg.lang = this.getAttribute('lang');
+                if (this.hasAttribute('validate-on')) cfg.validateOn = this.getAttribute('validate-on');
+                if (this.hasAttribute('error-summary')) cfg.errorSummary = this.getAttribute('error-summary') === 'false' ? false : true;
+                if (this.hasAttribute('valid-class')) cfg.validClass = this.getAttribute('valid-class');
+                if (this.hasAttribute('auto-attributes')) cfg.autoAttributes = this.getAttribute('auto-attributes') === 'false' ? false : true;
+                const host = this;
+                cfg.submitHandler = (f, e, values) => {
+                    const ev = new root.CustomEvent('fv-submit', { bubbles: true, cancelable: true, detail: { values, form: f, event: e } });
+                    host.dispatchEvent(ev);
+                    if (ev.defaultPrevented) return undefined;            // your code sends it (fetch ...): the browser does not
+                    const inst = host._inst;
+                    setTimeout(() => {                                    // hand the form back to the browser on the next task (see FormValidator's own submit)
+                        if (inst) inst._bypass = true;
+                        try { if (typeof f.requestSubmit === 'function') { try { f.requestSubmit(e && e.submitter || undefined); } catch (err) { f.requestSubmit(); } } else f.submit(); }
+                        finally { if (inst) inst._bypass = false; }
+                    }, 0);
+                    return undefined;
+                };
+                return cfg;
+            }
+            _start() {
+                this._stop();
+                const form = this._findForm();
+                if (!form) {                                              // the form may arrive later (a framework renders it): wait for it
+                    if (typeof root.MutationObserver === 'function' && !this._mo) {
+                        this._mo = new root.MutationObserver(() => { if (this._findForm()) { this._mo.disconnect(); this._mo = null; this._start(); } });
+                        this._mo.observe(this, { childList: true, subtree: true });
+                    } else warnOnce('noform', 'fv-form: no <form> found inside it.');
+                    return;
+                }
+                if (this._mo) { this._mo.disconnect(); this._mo = null; }
+                this._form = form;
+                const rules = this._collectRules(form);
+                const masks = [];
+                Array.from(form.querySelectorAll('[data-fv-mask]')).forEach(el => { if (el.name || el.id) masks.push(FV.mask(el, el.getAttribute('data-fv-mask'))); });
+                const inst = FV.init({ form, rules, messages: jsonAttr(this, 'messages') || undefined, config: this._config(form) });
+                this._inst = Array.isArray(inst) ? inst[0] : inst;
+                this._inst._listeners.push(() => masks.forEach(m => m.destroy()));
+                // the form's own events reach the host too (they bubble): re-announce them under the element's name
+                const relay = (from, to) => { const fn = e => this.dispatchEvent(new root.CustomEvent(to, { detail: e.detail })); form.addEventListener(from, fn); this._cleanups.push(() => form.removeEventListener(from, fn)); };
+                relay('fv:invalid', 'fv-invalid'); relay('fv:valid', 'fv-valid');
+                this.dispatchEvent(new root.CustomEvent('fv-ready', { detail: { instance: this._inst } }));
+            }
+            _stop() {
+                this._cleanups.splice(0).forEach(fn => fn());
+                if (this._mo) { this._mo.disconnect(); this._mo = null; }
+                if (this._inst) { try { this._inst.destroy(); } catch (e) { /* gone */ } }
+                if (this._form && this._form._fvInstance === this._inst) this._form._fvInstance = null;
+                this._inst = null;
+            }
+
+            get instance() { return this._inst; }
+            get form() { return this._form; }
+            get rules() { return this._rules !== undefined ? this._rules : jsonAttr(this, 'rules'); }
+            set rules(v) { this._rules = v; if (this.isConnected) this._schedule(); }
+            get values() { return this._inst ? this._inst.getValues() : {}; }
+            get errors() { return this._inst ? this._inst.getErrors() : []; }
+            get valid() { return this._inst ? this._inst.getErrors().length === 0 : true; }
+            get state() { return this._inst ? this._inst.getState() : null; }
+            validate(o) { return this._inst ? this._inst.validate(o) : Promise.resolve(true); }
+            validateStep(step) { return this._inst ? this._inst.validateStep(step) : Promise.resolve(true); }
+            setErrors(map) { return this._inst ? this._inst.setErrors(map) : []; }
+            clearErrors() { if (this._inst) this._inst.clearErrors(); }
+            reset() { if (this._form) this._form.reset(); }
+        }
+        return FvForm;
+    }
+    let FormKlass = null;
+    const formElement = {
+        /** Registers <fv-form> (or another name). Returns the class, or null when this environment has no custom elements. */
+        define(name) {
+            if (typeof root.customElements === 'undefined' || typeof root.HTMLElement === 'undefined') return null;
+            const tag = name || FORM_NAME;
+            const existing = root.customElements.get(tag);
+            if (existing) return existing;
+            if (!FormKlass) FormKlass = createFormClass();
+            const C = tag === FORM_NAME ? FormKlass : class extends FormKlass {};
+            root.customElements.define(tag, C);
+            return C;
+        }
+    };
+    FV.formElement = formElement;
+    try { formElement.define(FORM_NAME); } catch (e) { if (root.console) console.warn('fv-form could not be registered:', e); }
+
     FV.fieldElement = fieldElement;
     try { fieldElement.define(DEFAULT_NAME); } catch (e) { if (root.console) console.warn('fv-field could not be registered:', e); }
     return fieldElement;

@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.34.0
+- **`<fv-form>`** (element add-on 1.1.0, in the bundle): wrap a form in HTML and it is validated, no init call. `rules` / `messages` / `config` attributes (JSON) plus `lang`, `validate-on`, `error-summary`, `valid-class`, `auto-attributes`, `data-fv` on fields, `fv-submit` / `fv-invalid` / `fv-valid` / `fv-ready` events, a script API (`validate()`, `errors`, `values`, `setErrors()`, ...), late-rendered forms and clean-up on removal.
+
 ## 3.33.0
 - **Upright photos everywhere**: thumbnails, `resizeImage()` copies and the image add-on now apply the EXIF orientation themselves when the browser does not (a feature test decides, once). A copy has no EXIF tag, so a sideways decode used to stay sideways. New `FileValidator.readImage(file)` (displayed width / height, upright source) and `FileValidator.exifOrientation(file)`. Widget 1.6.0. Tested in a real browser, including one that ignores the tag.
 

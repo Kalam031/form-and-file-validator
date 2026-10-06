@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.33.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.34.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -454,6 +454,22 @@ FormValidator.checkValues(body, {                      // a JSON body, a model, 
 <li><strong>Styling and scripting</strong>: <code>.fv-error</code>, <code>fv-field[data-state=&quot;invalid&quot;]</code>, <code>[data-shown]</code>, <code>input:user-invalid</code>, and <code>fv-field:state(user-invalid)</code> where the browser has custom states. Event <code>fv-validate</code> (<code>detail: { valid, rule, code, message, shown }</code>), methods <code>validate()</code>, <code>reportValidity()</code>, <code>reset()</code>, <code>setServerError(text)</code>. Language packs and message overrides (<code>messages=&#39;{&quot;required&quot;:&quot;Fill me&quot;}&#39;</code>) work as everywhere.</li>
 <li>Like the native pseudo-classes, <code>checkValidity()</code> fires <code>invalid</code>, so a field that gets one shows its message.</li>
 <li>Another tag name: <code>FormValidator.fieldElement.define(&#39;my-field&#39;)</code>.</li>
+</ul>
+<h3 id="ltfv-formgt-a-whole-form-from-html"><code>&lt;fv-form&gt;</code>: a whole form from HTML</h3>
+<pre tabindex="0"><code class="language-html">&lt;fv-form rules=&#39;{&quot;email&quot;:&quot;required email&quot;,&quot;age&quot;:&quot;required digits&quot;}&#39; lang=&quot;de&quot; validate-on=&quot;blur&quot; error-summary&gt;
+  &lt;form action=&quot;/signup&quot; method=&quot;post&quot;&gt;
+    &lt;input name=&quot;email&quot;&gt; &lt;input name=&quot;age&quot; data-fv=&quot;min:18&quot;&gt; &lt;button&gt;Send&lt;/button&gt;
+  &lt;/form&gt;
+&lt;/fv-form&gt;
+&lt;script&gt;
+  document.querySelector(&#39;fv-form&#39;).addEventListener(&#39;fv-submit&#39;, e =&gt; { e.preventDefault(); send(e.detail.values); });   // or leave it alone: the browser posts the form
+&lt;/script&gt;
+</code></pre>
+<ul>
+<li><strong>Attributes:</strong> <code>rules</code> (JSON map of field name to rules; fields may also carry <code>data-fv</code> / <code>data-fv-mask</code>, the attribute wins), <code>messages</code> (JSON), <code>config</code> (JSON of any config option), and shortcuts <code>lang</code>, <code>validate-on</code>, <code>error-summary</code>, <code>valid-class</code>, <code>auto-attributes</code>. <code>form=&quot;#id&quot;</code> picks the form when it is not the first one inside.</li>
+<li><strong>Events</strong> (they bubble): <code>fv-ready</code> <code>{ instance }</code>, <code>fv-invalid</code> <code>{ errors }</code>, <code>fv-valid</code>, and <code>fv-submit</code> <code>{ values, form, event }</code> once a valid form is submitted. Call <code>preventDefault()</code> to send the data yourself; otherwise the browser posts the form as usual.</li>
+<li><strong>Script:</strong> <code>el.instance</code>, <code>el.values</code>, <code>el.errors</code>, <code>el.valid</code>, <code>el.validate()</code>, <code>el.validateStep(n)</code>, <code>el.setErrors(map)</code>, <code>el.clearErrors()</code>, <code>el.reset()</code>, and <code>el.rules = {...}</code> (restarts).</li>
+<li>A form that a framework renders later is picked up; removing the element destroys the validator. Another tag name: <code>FormValidator.formElement.define(&#39;my-form&#39;)</code>.</li>
 </ul>
 <h3 id="bots-double-submits-drafts-and-unsaved-changes">Bots, double submits, drafts and unsaved changes</h3>
 <p>Five opt-in protections in the form config. None of them changes a form that does not ask for it.</p>
