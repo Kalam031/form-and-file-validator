@@ -75,3 +75,55 @@ test('fromYup: reports tests it cannot read', () => {
     assert.ok(seen.some(s => s === 'a:mine'), String(seen));
     assert.ok(seen.some(s => /exclusive/.test(s)), String(seen));
 });
+
+// ---------------------------------------------------------------- class-validator (decorated classes compiled by esbuild, judged by class-validator itself)
+function loadDecorated(source, names) {
+    require('reflect-metadata');
+    const esbuild = require('esbuild');
+    const js = esbuild.transformSync(source, { loader: 'ts', format: 'cjs', tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } } }).code;
+    const m = { exports: {} };
+    new Function('require', 'module', 'exports', js)(require, m, m.exports);
+    return m.exports;
+}
+const CV_SOURCE = `
+import { IsEmail, IsNotEmpty, MinLength, MaxLength, Length, Min, Max, IsInt, IsIn, IsOptional, Matches, IsUrl, IsUUID, ArrayMinSize, ArrayMaxSize, IsPositive, ValidateNested, IsAlphanumeric, IsNotIn, Equals } from 'class-validator';
+export class Signup {
+  @IsEmail() @IsNotEmpty() email!: string;
+  @MinLength(3) @MaxLength(10) name!: string;
+  @Length(2, 5) code!: string;
+  @IsInt() @Min(18) @Max(99) age!: number;
+  @IsIn(['free', 'pro']) plan!: string;
+  @IsOptional() @Matches(/^[a-z]+$/) slug?: string;
+  @IsUrl() site!: string;
+  @ArrayMinSize(1) @ArrayMaxSize(3) tags!: string[];
+  @IsAlphanumeric() handle!: string;
+  @IsNotIn(['root']) user!: string;
+  @Equals('yes') agree!: string;
+  @IsPositive() points!: number;
+  @ValidateNested() nested!: object;
+}`;
+
+test('fromClassValidator: decorated classes become rules that agree with class-validator', () => {
+    const cv = require('class-validator');
+    const { Signup } = loadDecorated(CV_SOURCE);
+    const seen = [];
+    const rules = FormValidator.fromClassValidator(Signup, { classValidator: cv, onUnsupported: (p, w) => seen.push(p + ':' + w) });
+    assert.deepEqual(Object.keys(rules).sort(), ['age', 'agree', 'code', 'email', 'handle', 'name', 'nested', 'plan', 'points', 'site', 'slug', 'tags', 'user']);
+    assert.ok(seen.some(s => /^points:/.test(s)) && seen.some(s => /^nested:ValidateNested/.test(s)), 'unsupported decorators are reported: ' + seen);
+    const good = { email: 'a@b.co', name: 'Bob', code: 'abc', age: 30, plan: 'pro', site: 'https://a.co', tags: ['x'], handle: 'abc123', user: 'bob', agree: 'yes', slug: '' };
+    const bad = { email: 'nope', name: 'Bo', code: 'x', age: 17, plan: 'gold', site: 'x', tags: [], handle: 'a-b', user: 'root', agree: 'no', slug: 'UP' };
+    const cvFailing = data => { const inst = Object.assign(new Signup(), data, { points: 1, nested: {} }); return [...new Set(cv.validateSync(inst, { skipMissingProperties: false }).map(e => e.property))].filter(p => p !== 'nested').sort(); };
+    const ours = data => Object.keys(FormValidator.checkValues(data, rules).errors).filter(k => k !== 'points' && k !== 'nested').sort();   // those two have decorators with no rule equivalent
+    assert.deepEqual(ours(good), []);
+    assert.deepEqual(cvFailing(Object.assign({}, good, { slug: undefined })), []);
+    assert.deepEqual(ours(bad), cvFailing(bad));
+    assert.deepEqual(ours({}), ['age', 'agree', 'code', 'email', 'handle', 'name', 'plan', 'site', 'tags', 'user'], 'every property but the optional one is required');
+});
+test('fromClassValidator: a storage can be passed directly; junk gives {}', () => {
+    const cv = require('class-validator');
+    const { Signup } = loadDecorated(CV_SOURCE);
+    assert.deepEqual(Object.keys(FormValidator.fromClassValidator(Signup, { storage: cv.getMetadataStorage() })).includes('email'), true);
+    for (const bad of [null, undefined, 5, {}, class Plain {}]) assert.deepEqual(FormValidator.fromClassValidator(bad, { classValidator: cv }), bad && typeof bad === 'function' ? {} : {});
+    assert.deepEqual(FormValidator.fromClassValidator(class X {}, {}), {});
+    assert.deepEqual(FormValidator.fromClassValidator(class X {}, { classValidator: { getMetadataStorage() { throw new Error('boom'); } } }), {});
+});

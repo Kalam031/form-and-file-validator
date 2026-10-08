@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.38.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.39.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -603,6 +603,7 @@ FormValidator.schema(rules).safeParse(body);
 FormValidator.init(&#39;#signup&#39;, { rules });
 </code></pre>
 <ul>
+<li><strong>class-validator</strong>: <code>FormValidator.fromClassValidator(Signup, { classValidator: require(&#39;class-validator&#39;) })</code> reads a decorated class (<code>@IsEmail</code>, <code>@IsNotEmpty</code>, <code>@MinLength</code>, <code>@Length</code>, <code>@Min</code>, <code>@Max</code>, <code>@IsInt</code>, <code>@IsIn</code>, <code>@Matches</code>, <code>@IsUrl</code>, <code>@IsUUID</code>, <code>@ArrayMinSize</code>, <code>@IsPostalCode</code>, <code>@IsOptional</code>, ...). Every property is required unless it has <code>@IsOptional</code>, as in class-validator. Pass the module or its <code>getMetadataStorage()</code> result as <code>storage</code>; the library does not load class-validator. Unreadable decorators (<code>@IsPositive</code>, <code>@ValidateNested</code>, custom validators) go to <code>onUnsupported</code>.</li>
 <li>Read: required (non-optional) fields, string <code>min</code> / <code>max</code> / <code>length</code> / <code>regex</code> / <code>email</code> / <code>url</code> / <code>uuid</code> / <code>startsWith</code> / <code>endsWith</code>, number <code>int</code> / <code>min</code> / <code>max</code> / <code>multipleOf</code>, <code>enum</code>, <code>literal</code>, nested objects (<code>a.b</code>), arrays of objects (<code>a[].b</code>), <code>optional</code> / <code>nullable</code> / <code>default</code> / <code>pipe</code> / <code>coerce</code> (the input side). Yup: <code>required</code>, <code>min</code> / <code>max</code> / <code>length</code>, <code>email</code> / <code>url</code> / <code>uuid</code> / <code>matches</code>, <code>integer</code>, <code>oneOf</code>, nested <code>object()</code> and <code>array().of()</code>.</li>
 <li>Reported to <code>onUnsupported(path, what)</code> and skipped: <code>refine</code> / <code>test()</code> functions, <code>union</code>, exclusive bounds (<code>positive()</code>, <code>gt</code>), regex flags, <code>when()</code>, <code>lazy</code>. Add those with your own rule. Both functions never throw.</li>
 </ul>

@@ -1,4 +1,4 @@
-/*! FormValidator 2.20.0 + FileValidator 2.12.0 + upload widget 1.6.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.21.0 + FileValidator 2.12.0 + upload widget 1.6.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
@@ -3219,9 +3219,10 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.20.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.21.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.21.0 FormValidator.fromClassValidator(): rules from a class decorated with class-validator.
  *   2.20.0 A rule can declare dependsOn (another field) so a form re-checks it when that field changes; countryField does the same for the inputs add-on.
  *   2.19.0 FormValidator.fromZod() / fromYup(): rules from an existing Zod 4 or Yup schema.
  *   2.18.0 FormValidator.htmx() cancels the HTMX request of an invalid form; auto() destroys the forms a swap removed.
@@ -6275,6 +6276,65 @@ const api = (function (root) {
         return rules;
     }
 
+    /**
+     * A class decorated with class-validator as rules: FormValidator.fromClassValidator(Signup, { classValidator: classValidatorModule }).
+     * The library does not load class-validator: pass the module (options.classValidator) or its metadata storage (options.storage). Read: IsNotEmpty / IsDefined, IsEmail,
+     * IsUrl, IsUUID, MinLength, MaxLength, Length, Min, Max, IsInt, IsNumber, IsIn, IsNotIn, Equals, Matches (no flags), IsAlpha, IsAlphanumeric, IsNumberString, IsDateString,
+     * ArrayMinSize, ArrayMaxSize, IsPostalCode (-> postalCode, inputs add-on), IsOptional (not required). class-validator treats every property as required unless IsOptional,
+     * so the others are required here too. What has no rule (IsPositive, ValidateNested, custom validators, IsPhoneNumber ...) goes to options.onUnsupported(path, name).
+     */
+    function fromClassValidator(cls, options) {
+        const o = options || {};
+        const storage = o.storage || (o.classValidator && isFn(o.classValidator.getMetadataStorage) ? guard(o.classValidator.getMetadataStorage, undefined) : null);
+        if (!cls || !storage || !isFn(storage.getTargetValidationMetadatas)) return {};
+        const metas = guard(() => storage.getTargetValidationMetadatas(cls, null, false, false), []) || [];
+        const node = { type: 'object', properties: {}, required: [] };
+        const optional = {};
+        const notes = [];
+        const note = (k, w) => notes.push(k + ': ' + w);
+        metas.forEach(m => {
+            const k = m.propertyName;
+            if (typeof k !== 'string' || BAD_KEYS.indexOf(k) >= 0) return;
+            const p = node.properties[k] || (node.properties[k] = {});
+            const c = m.constraints || [];
+            const n = m.name;
+            if (m.type === 'conditionalValidation') { if (n === 'isOptional' || !n) optional[k] = true; else note(k, n || 'conditional'); return; }
+            if (m.type === 'nestedValidation') { note(k, 'ValidateNested'); return; }
+            if (m.type !== 'customValidation' && m.type !== undefined && m.type !== 'isDefined') { note(k, String(m.type)); return; }
+            if (m.each) { note(k, n + ' (each)'); return; }
+            const num = () => { if (p.type !== 'integer') p.type = 'number'; };
+            if (n === 'isNotEmpty' || n === 'isDefined') { /* required: every property is */ }
+            else if (n === 'isEmail') p.format = 'email';
+            else if (n === 'isUrl') p.format = 'uri';
+            else if (n === 'isUuid') p.format = 'uuid';
+            else if (n === 'minLength' && isNum0(c[0])) p.minLength = c[0];
+            else if (n === 'maxLength' && isNum0(c[0])) p.maxLength = c[0];
+            else if (n === 'isLength' && isNum0(c[0])) { p.minLength = c[0]; if (isNum0(c[1])) p.maxLength = c[1]; }
+            else if (n === 'min' && typeof c[0] === 'number') { num(); p.minimum = c[0]; }
+            else if (n === 'max' && typeof c[0] === 'number') { num(); p.maximum = c[0]; }
+            else if (n === 'isInt') p.type = 'integer';
+            else if (n === 'isNumber') num();
+            else if (n === 'isIn' && Array.isArray(c[0])) p.enum = c[0].slice();
+            else if (n === 'isNotIn' && Array.isArray(c[0])) p.not = { enum: c[0].slice() };
+            else if (n === 'equals') p.enum = [c[0]];
+            else if (n === 'matches' && c[0] instanceof RegExp) { const s2 = regexSource(c[0], w => note(k, w)); if (s2 !== undefined) p.pattern = s2; }
+            else if (n === 'matches' && typeof c[0] === 'string') p.pattern = c[0];
+            else if (n === 'isAlpha') p.pattern = JS_PATTERNS.alpha;
+            else if (n === 'isAlphanumeric') p.pattern = JS_PATTERNS.alphanumeric;
+            else if (n === 'isNumberString') p.type = 'number';
+            else if (n === 'isDateString') p.format = 'date';
+            else if (n === 'arrayMinSize' && isNum0(c[0])) { p.type = 'array'; p.minItems = c[0]; }
+            else if (n === 'arrayMaxSize' && isNum0(c[0])) { p.type = 'array'; p.maxItems = c[0]; }
+            else if (n === 'isPostalCode' && typeof c[0] === 'string' && c[0] !== 'any') p['x-fv-rules'] = Object.assign({}, p['x-fv-rules'], { postalCode: { country: c[0] } });
+            else if (n === 'isString' || n === 'isBoolean' || n === 'isDate' || n === 'isArray' || n === 'isObject' || n === 'isNotEmptyObject') { /* a type, not a rule */ }
+            else note(k, n || 'custom validator');
+        });
+        Object.keys(node.properties).forEach(k => { if (!optional[k]) node.required.push(k); });
+        const rules = fromJsonSchema(node, { onUnsupported: o.onUnsupported });
+        if (isFn(o.onUnsupported)) notes.forEach(w => { const i = w.indexOf(': '); guard(o.onUnsupported, undefined, w.slice(0, i), w.slice(i + 2)); });
+        return rules;
+    }
+
     // ------------------------------------------------------------------ rules served by your backend
     const LOADED = new Map();
     /**
@@ -6841,10 +6901,11 @@ const api = (function (root) {
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.20.0'
+        version: '2.21.0'
     }, CORE ? {} : {
         fromZod,       // (zodSchema, { onUnsupported }) -> rules, read from a Zod 4 schema (Zod itself is not loaded)
         fromYup,       // (yupSchema, { onUnsupported }) -> rules, read from a Yup schema through describe()
+        fromClassValidator, // (Class, { classValidator | storage, onUnsupported }) -> rules, read from class-validator decorators
         init,
         initFromUrl,   // async (formId, url, { config, messages }) -> instance: load() the rules and start the form
         mask,          // (input, '(999) 999-9999', { onComplete, trailing }) -> { value, raw, complete, update, destroy }: format while typing
@@ -10032,7 +10093,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.12.0","fileValidator.widget":"1.6.0","fileValidator.upload":"1.1.0","fileValidator.image":"1.0.0","formValidator":"2.20.0","formValidator.element":"1.1.0","formValidator.password":"1.0.0","formValidator.inputs":"1.1.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.12.0","fileValidator.widget":"1.6.0","fileValidator.upload":"1.1.0","fileValidator.image":"1.0.0","formValidator":"2.21.0","formValidator.element":"1.1.0","formValidator.password":"1.0.0","formValidator.inputs":"1.1.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;

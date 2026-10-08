@@ -1,8 +1,8 @@
 {
-  "validator.min.js": "sha384-1TF3wXzGL6rW9yzlKYHh1GKi5/AByzSMr+zTZU2H8FoluWb44sedVuwFkiIAaRxM",
-  "validator.min.mjs": "sha384-Ryb5SPBDYUrIfgG8UyE9BTBA85YiIlp0bDK+KWGge5ayCKFYkpY1JwISgM+oSGVV",
+  "validator.min.js": "sha384-eU0XWZ7Hpyd0pTF65crGaH7cX4g7lwI301a0N+N5i6SXMQ1PH3/xn9Rhc9qHhwiR",
+  "validator.min.mjs": "sha384-04Ndzsn3koE0u9w7kJnqFLWpXIU9t+seX4Adw8ZkUATiI/Uj5FcRK1EPkfy5VUpT",
   "locales/all.min.js": "sha384-sDVWTSxfE7O/tOXzUuJM86YQ3caDt0/6WzJXZKTUuP0jKFnn58D/8J0gFXaxrlPU",
-  "integrations/alpine.min.js": "sha384-yFhP4mGkguwiC4A3LWTtFWoCAfFwEF4h6wi+AYyRigL6qMfl+fsDc9hP4RHK5Y07",
+  "integrations/alpine.min.js": "sha384-Hli7XCHpPO4Ube7fk19ex8kVwu/aPLsuW8dpXHnzmP3dwhk23WxWBYr447CxM3JL",
   "locales/de.min.js": "sha384-cYJEYyLu12+mtw2kKugBz1PWRLcMfbvYKcTNWaRoYVhHCOygfKMwg0ZxLPftMmFh",
   "locales/fr.min.js": "sha384-JLmxMRJ2aVrrWdY5rvzGORN0uTe6x8tHQ274Of+MTkN9+UswfN2quIgLfBMAL0aY",
   "locales/es.min.js": "sha384-yUncgYP8T4Igo86UQe64/7X0/9v2AtpwA3Of3mg8JE5ntKjp6E6mWM7xGuIw9Eh0",

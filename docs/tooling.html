@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.38.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.39.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -37,7 +37,7 @@
 <h2 id="the-fv-command-line">The <code>fv</code> command line</h2>
 <pre tabindex="0"><code>npx fv check rules.json                  # lint a rules file
 npx fv export rules.json --to zod        # rules as Zod / TypeScript / JSON Schema / HTML / React / Vue / Angular
-npx fv import ./schema.mjs --from zod    # a Zod, Yup or Joi schema (or a JSON Schema file) as rules
+npx fv import ./schema.mjs --from zod    # a Zod, Yup, Joi or class-validator schema (or a JSON Schema file) as rules
 npx fv migrate &quot;src/**/*.js&quot; --write     # jQuery Validation calls -&gt; FormValidator
 npx fv rules                             # every rule name
 </code></pre>
@@ -53,7 +53,7 @@ warning: pw2 (equalTo): &quot;equalTo&quot; refers to the field &quot;pw&quot;, 
 <h3 id="fv-export-and-the-playground"><code>fv export</code> and the playground</h3>
 <p><code>fv export rules.json --to zod --name Signup</code> writes a Zod schema and its inferred type; <code>typescript</code> an interface; <code>json-schema</code> a JSON Schema (2020-12); <code>html</code> a form with <code>data-fv</code> attributes; <code>react</code>, <code>vue</code>, <code>angular</code> a starter component. Rules that a target cannot say (<code>equalTo</code>, <code>requiredIf</code>, ...) are kept as a comment so nothing disappears silently. The <a href="playground.html">playground</a> has the same exporter in a box: type the rules, pick a format, copy.</p>
 <h3 id="fv-import"><code>fv import</code></h3>
-<p>Already have a schema? <code>fv import ./schema.mjs --from zod --export signupSchema &gt; rules.json</code>. Zod 4, Yup and Joi schemas are read through their own public description; a JSON Schema or OpenAPI component works too (<code>--from json-schema</code>). Whatever has no rule equivalent (<code>refine</code>, unions, exclusive bounds) is listed on stderr. The same conversion is available in code as <code>FormValidator.fromZod(schema)</code> and <code>FormValidator.fromYup(schema)</code>.</p>
+<p>Already have a schema? <code>fv import ./schema.mjs --from zod --export signupSchema &gt; rules.json</code>. Zod 4, Yup and Joi schemas are read through their own public description, and a decorated class-validator class (<code>--from class-validator --export Signup</code>, the compiled JavaScript class; <code>class-validator</code> is loaded from your project) through its metadata; a JSON Schema or OpenAPI component works too (<code>--from json-schema</code>). Whatever has no rule equivalent (<code>refine</code>, unions, exclusive bounds) is listed on stderr. The same conversion is available in code as <code>FormValidator.fromZod(schema)</code> and <code>FormValidator.fromYup(schema)</code>.</p>
 <h3 id="fv-migrate"><code>fv migrate</code></h3>
 <p>For code that should stop depending on jQuery: <code>$(&#39;#signup&#39;).validate({ rules, messages })</code> becomes <code>FormValidator.init({ form: &#39;#signup&#39;, rules, messages })</code>, <code>.valid()</code> becomes <code>FormValidator.isValid(...)</code>, and <code>$.validator.addMethod</code> / <code>addClassRules</code> become <code>FormValidator.addMethod</code> / <code>addClassRules</code>. Without <code>--write</code> it only reports. Options other than <code>rules</code> and <code>messages</code> (<code>submitHandler</code>, <code>errorPlacement</code>, ...) stay in a <code>/* TODO */</code> comment and are listed, because they have a different shape in the new API (<a href="migrating.html">migration guide</a>). If you keep jQuery, you do not need this: the compatibility layer runs your existing code unchanged.</p>
 <h2 id="eslint">ESLint</h2>

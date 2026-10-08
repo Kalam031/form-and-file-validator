@@ -351,6 +351,25 @@ import { FvFormController } from '../lit';
     void [pending, errs, v, FvFormController];
 }
 
+// ---------------------------------------------------------------- Qwik, class-validator, equal bindings
+import { fvQwik, fvQwikCheck } from '../qwik';
+import { fvServerErrors, fvPrecognition } from '../angular';
+{
+    const q = fvQwik(document.createElement('form'), { rules: { email: ['required', 'email'] }, onErrors: list => { const m: string | undefined = list[0]?.message; void m; }, onValid: ok => { const b: boolean = ok; void b; } });
+    const qe: string[] = q.errors().map(e => e.name);
+    const qv: boolean | null = q.valid();
+    const check = fvQwikCheck({ email: 'required' }, { email: '' });
+    const ok: boolean = check.ok;
+    const msg: string | undefined = check.errors.email;
+    const sr: Promise<boolean | null> = q.validateOnServer('/check').then(r => r.valid);
+    const rules = FormValidator.fromClassValidator(class Signup {}, { classValidator: { getMetadataStorage: () => ({}) }, onUnsupported: (p, w) => { void [p, w]; } });
+    const sv = svelteFv({ rules: {} }).validateOnServer('/x');
+    const so = solidFv({ rules: {} }).validateOnServer('/x');
+    const fa: Promise<unknown> = fvPrecognition({}, '/x');
+    const fb: string[] = fvServerErrors({ get: () => null }, {}).missed;
+    void [qe, qv, ok, msg, sr, rules, sv, so, fa, fb];
+}
+
 // ---------------------------------------------------------------- state, steps, explain
 {
     const fi = FormValidator.init({ formId: 'w', rules: { a: { requiredIf: { field: 'b', equals: 'x' } }, c: { dateAfter: 'd' }, e: { atLeastOne: ['f'] }, g: { sumEquals: { fields: ['h'], total: 100 } } } });

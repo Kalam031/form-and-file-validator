@@ -33,6 +33,10 @@ export declare function fvControls(schema: Record<string, RulesForField>, initia
 export declare function fvValues(group: ControlLike, options?: { trim?: boolean; keep?: string[] }): any;
 
 /** Shows messages from the server on the controls. Returns the names that matched no control. */
+/** Shows what a backend answered (problem+json, Laravel, DRF, ASP.NET, FastAPI, Zod ...) on the controls; what has no control lands on the group. */
+export declare function fvServerErrors(group: { get(path: string): any; controls?: any; setErrors?(e: any): void; errors?: any }, body: unknown, options?: { format?: string }): { errors: Record<string, string>; all: Record<string, string[]>; form: string[]; format: string; missed: string[] };
+/** Precognition: asks your real endpoint whether the current values would pass and shows its field errors on the controls. */
+export declare function fvPrecognition(group: any, url: string, options?: object): Promise<{ valid: boolean | null; status: number; errors: Record<string, string>; all: Record<string, string[]>; form: string[]; only: string[] | null }>;
 export declare function fvSetErrors(group: { get(path: string): any; controls?: any }, errors: Record<string, string | string[]>): string[];
 
 /**
@@ -50,5 +54,5 @@ export declare function fvGroupValidator(schema: Record<string, RulesForField>, 
 /** The message of the first failed rule of a control ('' when valid). */
 export declare function fvMessage(control: ControlLike | null | undefined): string;
 
-declare const _default: { fvValidator: typeof fvValidator; fvControls: typeof fvControls; fvGroupValidator: typeof fvGroupValidator; fvMessage: typeof fvMessage; fvText: typeof fvText; fvWatch: typeof fvWatch; fvValues: typeof fvValues; fvSetErrors: typeof fvSetErrors; fvSubmit: typeof fvSubmit };
+declare const _default: { fvValidator: typeof fvValidator; fvControls: typeof fvControls; fvGroupValidator: typeof fvGroupValidator; fvMessage: typeof fvMessage; fvText: typeof fvText; fvWatch: typeof fvWatch; fvValues: typeof fvValues; fvSetErrors: typeof fvSetErrors; fvServerErrors: typeof fvServerErrors; fvPrecognition: typeof fvPrecognition; fvSubmit: typeof fvSubmit };
 export default _default;

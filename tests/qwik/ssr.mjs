@@ -1,0 +1,11 @@
+import { createOptimizer } from '@builder.io/qwik/optimizer';
+import esbuild from 'esbuild';
+import fs from 'node:fs'; import path from 'node:path'; import { pathToFileURL } from 'node:url';
+const opt = await createOptimizer();
+const code = fs.readFileSync('tests/qwik/Signup.tsx', 'utf8');
+const r = await opt.transformModules({ input: [{ path: 'Signup.tsx', code }], srcDir: process.cwd() + '/tests/qwik', entryStrategy: { type: 'segment' }, minify: 'none', transpileTs: true, transpileJsx: true, mode: 'prod' });
+const out = path.resolve('tests/qwik/.out'); fs.mkdirSync(out, { recursive: true }); for (const m of r.modules) fs.writeFileSync(path.join(out, m.path), m.code); 
+fs.writeFileSync(out + '/entry.mjs', "import { renderToString } from '@builder.io/qwik/server'; import { jsx } from '@builder.io/qwik'; import { Signup } from './Signup.js'; export const html = async () => (await renderToString(jsx(Signup, {}), { containerTagName: 'div', base: '/build/', manifest: { mapping: {}, bundles: {}, version: '1', core: '', preloader: '', bundleGraph: [], injections: [] }, preloader: false, symbolMapper: sym => ['./' + sym + '.js', sym] })).html;");
+await esbuild.build({ entryPoints: [out + '/entry.mjs'], bundle: true, format: 'esm', platform: 'node', outfile: out + '/ssr.mjs', logLevel: 'error', define: { 'import.meta.env': '{"BASE_URL":"/","DEV":false,"PROD":true}' }, plugins: [{ name: 'stub', setup(b) { b.onResolve({ filter: /^@qwik-client-manifest$/ }, () => ({ path: 'manifest', namespace: 'stub' })); b.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({ contents: 'export const manifest = undefined; export default undefined;', loader: 'js' })); } }] });
+const m = await import(pathToFileURL(out + '/ssr.mjs').href);
+const h = await m.html(); console.log(h.includes('id="signup"'), h.includes('on-document:qinit'), h.length);

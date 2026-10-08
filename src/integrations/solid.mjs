@@ -65,6 +65,8 @@ export function createFormValidator(options) {
         },
         getValues: () => (inst ? inst.getValues() : {}),
         setServerErrors(body, opts) { if (!inst) return null; const r = inst.setServerErrors(body, opts); sync(); return r; },
+        /** Precognition: asks your real endpoint whether the current values pass and shows its field errors. */
+        async validateOnServer(url, opts) { if (!inst) return { valid: null, status: 0, errors: {}, all: {}, form: [], only: null }; const r = await inst.validateOnServer(url, opts); sync(); return r; },
         reset() { if (inst) { inst.resetForm(); setValid(null); sync(); } },
         instance: () => inst,
         element: () => node

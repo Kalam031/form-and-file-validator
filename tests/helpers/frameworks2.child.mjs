@@ -175,3 +175,52 @@ test('Solid: accessors are reactive, the validator follows the ref and the owner
     assert.equal(form._fvInstance, undefined);
     assert.ok(inst);
 });
+
+// ---------------------------------------------------------------- Precognition (validateOnServer) in all three
+const stub = errors => async () => ({ ok: false, status: 422, headers: { get: () => 'application/json' }, json: async () => ({ errors }), text: async () => '' });
+
+test('Svelte, Lit and Solid: validateOnServer shows the endpoint field errors and refreshes their error lists', async () => {
+    // Svelte
+    const { createFormValidator: svelteFv } = await import('../../dist/integrations/svelte.mjs');
+    const { get } = await import('svelte/store');
+    const f1 = mountForm('<input name="email" value="a@b.co">');
+    const sv = svelteFv({ rules: { email: ['required', 'email'] } });
+    sv.form(f1);
+    let r = await sv.validateOnServer('/check', { fetch: stub({ email: ['Taken (svelte)'] }) });
+    assert.equal(r.valid, false);
+    assert.equal(get(sv.errors)[0].message, 'Taken (svelte)');
+    assert.equal((await svelteFv({ rules: {} }).validateOnServer('/x')).valid, null, 'not mounted: no check, no throw');
+
+    // Solid
+    const solid = await import('solid-js');
+    const { createFormValidator: solidFv } = await import('../../dist/integrations/solid.mjs');
+    const f2 = mountForm('<input name="email" value="a@b.co">');
+    await solid.createRoot(async dispose => {
+        const so = solidFv({ rules: { email: ['required', 'email'] } });
+        so.ref(f2); await settle(5);
+        const res = await so.validateOnServer('/check', { fetch: stub({ email: ['Taken (solid)'] }) });
+        assert.equal(res.valid, false);
+        assert.equal(so.errors()[0].message, 'Taken (solid)');
+        assert.equal((await solidFv({ rules: {} }).validateOnServer('/x')).valid, null);
+        dispose();
+    });
+
+    // Lit
+    const { LitElement, html } = await import('lit');
+    const { FvFormController } = await import('../../dist/integrations/lit.mjs');
+    class PrecogForm extends LitElement {
+        constructor() { super(); this.fv = new FvFormController(this, { rules: { email: ['required', 'email'] } }); }
+        createRenderRoot() { return this; }
+        render() { return html`<form><input name="email" value="a@b.co"><span class="count">${this.fv.errors.length}</span></form>`; }
+    }
+    customElements.define('precog-form-test', PrecogForm);
+    const el = document.createElement('precog-form-test');
+    document.getElementById('root').appendChild(el);
+    await el.updateComplete; await settle(10);
+    r = await el.fv.validateOnServer('/check', { fetch: stub({ email: ['Taken (lit)'] }) });
+    await el.updateComplete;
+    assert.equal(r.valid, false);
+    assert.equal(el.fv.errors[0].message, 'Taken (lit)');
+    assert.equal(el.querySelector('.count').textContent, '1');
+    el.remove();
+});

@@ -5,7 +5,7 @@
  *
  *   fv check rules.json                         lint a rules file: unknown rules (did you mean), wrong parameters, dangling field references
  *   fv export rules.json --to zod --name Signup rules as zod / typescript / json-schema / html / react / vue / angular / rules
- *   fv import ./schema.mjs --from zod           a Zod, Yup or Joi schema (or a JSON Schema file) as rules JSON   [--export schema]
+ *   fv import ./schema.mjs --from zod           a Zod, Yup, Joi or class-validator schema (or a JSON Schema file) as rules JSON   [--export schema]
  *   fv migrate src/**.js [--write]              jQuery Validation calls -> FormValidator (prints a diff summary; --write changes the files)
  *   fv rules                                    every rule name
  *
@@ -109,7 +109,7 @@ async function cmdExport(args, FV) {
 }
 async function cmdImport(args, FV) {
     const file = args._[1], from = String(args.flags.from || '').toLowerCase();
-    if (!file || !from) die('usage: fv import <module> --from zod|yup|joi|json-schema [--export name]');
+    if (!file || !from) die('usage: fv import <module> --from zod|yup|joi|class-validator|json-schema [--export name]');
     const value = pickExport(await importModule(file), args.flags.export);
     const unsupported = [];
     const onUnsupported = (p, w) => unsupported.push((p ? p + ': ' : '') + w);
@@ -117,8 +117,15 @@ async function cmdImport(args, FV) {
     if (from === 'zod') rules = FV.fromZod(value, { onUnsupported });
     else if (from === 'yup') rules = FV.fromYup(value, { onUnsupported });
     else if (from === 'joi') rules = FV.fromJsonSchema(joiNode(typeof value.describe === 'function' ? value.describe() : value, 0), { onUnsupported });
+    else if (from === 'class-validator') {
+        if (typeof value !== 'function') die('--from class-validator needs --export ClassName (the compiled JavaScript class)');
+        const req = require('module').createRequire(path.join(process.cwd(), 'noop.js'));
+        try { req('reflect-metadata'); } catch (e) { /* optional */ }
+        let cv; try { cv = req('class-validator'); } catch (e) { die('class-validator is not installed in ' + process.cwd()); }
+        rules = FV.fromClassValidator(value, { classValidator: cv, onUnsupported });
+    }
     else if (from === 'json-schema' || from === 'jsonschema') rules = FV.fromJsonSchema(value, { onUnsupported });
-    else die('--from must be zod, yup, joi or json-schema');
+    else die('--from must be zod, yup, joi, class-validator or json-schema');
     const text = JSON.stringify(rules, null, 2) + '\n';
     if (args.flags.out) fs.writeFileSync(args.flags.out, text); else process.stdout.write(text);
     if (unsupported.length) process.stderr.write('Not converted (add these with your own rules):\n  ' + Array.from(new Set(unsupported)).join('\n  ') + '\n');

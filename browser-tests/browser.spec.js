@@ -34,7 +34,11 @@ const tmpFile = (name, data) => { const p = path.join(tmp, name); fs.mkdirSync(p
 const toFile = (name, data, type = '') => ({ name, mimeType: type || 'application/octet-stream', buffer: Buffer.from(data) });
 const bytes = data => Array.from(Buffer.from(data));
 
-before(async () => { srv = await start(); });
+before(async () => {
+    // the Qwik sample page is compiled with Qwik's own optimizer (tests/qwik/build.mjs) before the server starts
+    require('node:child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'tests', 'qwik', 'build.mjs'), 'client', path.join(__dirname, 'pages', 'qwik')], { stdio: 'inherit' });
+    srv = await start();
+});
 after(async () => { await srv.close(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
 for (const b of BROWSERS) {
@@ -818,6 +822,20 @@ for (const b of BROWSERS) {
             await page.fill('#rules-json', '{"a":"required"}');
             await page.waitForFunction(() => !document.getElementById('export-out').classList.contains('error') && /useFormValidator/.test(document.getElementById('export-out').textContent));
         }, '/docs/playground.html');
+        it2('Qwik: fvQwik() started from useVisibleTask$ shows the errors in Qwik signals, follows fixes, and shows server errors', async page => {
+            await page.waitForFunction(() => !!window.__fv);
+            await page.click('button[type=submit]');
+            await page.waitForFunction(() => document.querySelectorAll('#errs li').length === 2);
+            assert.equal(await page.textContent('#state'), 'invalid');
+            assert.match(await page.textContent('#errs'), /email: .*required/i);
+            await page.fill('input[name=email]', 'a@b.co');
+            await page.fill('input[name=name]', 'Bob');
+            await page.click('button[type=submit]');
+            await page.waitForFunction(() => document.getElementById('state').textContent === 'valid' && document.querySelectorAll('#errs li').length === 0);
+            await page.evaluate(() => window.__fv.setServerErrors({ email: 'Already registered' }));
+            await page.waitForFunction(() => /Already registered/.test(document.getElementById('errs').textContent));
+            assert.deepEqual(await page.evaluate(() => window.__fv.getValues()), { email: 'a@b.co', name: 'Bob' });
+        }, '/browser-tests/pages/qwik/index.html');
         it2('axe (with colour contrast): docs site pages', async page => {
             await axeRun(page, 'docs/index.html');
             for (const f of ['form.html', 'file.html', 'languages.html', 'server-and-frameworks.html', 'playground.html']) {

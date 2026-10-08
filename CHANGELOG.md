@@ -2,6 +2,12 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.39.0
+- **Qwik** (`form-and-file-validator/qwik`): `fvQwik(form, options)` for `useVisibleTask$` (plain-data errors for signals, `handleSubmit`, server errors, Precognition) and `fvQwikCheck(rules, data)` for `routeAction$` / `server$`. No Qwik peer dependency. Tested with Qwik's real optimizer and server renderer, and in Chromium, Firefox and WebKit.
+- **`FormValidator.fromClassValidator(Class, { classValidator })`** and `fv import --from class-validator`: decorated classes become rules; checked against class-validator itself.
+- **Bindings made equal**: `validateOnServer` (Precognition) in Svelte, Solid and Lit; `fvServerErrors` and `fvPrecognition` in the Angular helpers; the `$fv` magic in the Alpine plugin (1.1.0).
+- Dev dependencies: @builder.io/qwik, class-validator, reflect-metadata (tests only).
+
 ## 3.38.0
 - **`fv` command line** (`npx fv ...`, `tools/fv.js`): `check` (unknown rules with a suggestion, impossible ranges, wrong parameters, dangling field references), `export` (Zod, TypeScript, JSON Schema, HTML, React, Vue, Angular), `import` (Zod, Yup, Joi, JSON Schema), `migrate` (a jQuery Validation codemod), `rules`.
 - **ESLint plugin** `form-and-file-validator/eslint-plugin` with the rule `valid-rules`.

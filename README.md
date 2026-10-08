@@ -28,7 +28,7 @@ TypeScript types are included.
 | --- | --- |
 | Node | 18, 20, 22, 24, 26 |
 | Browsers | Chromium (Chrome, Edge), Firefox, WebKit (Safari) with real browser tests |
-| Frameworks | React 19, Vue 3, Angular 21+ (Reactive Forms and Signal Forms), Svelte 5, Solid, Lit, Alpine, React Hook Form (Standard Schema) |
+| Frameworks | React 19, Vue 3, Angular 21+ (Reactive Forms and Signal Forms), Svelte 5, Solid, Lit, Qwik, Alpine, React Hook Form (Standard Schema) |
 | Supply chain | zero runtime dependencies, no install scripts, `sbom.cdx.json` (CycloneDX) lists every shipped file with its SHA-256 |
 | Stability | [semver and deprecation policy](docs/API-Stability.md) |
 
@@ -335,7 +335,7 @@ Anyone can contribute: fork, change `src/`, open a pull request. See [CONTRIBUTI
 - **Angular:** `import { fvValidator, fvControls, fvWatch, fvMessage } from 'form-and-file-validator/angular'`: validators for Reactive Forms, tested on real `@angular/forms`.
 - **React:** `import { useFormValidator, FileDropzone } from 'form-and-file-validator/react'`
 - **Vue 3:** `import { useFormValidator, FileDropzone, vFormValidator } from 'form-and-file-validator/vue'`
-- **Svelte** (`/svelte`), **Lit** (`/lit`), **Solid** (`/solid`), **Angular Signal Forms** (`/angular-signals`): see `docs/Server-and-Frameworks.md`
+- **Svelte** (`/svelte`), **Lit** (`/lit`), **Solid** (`/solid`), **Qwik** (`/qwik`), **Angular Signal Forms** (`/angular-signals`): see `docs/Server-and-Frameworks.md`
 - **Alpine.js:** `dist/integrations/alpine.min.js` adds `x-validate` and `x-dropzone`.
 
 Full examples: [Server and frameworks](docs/Server-and-Frameworks.md), languages: [Languages](docs/Languages.md). A live playground is in the docs site (`docs/playground.html`).

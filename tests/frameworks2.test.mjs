@@ -10,5 +10,5 @@ test('Svelte, Lit and Solid bindings on the real libraries', { timeout: 120000 }
     const r = spawnSync(process.execPath, ['--conditions=browser', path.join(dir, 'helpers', 'frameworks2.child.mjs')], { encoding: 'utf8', timeout: 110000, cwd: path.join(dir, '..'), env: Object.assign({}, process.env, { NODE_TEST_CONTEXT: '' }) });
     const out = (r.stdout || '') + (r.stderr || '');
     assert.equal(r.status, 0, out.split('\n').filter(l => /not ok|✖|Error|expected|actual|at .*child/.test(l)).slice(0, 30).join('\n') || out.slice(-3000));
-    assert.match(out, /(pass 5|ℹ pass 5)/);
+    assert.match(out, /(pass 6|ℹ pass 6)/);
 });

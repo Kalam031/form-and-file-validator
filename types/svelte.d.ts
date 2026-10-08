@@ -22,6 +22,8 @@ export interface SvelteFormValidator {
     handleSubmit(fn: (values: FormValues, event: any) => unknown): (event?: any) => Promise<SubmitResult>;
     getValues(): FormValues;
     setServerErrors(body: unknown, options?: { format?: ServerErrorFormat; clear?: boolean }): (ServerErrorsResult & { missed: string[] }) | null;
+    /** Precognition: asks your real endpoint whether the current values pass and shows its field errors. */
+    validateOnServer(url: string, options?: object): Promise<{ valid: boolean | null; status: number; errors: Record<string, string>; all: Record<string, string[]>; form: string[]; only: string[] | null }>;
     reset(): void;
     instance(): FormInstance | null;
     readonly element: HTMLFormElement | null;

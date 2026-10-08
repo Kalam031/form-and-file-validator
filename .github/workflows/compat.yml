@@ -25,6 +25,9 @@ jobs:
           - name: schema-libraries
             packages: zod@latest yup@latest joi@latest ajv@latest valibot@latest
             tests: tests/formValidator.converters.test.js tests/formValidator.jsonschema.test.js tests/tools.test.js tests/formValidator.schema.test.js
+          - name: qwik
+            packages: '@builder.io/qwik@latest'
+            tests: tests/qwik.test.mjs
           - name: next-channels
             packages: react@next react-dom@next vue@next
             tests: tests/integrations.test.mjs

@@ -288,6 +288,7 @@ fvMessage = fvMessage;
 - `fvGroupValidator(schema)` on the FormGroup returns every field's error at once.
 - The same rules, written once as JSON, can be shared with the server (`checkValue` in Node, `FormAndFileValidator` in .NET).
 - Template-driven forms: wrap `fvValidator` in a one-line directive (`NG_VALIDATORS`) in your app.
+- **Server answers and Precognition**: `fvServerErrors(this.form, await res.json())` puts a backend's validation answer (problem+json, Laravel, Django REST, ASP.NET `ModelState`, FastAPI, Zod) on the matching controls and the rest on the group; `await fvPrecognition(this.form, '/api/signup', { only: ['email'] })` asks your real endpoint whether the values would pass and shows its field errors (`valid: null` = could not check, nothing is shown).
 
 ## Alpine.js
 
@@ -317,6 +318,8 @@ fvMessage = fvMessage;
 ```
 
 With a bundler: `import Alpine from 'alpinejs'; window.FVAlpine(Alpine); Alpine.start();` (after loading the validator bundle).
+
+The magic **`$fv`** reaches the controller of the closest form from any element inside it: `$fv.errors()` (plain `{ name, message, code }`), `$fv.validate()`, `$fv.getValues()`, `$fv.setServerErrors(body)`, `$fv.validateOnServer(url)`, `$fv.reset()`, `$fv.instance()`. Alpine does not watch the engine, so read `$fv.errors()` in an event handler (for example `@click="n = $fv.errors().length"`) or use the messages the engine places next to the fields.
 
 ### .NET: uploaded files
 
@@ -444,3 +447,30 @@ function Signup() {
 ```
 
 `errors()`, `valid()` and `submitting()` are signals; the validator is created when the form gets its `ref` and destroyed with the owner (`onCleanup`). The three bindings are tested on the real libraries (Svelte's `get()`, a LitElement in jsdom, Solid's reactive build). **Qwik** has no binding: use the DOM-free core (`form-and-file-validator/core`) inside a `routeAction$` or `server$`, and `FormValidator.init` in `useVisibleTask$` on the client.
+
+## Qwik and Qwik City
+
+`form-and-file-validator/qwik` is plain functions with no Qwik import, so it works with `@builder.io/qwik` 1.x and `@qwik.dev/core`. Start the validator inside `useVisibleTask$` (it runs in the browser only, so server rendering never touches the DOM) and keep the errors in a signal:
+
+```tsx
+import { component$, useSignal, useVisibleTask$ } from '@builder.io/qwik';
+import { fvQwik } from 'form-and-file-validator/qwik';
+
+export default component$(() => {
+  const errors = useSignal<{ name: string; message: string }[]>([]);
+  const formRef = useSignal<HTMLFormElement>();
+  useVisibleTask$(({ cleanup }) => {
+    const fv = fvQwik(formRef.value!, { rules: { email: ['required', 'email'] }, onErrors: list => { errors.value = list; } });
+    cleanup(() => fv.destroy());
+  }, { strategy: 'document-ready' });
+  return (
+    <form ref={formRef} preventdefault:submit noValidate>
+      <input name="email" />
+      <ul>{errors.value.map(e => <li key={e.name}>{e.message}</li>)}</ul>
+      <button>Save</button>
+    </form>
+  );
+});
+```
+
+`fvQwik()` returns `{ errors(), valid(), validate(), handleSubmit(fn), getValues(), setServerErrors(body), validateOnServer(url), reset(), instance(), destroy() }`. The errors are plain data (no DOM nodes), so a signal can hold them. On the server (`routeAction$`, `server$`, endpoints) the same rules check the posted data: `const r = fvQwikCheck(rules, data); if (!r.ok) return fail(400, { errors: r.errors });`. The sample above is compiled by Qwik's own optimizer in the tests, rendered by Qwik's server renderer, and run in Chromium, Firefox and WebKit.

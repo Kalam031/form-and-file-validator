@@ -182,4 +182,21 @@ test('ESLint plugin: unknown rules in init / schema / checkValue / useFormValida
     assert.equal(run("FormValidator.init({ form: 'f', rules: { a: { required: true, minlength: 3, equalTo: '#b' }, b: 'required' } });").length, 0);
 });
 
+test('fv CLI: import --from class-validator reads a compiled decorated class', () => {
+    const esbuild = require('esbuild');
+    const src = "import 'reflect-metadata'; import { IsEmail, MinLength, IsOptional, IsPositive } from 'class-validator'; export class Signup { @IsEmail() email!: string; @MinLength(3) name!: string; @IsOptional() @IsPositive() n?: number; }";
+    const js = esbuild.transformSync(src, { loader: 'ts', format: 'cjs', tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } } }).code;
+    write('cvclass.cjs', js);
+    const run = (...args) => spawnSync(process.execPath, [FV, ...args], { encoding: 'utf8', cwd: tmp, env: Object.assign({}, process.env, { NODE_PATH: path.join(__dirname, '..', 'node_modules') }) });
+    let r = run('import', 'cvclass.cjs', '--from', 'class-validator', '--export', 'Signup');
+    assert.equal(r.status, 0, r.stderr);
+    const rules = JSON.parse(r.stdout);
+    assert.deepEqual(Object.keys(rules).sort(), ['email', 'name']);
+    assert.match(r.stderr, /n: isPositive/, 'what has no rule is listed on stderr');
+    assert.equal(FormValidator.checkValues({ email: 'nope', name: 'ab' }, rules).valid, false);
+    assert.equal(FormValidator.checkValues({ email: 'a@b.co', name: 'abc' }, rules).valid, true);
+    r = run('import', 'cvclass.cjs', '--from', 'class-validator');
+    assert.equal(r.status, 2, 'needs --export');
+});
+
 test.after(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* temp */ } });

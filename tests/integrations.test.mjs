@@ -296,3 +296,39 @@ test('Vue: setServerErrors reads a backend response and validateOnServer asks th
     assert.equal(api.errors.value.length, 0);
     app.unmount();
 });
+
+test('Alpine: the $fv magic reaches the controller of the closest form from any element', async () => {
+    const mod = await import('alpinejs');
+    const Alpine = mod.default && mod.default.directive ? mod.default : (mod.default && mod.default.default) || mod.default;
+    globalThis.Alpine = Alpine;
+    const register = require('../dist/integrations/alpine.js');
+    register(Alpine);
+    document.body.insertAdjacentHTML('beforeend', '<form id="afv" x-data="{ n: -1 }" x-validate="{ rules: { email: [\'required\', \'email\'] } }"><input name="email" value="a@b.co"><button type="button" id="afv-go" @click="n = $fv.errors().length"></button><span id="afv-in"></span></form>');
+    try { Alpine.start(); } catch (e) { /* already started by an earlier test */ }
+    if (Alpine.initTree) Alpine.initTree(document.getElementById('afv'));
+    await settle(100);
+    const form = document.getElementById('afv');
+    assert.ok(form.__fvInstance);
+    const magic = el => Alpine.evaluate(el, '$fv');
+    const fv = magic(document.getElementById('afv-in'));
+    assert.equal(fv.instance(), form.__fvInstance, 'found from a child element');
+    assert.deepEqual(fv.errors(), []);
+    form.elements.email.value = '';
+    assert.equal(await fv.validate(), false);
+    assert.equal(fv.errors().length, 1);
+    assert.equal(fv.errors()[0].code, 'required');
+    document.getElementById('afv-go').click(); await settle(20);
+    assert.equal(Alpine.$data(form).n, 1, '@click expressions can use $fv');
+    form.elements.email.value = 'a@b.co';
+    assert.ok(fv.setServerErrors({ errors: { email: ['Taken'] } }));
+    assert.equal(fv.errors()[0].message, 'Taken');
+    const pr = await fv.validateOnServer('/check', { fetch: async () => ({ ok: true, status: 204, headers: { get: () => null }, json: async () => ({}), text: async () => '' }) });
+    assert.equal(pr.valid, true);
+    assert.deepEqual(fv.getValues(), { email: 'a@b.co' });
+    fv.reset();
+    assert.deepEqual(fv.errors(), []);
+    const none = magic(document.body);
+    assert.equal(none.instance(), null);
+    assert.equal(await none.validate(), false);
+    assert.equal((await none.validateOnServer('/x')).valid, null);
+});

@@ -90,6 +90,8 @@ export class FvFormController {
         };
     }
     setServerErrors(body, o) { if (!this._inst) return null; const r = this._inst.setServerErrors(body, o); this._sync(); return r; }
+    /** Precognition: asks your real endpoint whether the current values pass and shows its field errors. */
+    async validateOnServer(url, o) { if (!this._inst) return { valid: null, status: 0, errors: {}, all: {}, form: [], only: null }; const r = await this._inst.validateOnServer(url, o); this._sync(); return r; }
     reset() { if (this._inst) { this._inst.resetForm(); this.valid = null; this._sync(); } }
 }
 

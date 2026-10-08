@@ -165,6 +165,33 @@ export function fvSetErrors(group, errors) {
 }
 
 /**
+ * Shows what a backend answered (problem+json, Laravel, Django REST, ASP.NET ModelState, FastAPI, Zod ...) on the controls.
+ *   const res = await fetch('/api/signup', ...); if (!res.ok) fvServerErrors(this.form, await res.json());
+ * Messages for fields that do not exist, and messages that belong to no field, are set on the group itself. Returns { errors, all, form, format, missed }.
+ */
+export function fvServerErrors(group, body, options) {
+    const r = FormValidator.serverErrors(body, options);
+    const flat = {};
+    Object.keys(r.all).forEach(k => { flat[k] = r.all[k]; });
+    const missed = fvSetErrors(group, flat);
+    const rest = r.form.concat(missed.map(k => [].concat(flat[k])[0]));
+    if (rest.length && group.setErrors) group.setErrors(Object.assign({}, group.errors, { server: { message: String(rest[0]) }, fv: { rule: 'server', message: String(rest[0]) } }));
+    return Object.assign({}, r, { missed });
+}
+
+/**
+ * Precognition: asks your real endpoint whether the current values would pass, and shows its field errors on the controls.
+ *   await fvPrecognition(this.form, '/api/signup', { only: ['email'] });
+ * Resolves to { valid, status, errors, all, form, only }; valid is null when the check could not be made (offline, 5xx): nothing is shown then.
+ */
+export async function fvPrecognition(group, url, options) {
+    const o = options || {};
+    const r = await FormValidator.precognition(url, fvValues(group, o), o);
+    if (r && r.valid === false) fvServerErrors(group, { errors: r.all && Object.keys(r.all).length ? r.all : r.errors });
+    return r;
+}
+
+/**
  * Submit a FormGroup: touches every control (so the messages show), checks them all, and only when the form is valid calls fn(values, group).
  * fn may return { errors: { field: message } } from your server: they are shown on the controls. Resolves to { valid, values, result, serverErrors }.
  *   async onSubmit() { const r = await fvSubmit(this.form, async values => { const res = await this.http.post('/api/signup', values); ... }); }
@@ -189,4 +216,4 @@ export function fvMessage(control) {
     return first ? e[first].message : '';
 }
 
-export default { fvValidator, fvControls, fvGroupValidator, fvMessage, fvText, fvWatch, fvValues, fvSetErrors, fvSubmit, fvTargets };
+export default { fvValidator, fvControls, fvGroupValidator, fvMessage, fvText, fvWatch, fvValues, fvSetErrors, fvServerErrors, fvPrecognition, fvSubmit, fvTargets };

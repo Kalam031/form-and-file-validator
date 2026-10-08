@@ -1,5 +1,5 @@
 /*!
- * Alpine.js plugin v1.0.0 — x-validate on a <form>, x-dropzone on a file zone. Plain script: load it BEFORE Alpine, after the validator bundle.
+ * Alpine.js plugin v1.1.0 — x-validate on a <form>, x-dropzone on a file zone. Plain script: load it BEFORE Alpine, after the validator bundle.
  *
  *   <script src="dist/validator.min.js"></script>
  *   <script src="dist/integrations/alpine.js"></script>
@@ -14,10 +14,14 @@
  *     <input type="file" name="photos"> <ul class="fv-list"></ul> <div class="fv-messages"></div> <div class="fv-status" aria-live="polite"></div>
  *   </div>
  *
- * Inside the element: $el.__fvInstance (form) or $el.__fvWidget (zone). The zone dispatches "fv-change" and "fv-reject" events with { detail }.
+ * Inside the element: $el.__fvInstance (form) or $el.__fvWidget (zone). The magic $fv gives the form's controller from any element inside it:
+ *   <span x-text="$fv.errors().length"></span>   <button @click="$fv.setServerErrors(await (await fetch('/x')).json())">   $fv.validate(), $fv.validateOnServer(url), $fv.getValues(), $fv.reset(), $fv.instance().
+ *   Alpine does not track the engine, so show the errors with the plain DOM messages or call $fv.errors() from an event handler.
+ * The zone dispatches "fv-change" and "fv-reject" events with { detail }.
  * Elements with the classes fv-list / fv-messages / fv-status inside the zone are used automatically.
  *
  * Changelog
+ *   1.1.0  The $fv magic (errors, validate, setServerErrors, validateOnServer, getValues, reset, instance).
  *   1.0.0  First release.
  */
 (function (root) {
@@ -34,6 +38,22 @@
                 el.__fvInstance = FV.init({ form: el, rules: o.rules || {}, config: o.config, messages: o.messages, context: o.context });
             });
             cleanup(function () { if (el.__fvInstance) el.__fvInstance.destroy(); el.__fvInstance = null; });
+        });
+
+        // $fv: the controller of the closest form (the element itself, an ancestor, or a form inside it)
+        if (typeof Alpine.magic === 'function') Alpine.magic('fv', function (el) {
+            var form = el.__fvInstance ? el : (el.closest && el.closest('form')) || (el.querySelector && el.querySelector('form'));
+            var inst = function () { return form && form.__fvInstance || null; };
+            var none = { valid: null, status: 0, errors: {}, all: {}, form: [], only: null };
+            return {
+                instance: inst,
+                errors: function () { var i = inst(); return i ? i.getErrors().map(function (e) { return { name: e.name, message: e.message, code: e.code }; }) : []; },
+                validate: function (o) { var i = inst(); return i ? i.validate(o) : Promise.resolve(false); },
+                getValues: function () { var i = inst(); return i ? i.getValues() : {}; },
+                setServerErrors: function (body, o) { var i = inst(); return i ? i.setServerErrors(body, o) : null; },
+                validateOnServer: function (url, o) { var i = inst(); return i ? i.validateOnServer(url, o) : Promise.resolve(none); },
+                reset: function () { var i = inst(); if (i) i.resetForm(); }
+            };
         });
 
         Alpine.directive('dropzone', function (el, directive, utilities) {

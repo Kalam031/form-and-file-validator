@@ -382,6 +382,7 @@ const rules = FormValidator.fromZod(z.object({ email: z.email(), age: z.number()
 FormValidator.init('#signup', { rules });
 ```
 
+- **class-validator**: `FormValidator.fromClassValidator(Signup, { classValidator: require('class-validator') })` reads a decorated class (`@IsEmail`, `@IsNotEmpty`, `@MinLength`, `@Length`, `@Min`, `@Max`, `@IsInt`, `@IsIn`, `@Matches`, `@IsUrl`, `@IsUUID`, `@ArrayMinSize`, `@IsPostalCode`, `@IsOptional`, ...). Every property is required unless it has `@IsOptional`, as in class-validator. Pass the module or its `getMetadataStorage()` result as `storage`; the library does not load class-validator. Unreadable decorators (`@IsPositive`, `@ValidateNested`, custom validators) go to `onUnsupported`.
 - Read: required (non-optional) fields, string `min` / `max` / `length` / `regex` / `email` / `url` / `uuid` / `startsWith` / `endsWith`, number `int` / `min` / `max` / `multipleOf`, `enum`, `literal`, nested objects (`a.b`), arrays of objects (`a[].b`), `optional` / `nullable` / `default` / `pipe` / `coerce` (the input side). Yup: `required`, `min` / `max` / `length`, `email` / `url` / `uuid` / `matches`, `integer`, `oneOf`, nested `object()` and `array().of()`.
 - Reported to `onUnsupported(path, what)` and skipped: `refine` / `test()` functions, `union`, exclusive bounds (`positive()`, `gt`), regex flags, `when()`, `lazy`. Add those with your own rule. Both functions never throw.
 

@@ -8,3 +8,5 @@ _original_backup/
 bin/
 obj/
 *.nupkg
+browser-tests/pages/qwik/
+tests/qwik/.out/

@@ -7,7 +7,7 @@ Everything here is optional and ships in the same package (the `tools/` folder).
 ```
 npx fv check rules.json                  # lint a rules file
 npx fv export rules.json --to zod        # rules as Zod / TypeScript / JSON Schema / HTML / React / Vue / Angular
-npx fv import ./schema.mjs --from zod    # a Zod, Yup or Joi schema (or a JSON Schema file) as rules
+npx fv import ./schema.mjs --from zod    # a Zod, Yup, Joi or class-validator schema (or a JSON Schema file) as rules
 npx fv migrate "src/**/*.js" --write     # jQuery Validation calls -> FormValidator
 npx fv rules                             # every rule name
 ```
@@ -33,7 +33,7 @@ Your own rules are unknown to a plain run: load the file that registers them wit
 
 ### `fv import`
 
-Already have a schema? `fv import ./schema.mjs --from zod --export signupSchema > rules.json`. Zod 4, Yup and Joi schemas are read through their own public description; a JSON Schema or OpenAPI component works too (`--from json-schema`). Whatever has no rule equivalent (`refine`, unions, exclusive bounds) is listed on stderr. The same conversion is available in code as `FormValidator.fromZod(schema)` and `FormValidator.fromYup(schema)`.
+Already have a schema? `fv import ./schema.mjs --from zod --export signupSchema > rules.json`. Zod 4, Yup and Joi schemas are read through their own public description, and a decorated class-validator class (`--from class-validator --export Signup`, the compiled JavaScript class; `class-validator` is loaded from your project) through its metadata; a JSON Schema or OpenAPI component works too (`--from json-schema`). Whatever has no rule equivalent (`refine`, unions, exclusive bounds) is listed on stderr. The same conversion is available in code as `FormValidator.fromZod(schema)` and `FormValidator.fromYup(schema)`.
 
 ### `fv migrate`
 

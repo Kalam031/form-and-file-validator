@@ -119,3 +119,25 @@ test('fvSubmit: touches and checks everything, calls you only for a valid form w
     assert.deepEqual(fvValues(g), { email: 'free@example.com', password: ' pw ', born: '29/2/2000' });
     assert.deepEqual(fvSetErrors(g, { password: 'Too weak', nothere: 'x' }), ['nothere']);
 });
+
+test('fvServerErrors shows a backend answer on the controls and the group; fvPrecognition asks the real endpoint', { skip }, async () => {
+    const { FormControl, FormGroup } = forms;
+    const { fvServerErrors, fvPrecognition } = await import('../dist/integrations/angular.mjs');
+    const g = new FormGroup({ email: new FormControl('a@b.co', fvValidator(['required', 'email'])), name: new FormControl('Bob') });
+    const r = fvServerErrors(g, { type: 'about:blank', status: 422, errors: { Email: ['Already registered'], Nothere: ['x'], '': ['Try later'] } });
+    assert.equal(fvMessage(g.get('email')), 'Already registered');
+    assert.deepEqual(r.missed, ['Nothere']);
+    assert.ok(g.errors && g.errors.server, 'what belongs to no control lands on the group');
+
+    const g2 = new FormGroup({ email: new FormControl('a@b.co'), name: new FormControl('Bob') });
+    const calls = [];
+    const fetchStub = async (url, init) => { calls.push({ url: String(url), headers: init && init.headers }); return { ok: false, status: 422, headers: { get: () => 'application/json' }, json: async () => ({ errors: { email: ['Taken'] } }), text: async () => '' }; };
+    const p = await fvPrecognition(g2, '/api/signup', { fetch: fetchStub, only: ['email'] });
+    assert.equal(p.valid, false);
+    assert.equal(calls.length, 1);
+    assert.equal(fvMessage(g2.get('email')), 'Taken');
+    const ok = await fvPrecognition(new FormGroup({ email: new FormControl('x') }), '/api/signup', { fetch: async () => ({ ok: true, status: 204, headers: { get: () => null }, json: async () => ({}), text: async () => '' }) });
+    assert.equal(ok.valid, true);
+    const offline = await fvPrecognition(new FormGroup({ email: new FormControl('x') }), '/api/signup', { fetch: async () => { throw new Error('offline'); } });
+    assert.equal(offline.valid, null, 'could not check: nothing is shown');
+});
