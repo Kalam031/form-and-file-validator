@@ -6280,8 +6280,8 @@ const api = (function (root) {
      * A class decorated with class-validator as rules: FormValidator.fromClassValidator(Signup, { classValidator: classValidatorModule }).
      * The library does not load class-validator: pass the module (options.classValidator) or its metadata storage (options.storage). Read: IsNotEmpty / IsDefined, IsEmail,
      * IsUrl, IsUUID, MinLength, MaxLength, Length, Min, Max, IsInt, IsNumber, IsIn, IsNotIn, Equals, Matches (no flags), IsAlpha, IsAlphanumeric, IsNumberString, IsDateString,
-     * ArrayMinSize, ArrayMaxSize, IsPostalCode (-> postalCode, inputs add-on), IsOptional (not required). class-validator treats every property as required unless IsOptional,
-     * so the others are required here too. What has no rule (IsPositive, ValidateNested, custom validators, IsPhoneNumber ...) goes to options.onUnsupported(path, name).
+     * ArrayMinSize, ArrayMaxSize, IsPostalCode (-> postalCode, inputs add-on). Only the properties you mark with IsNotEmpty or IsDefined are required; every other
+     * property is optional (an empty value passes, a filled one must satisfy its rules). options.allRequired: true makes every property required, as class-validator does. What has no rule (IsPositive, ValidateNested, custom validators, IsPhoneNumber ...) goes to options.onUnsupported(path, name).
      */
     function fromClassValidator(cls, options) {
         const o = options || {};
@@ -6289,7 +6289,7 @@ const api = (function (root) {
         if (!cls || !storage || !isFn(storage.getTargetValidationMetadatas)) return {};
         const metas = guard(() => storage.getTargetValidationMetadatas(cls, null, false, false), []) || [];
         const node = { type: 'object', properties: {}, required: [] };
-        const optional = {};
+        const optional = {}, requiredBy = {};
         const notes = [];
         const note = (k, w) => notes.push(k + ': ' + w);
         metas.forEach(m => {
@@ -6303,7 +6303,7 @@ const api = (function (root) {
             if (m.type !== 'customValidation' && m.type !== undefined && m.type !== 'isDefined') { note(k, String(m.type)); return; }
             if (m.each) { note(k, n + ' (each)'); return; }
             const num = () => { if (p.type !== 'integer') p.type = 'number'; };
-            if (n === 'isNotEmpty' || n === 'isDefined') { /* required: every property is */ }
+            if (n === 'isNotEmpty' || n === 'isDefined') requiredBy[k] = true;
             else if (n === 'isEmail') p.format = 'email';
             else if (n === 'isUrl') p.format = 'uri';
             else if (n === 'isUuid') p.format = 'uuid';
@@ -6329,7 +6329,7 @@ const api = (function (root) {
             else if (n === 'isString' || n === 'isBoolean' || n === 'isDate' || n === 'isArray' || n === 'isObject' || n === 'isNotEmptyObject') { /* a type, not a rule */ }
             else note(k, n || 'custom validator');
         });
-        Object.keys(node.properties).forEach(k => { if (!optional[k]) node.required.push(k); });
+        Object.keys(node.properties).forEach(k => { if (!optional[k] && (o.allRequired === true || requiredBy[k])) node.required.push(k); });
         const rules = fromJsonSchema(node, { onUnsupported: o.onUnsupported });
         if (isFn(o.onUnsupported)) notes.forEach(w => { const i = w.indexOf(': '); guard(o.onUnsupported, undefined, w.slice(0, i), w.slice(i + 2)); });
         return rules;

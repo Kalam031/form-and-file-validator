@@ -108,7 +108,8 @@ test('fromClassValidator: decorated classes become rules that agree with class-v
     const { Signup } = loadDecorated(CV_SOURCE);
     const seen = [];
     const rules = FormValidator.fromClassValidator(Signup, { classValidator: cv, onUnsupported: (p, w) => seen.push(p + ':' + w) });
-    assert.deepEqual(Object.keys(rules).sort(), ['age', 'agree', 'code', 'email', 'handle', 'name', 'nested', 'plan', 'points', 'site', 'slug', 'tags', 'user']);
+    assert.ok(rules.email.includes('required') && !JSON.stringify(rules.name).includes('required'));
+    assert.deepEqual(Object.keys(rules).sort(), ['age', 'agree', 'code', 'email', 'handle', 'name', 'plan', 'site', 'slug', 'tags', 'user']);
     assert.ok(seen.some(s => /^points:/.test(s)) && seen.some(s => /^nested:ValidateNested/.test(s)), 'unsupported decorators are reported: ' + seen);
     const good = { email: 'a@b.co', name: 'Bob', code: 'abc', age: 30, plan: 'pro', site: 'https://a.co', tags: ['x'], handle: 'abc123', user: 'bob', agree: 'yes', slug: '' };
     const bad = { email: 'nope', name: 'Bo', code: 'x', age: 17, plan: 'gold', site: 'x', tags: [], handle: 'a-b', user: 'root', agree: 'no', slug: 'UP' };
@@ -116,8 +117,10 @@ test('fromClassValidator: decorated classes become rules that agree with class-v
     const ours = data => Object.keys(FormValidator.checkValues(data, rules).errors).filter(k => k !== 'points' && k !== 'nested').sort();   // those two have decorators with no rule equivalent
     assert.deepEqual(ours(good), []);
     assert.deepEqual(cvFailing(Object.assign({}, good, { slug: undefined })), []);
-    assert.deepEqual(ours(bad), cvFailing(bad));
-    assert.deepEqual(ours({}), ['age', 'agree', 'code', 'email', 'handle', 'name', 'plan', 'site', 'tags', 'user'], 'every property but the optional one is required');
+    assert.deepEqual(ours(bad), cvFailing(bad), 'filled values are judged like class-validator does');
+    assert.deepEqual(ours({}), ['email', 'tags'], 'IsNotEmpty makes email required; tags has an explicit ArrayMinSize(1); the rest is optional');
+    const all = FormValidator.fromClassValidator(Signup, { classValidator: cv, allRequired: true });
+    assert.deepEqual(Object.keys(FormValidator.checkValues({}, all).errors).filter(k => k !== 'points' && k !== 'nested').sort(), ['age', 'agree', 'code', 'email', 'handle', 'name', 'plan', 'site', 'tags', 'user'], 'allRequired: every property but the IsOptional one');
 });
 test('fromClassValidator: a storage can be passed directly; junk gives {}', () => {
     const cv = require('class-validator');

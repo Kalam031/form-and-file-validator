@@ -4,7 +4,7 @@ Versions of the package follow semver. Each source file also keeps its own chang
 
 ## 3.39.0
 - **Qwik** (`form-and-file-validator/qwik`): `fvQwik(form, options)` for `useVisibleTask$` (plain-data errors for signals, `handleSubmit`, server errors, Precognition) and `fvQwikCheck(rules, data)` for `routeAction$` / `server$`. No Qwik peer dependency. Tested with Qwik's real optimizer and server renderer, and in Chromium, Firefox and WebKit.
-- **`FormValidator.fromClassValidator(Class, { classValidator })`** and `fv import --from class-validator`: decorated classes become rules; checked against class-validator itself.
+- **`FormValidator.fromClassValidator(Class, { classValidator })`** and `fv import --from class-validator`: decorated classes become rules; checked against class-validator itself. Only `@IsNotEmpty` / `@IsDefined` properties are required, the rest optional (`allRequired: true` for class-validator's own rule).
 - **Bindings made equal**: `validateOnServer` (Precognition) in Svelte, Solid and Lit; `fvServerErrors` and `fvPrecognition` in the Angular helpers; the `$fv` magic in the Alpine plugin (1.1.0).
 - Dev dependencies: @builder.io/qwik, class-validator, reflect-metadata (tests only).
 
