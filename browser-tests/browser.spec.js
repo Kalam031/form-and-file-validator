@@ -585,7 +585,7 @@ for (const b of BROWSERS) {
                 const r = await page.evaluate(async ignoreTag => {
                     if (ignoreTag) {      // an older browser: decodes the pixels as stored and never reads the EXIF tag (simulated by dropping the APP1 segment before decoding)
                         const orig = window.createImageBitmap.bind(window);
-                        window.createImageBitmap = async src => { const b = new Uint8Array(await src.arrayBuffer()); if (b[2] === 0xff && b[3] === 0xe1) src = new Blob([b.subarray(0, 2), b.subarray(4 + ((b[4] << 8) | b[5]))], { type: 'image/jpeg' }); return orig(src); };
+                        window.createImageBitmap = async (src, ...rest) => { if (!src || typeof src.arrayBuffer !== 'function') return orig(src, ...rest); const b = new Uint8Array(await src.arrayBuffer()); if (b[2] === 0xff && b[3] === 0xe1) src = new Blob([b.subarray(0, 2), b.subarray(4 + ((b[4] << 8) | b[5]))], { type: 'image/jpeg' }); return orig(src, ...rest); };
                     }
                     // 200 x 100 picture, left half red, right half blue, with EXIF orientation 6 (shown turned clockwise: 100 x 200, red on top)
                     const raw = await halves(200, 100, 'image/jpeg');
@@ -808,7 +808,7 @@ for (const b of BROWSERS) {
         }, '/docs/playground.html');
         it2('docs site playground: the rules box exports Zod, TypeScript and the other formats, and says what is wrong with bad JSON', async page => {
             await page.waitForFunction(() => /z.object/.test(document.getElementById('export-out').textContent));
-            assert.match(await page.textContent('#export-out'), /age: z.coerce.number().int().min(18).max(99)/);
+            assert.ok((await page.textContent('#export-out')).includes('age: z.coerce.number().int().min(18).max(99)'));
             await page.selectOption('#export-format', 'typescript');
             assert.match(await page.textContent('#export-out'), /export interface Signup/);
             await page.selectOption('#export-format', 'react');
