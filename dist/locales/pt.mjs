@@ -50,6 +50,8 @@ export default {
     "mask": "Complete este campo.",
     "pwscore": "Escolha uma senha mais forte.",
     "pwned": "Esta senha apareceu em um vazamento de dados. Escolha outra.",
+    "postalCode": "Insira um código postal válido.",
+    "phoneCountry": "Insira um número de telefone válido.",
     "dateAfter": "Insira uma data posterior.",
     "dateBefore": "Insira uma data anterior.",
     "atLeastOne": "Preencha pelo menos um destes campos.",

@@ -50,6 +50,8 @@ export default {
     "mask": "请填写完整。",
     "pwscore": "请选择更强的密码。",
     "pwned": "此密码曾出现在数据泄露中，请选择其他密码。",
+    "postalCode": "请输入有效的邮政编码。",
+    "phoneCountry": "请输入有效的电话号码。",
     "dateAfter": "请输入更晚的日期。",
     "dateBefore": "请输入更早的日期。",
     "atLeastOne": "请至少填写其中一个字段。",

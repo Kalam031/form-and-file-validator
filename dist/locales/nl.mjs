@@ -50,6 +50,8 @@ export default {
     "mask": "Vul dit veld volledig in.",
     "pwscore": "Kies een sterker wachtwoord.",
     "pwned": "Dit wachtwoord is in een datalek opgedoken. Kies een ander wachtwoord.",
+    "postalCode": "Voer een geldige postcode in.",
+    "phoneCountry": "Voer een geldig telefoonnummer in.",
     "dateAfter": "Voer een latere datum in.",
     "dateBefore": "Voer een eerdere datum in.",
     "atLeastOne": "Vul minstens één van deze velden in.",

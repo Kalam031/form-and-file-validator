@@ -2,6 +2,11 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.37.0
+- **Postal codes and phone numbers by country** (inputs add-on 1.1.0): rules `postalCode` and `phoneCountry` (a fixed `country` or a `countryField` that is watched), `FormValidator.regions` (`isPostalCode`, `isPhone`, `callingCode`), about 60 countries. Data only in the add-on; the core stays small.
+- **`FileValidator.readMediaInfo(file)`** (FileValidator 2.12.0): duration of MP4 / MOV / WAV / FLAC / Ogg / WebM / MP3 from the header, no browser element; `maxDurationSec` / `minDurationSec` use it first.
+- Rules can declare `dependsOn` (another field) so a form re-checks them when it changes.
+
 ## 3.36.0
 - **`FormValidator.fromZod(schema)` / `fromYup(schema)`**: existing Zod 4 and Yup schemas become rules (nested objects, arrays of rows, formats, limits, enums, optional fields); what has no rule is reported to `onUnsupported`. Neither library is loaded. Checked against Zod and Yup with the same payloads.
 

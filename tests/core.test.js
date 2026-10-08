@@ -92,7 +92,7 @@ test('build-subset: the unminified output keeps readable source and marks what w
 const BUDGET = {
     'formValidator.core.min.js': 19000,
     'formValidator.min.js': 42500,
-    'fileValidator.min.js': 23000,
+    'fileValidator.min.js': 26000,
     'fileValidator.widget.min.js': 8500,
     'fileValidator.upload.min.js': 6500,
     'fileValidator.image.min.js': 6000,
@@ -100,10 +100,10 @@ const BUDGET = {
     'formValidator.additional.min.js': 5500,
     'formValidator.element.min.js': 7500,
     'formValidator.password.min.js': 4500,
-    'formValidator.inputs.min.js': 4500,
+    'formValidator.inputs.min.js': 6200,
     'locale.min.js': 2600,
     'integrations/alpine.min.js': 1500,
-    'validator.min.js': 110500
+    'validator.min.js': 114500
 };
 for (const f of Object.keys(BUDGET)) {
     test('size budget: ' + f + ' stays under ' + (BUDGET[f] / 1024).toFixed(1) + ' KB gzip', () => {

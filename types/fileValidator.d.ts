@@ -312,6 +312,8 @@ export interface FileValidatorStatic {
     stripMetadata(file: File, options?: MetadataOptions): Promise<File>;
     formatBytes(bytes: number): string;
     formatDuration(seconds: number): string;
+    /** Duration (and width / height for MP4) read from the file header, no browser needed: MP4 / MOV / M4A, WAV, FLAC, Ogg, WebM / MKV, MP3. null when it cannot tell. */
+    readMediaInfo(file: Blob): Promise<{ duration: number; width?: number; height?: number; format: 'mp4' | 'wav' | 'flac' | 'ogg' | 'webm' | 'mp3' } | null>;
     getCategory(file: { name: string; type?: string }, sniffedMime?: string): FileCategory;
     getPath(file: File): string;
     isIgnored(file: File, ignoreFiles: boolean | Array<string | RegExp>): boolean;

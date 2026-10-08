@@ -1,7 +1,8 @@
 /*!
- * FileValidator v2.11.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.12.0 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.12.0 FileValidator.readMediaInfo(file): duration (and size of the picture for MP4) from the file header, no <audio> / <video> element: Node, workers, tests. maxDurationSec / minDurationSec use it first.
  *   2.11.0 Polyglots: a script, program or ZIP hidden in the head or tail of a picture is DANGEROUS_CONTENT (`polyglot` option). FileValidator.safeName(name) for storage, FileValidator.detect(file).
  *   2.10.0 SVG scan hardened: <!DOCTYPE>/<!ENTITY> (XXE, entity bombs), external href / xlink:href (remote <use>, <image>), CSS @import and url(http...),
  *          xml-stylesheet, and javascript: hidden by character references or whitespace are now DANGEROUS_CONTENT. #id, data:image and <a href=https> stay allowed.
@@ -1196,6 +1197,178 @@
         });
     }
 
+    // ------------------------------------------------------------------ media length without a browser (headers only: no decoding, works in Node and workers)
+    async function m_readRange(file, start, end) {
+        if (!file || typeof file.slice !== 'function') return null;
+        const blob = file.slice(Math.max(0, Math.floor(start)), Math.max(0, Math.floor(end)));
+        try {
+            if (typeof blob.arrayBuffer === 'function') return new Uint8Array(await blob.arrayBuffer());
+            if (root.FileReader) return await new Promise((res, rej) => { const r = new root.FileReader(); r.onload = () => res(new Uint8Array(r.result)); r.onerror = () => rej(r.error); r.readAsArrayBuffer(blob); });
+        } catch (e) { /* unreadable */ }
+        return null;
+    }
+    const m_u32 = (b, o) => ((b[o] * 16777216) + (b[o + 1] << 16) + (b[o + 2] << 8) + b[o + 3]);
+    const m_u64 = (b, o) => m_u32(b, o) * 4294967296 + m_u32(b, o + 4);
+    const m_le32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16)) + b[o + 3] * 16777216;
+    const m_ascii = (b, o, n) => { let s = ''; for (let i = 0; i < n && o + i < b.length; i++) s += String.fromCharCode(b[o + i]); return s; };
+    /** mvhd / tkhd inside a moov box that is fully in `b`. */
+    function mp4FromMoov(b, start, end) {
+        const out = {};
+        const walk = (s, e, depth) => {
+            let o = s;
+            while (o + 8 <= e && depth < 6) {
+                let size = m_u32(b, o), hdr = 8;
+                const type = m_ascii(b, o + 4, 4);
+                if (size === 1) { size = m_u64(b, o + 8); hdr = 16; } else if (size === 0) size = e - o;
+                if (size < hdr || o + size > e) break;
+                if (type === 'mvhd' && out.duration === undefined) {
+                    const v = b[o + hdr];
+                    const ts = v === 1 ? m_u32(b, o + hdr + 20) : m_u32(b, o + hdr + 12);
+                    const dur = v === 1 ? m_u64(b, o + hdr + 24) : m_u32(b, o + hdr + 16);
+                    if (ts > 0) out.duration = dur / ts;
+                } else if (type === 'tkhd' && out.width === undefined) {
+                    const v = b[o + hdr], w = o + hdr + (v === 1 ? 84 : 72);
+                    const width = m_u32(b, w) / 65536, height = m_u32(b, w + 4) / 65536;
+                    if (width > 0 && height > 0) { out.width = Math.round(width); out.height = Math.round(height); }
+                } else if (type === 'trak' || type === 'moov') walk(o + hdr, o + size, depth + 1);
+                o += size;
+            }
+        };
+        walk(start, end, 0);
+        return out;
+    }
+    async function mp4Info(file, head) {
+        // top-level boxes: moov is at the front (fast start) or at the end; read it wherever it is
+        let o = 0;
+        const total = file.size;
+        for (let i = 0; i < 64 && o + 8 <= total; i++) {
+            const h = o + 16 <= head.length && o >= 0 && head.length > o ? head.subarray(o, o + 16) : await m_readRange(file, o, o + 16);
+            if (!h || h.length < 8) return null;
+            let size = m_u32(h, 0), hdr = 8;
+            const type = m_ascii(h, 4, 4);
+            if (size === 1) { if (h.length < 16) return null; size = m_u64(h, 8); hdr = 16; } else if (size === 0) size = total - o;
+            if (size < hdr) return null;
+            if (type === 'moov') {
+                if (size > 64 * 1048576) return null;   // a header that large is not a real moov
+                const body = await m_readRange(file, o, o + size);
+                if (!body || body.length < size) return null;
+                const r = mp4FromMoov(body, hdr, size);
+                return r.duration === undefined ? null : r;
+            }
+            o += size;
+        }
+        return null;
+    }
+    function wavInfo(b) {
+        let o = 12, rate = 0, align = 0, bytes = -1;
+        while (o + 8 <= b.length) {
+            const id = m_ascii(b, o, 4), size = m_le32(b, o + 4);
+            if (id === 'fmt ' && o + 20 <= b.length) { rate = m_le32(b, o + 12); align = b[o + 20] | (b[o + 21] << 8); }
+            else if (id === 'data') { bytes = size; break; }
+            o += 8 + size + (size & 1);
+        }
+        return rate > 0 && align > 0 && bytes >= 0 ? { duration: bytes / (rate * align) } : null;
+    }
+    function flacInfo(b) {
+        let o = 4;
+        while (o + 4 <= b.length) {
+            const type = b[o] & 127, len = (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
+            if (type === 0 && len >= 18 && o + 4 + 18 <= b.length) {
+                const d = o + 4, rate = (b[d + 10] << 12) | (b[d + 11] << 4) | (b[d + 12] >> 4);
+                const samples = (b[d + 13] & 15) * 4294967296 + m_u32(b, d + 14);
+                return rate > 0 && samples > 0 ? { duration: samples / rate } : null;
+            }
+            if (b[o] & 128) break;
+            o += 4 + len;
+        }
+        return null;
+    }
+    function oggInfo(head, tail) {
+        // the first page names the codec and the sample rate; the granule position of the last page is the total length
+        if (head.length < 64) return null;
+        let rate = 0, preSkip = 0;
+        const seg = head[26], p = 27 + seg;
+        if (m_ascii(head, p + 1, 6) === 'vorbis') rate = m_le32(head, p + 12);
+        else if (m_ascii(head, p, 8) === 'OpusHead') { rate = 48000; preSkip = head[p + 10] | (head[p + 11] << 8); }
+        else if (m_ascii(head, p + 1, 4) === 'FLAC') return null;
+        if (!rate) return null;
+        for (let i = tail.length - 14; i >= 0; i--) {
+            if (tail[i] === 79 && tail[i + 1] === 103 && tail[i + 2] === 103 && tail[i + 3] === 83) {   // OggS
+                const lo = m_le32(tail, i + 6), hi = m_le32(tail, i + 10);
+                if (hi === 0xFFFFFFFF && lo === 0xFFFFFFFF) continue;
+                const g = hi * 4294967296 + lo - preSkip;
+                return g > 0 ? { duration: g / rate } : null;
+            }
+        }
+        return null;
+    }
+    function webmInfo(b) {
+        // EBML: Segment > Info > TimecodeScale (default 1,000,000 ns) and Duration (a float, in timecode units)
+        const readId = (o) => { let n = 1; const f = b[o]; if (f === undefined) return null; for (let m = 128; n < 5 && !(f & m); m >>= 1) n++; let v = 0; for (let i = 0; i < n; i++) v = v * 256 + b[o + i]; return { id: v, len: n }; };
+        const readSize = (o) => { const f = b[o]; if (f === undefined) return null; let n = 1; for (let m = 128; n < 9 && !(f & m); m >>= 1) n++; let v = f & (255 >> n); let unknown = v === (255 >> n); for (let i = 1; i < n; i++) { v = v * 256 + b[o + i]; if (b[o + i] !== 255) unknown = false; } return { size: unknown ? -1 : v, len: n }; };
+        let scale = 1000000, duration = null;
+        const walk = (s, e, depth) => {
+            let o = s;
+            while (o < e && o < b.length && depth < 5) {
+                const id = readId(o); if (!id) return;
+                const sz = readSize(o + id.len); if (!sz) return;
+                const body = o + id.len + sz.len;
+                const end = sz.size < 0 ? e : body + sz.size;
+                if (id.id === 0x18538067 || id.id === 0x1549A966) walk(body, Math.min(end, b.length), depth + 1);   // Segment, Info
+                else if (id.id === 0x2AD7B1 && sz.size > 0 && sz.size <= 8) { let v = 0; for (let i = 0; i < sz.size; i++) v = v * 256 + b[body + i]; scale = v; }
+                else if (id.id === 0x4489 && (sz.size === 4 || sz.size === 8)) { const dv = new DataView(b.buffer, b.byteOffset + body, sz.size); duration = sz.size === 4 ? dv.getFloat32(0) : dv.getFloat64(0); }
+                if (end > b.length && sz.size >= 0) return;
+                o = end;
+            }
+        };
+        walk(0, b.length, 0);
+        return duration !== null && isFinite(duration) && duration >= 0 ? { duration: duration * scale / 1e9 } : null;
+    }
+    function mp3Info(b, size) {
+        let o = 0;
+        if (m_ascii(b, 0, 3) === 'ID3' && b.length > 10) o = 10 + (((b[6] & 127) << 21) | ((b[7] & 127) << 14) | ((b[8] & 127) << 7) | (b[9] & 127));
+        for (let tries = 0; o + 4 < b.length && tries < 4096; o++, tries++) {
+            if (b[o] !== 255 || (b[o + 1] & 224) !== 224) continue;
+            const ver = (b[o + 1] >> 3) & 3, layer = (b[o + 1] >> 1) & 3, br = b[o + 2] >> 4, sr = (b[o + 2] >> 2) & 3;
+            if (ver === 1 || layer === 0 || br === 0 || br === 15 || sr === 3) continue;
+            const rates = [[44100, 48000, 32000], [22050, 24000, 16000], [22050, 24000, 16000]];   // ver 3 = MPEG1, 2 = MPEG2, 0 = MPEG2.5
+            const rate = ver === 3 ? rates[0][sr] : (ver === 2 ? rates[1][sr] : rates[2][sr] / 2);
+            const t1 = [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448], t2 = [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384], t3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+            const t4 = [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256], t5 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+            const table = ver === 3 ? (layer === 3 ? t1 : (layer === 2 ? t2 : t3)) : (layer === 3 ? t4 : t5);
+            const kbps = table[br];
+            const samplesPerFrame = layer === 3 ? 384 : ((layer === 1 && ver !== 3) ? 576 : 1152);
+            // a Xing / Info header (VBR) says the frame count; otherwise the bit rate of the first frame is taken as constant
+            const side = ver === 3 ? ((b[o + 3] >> 6) === 3 ? 17 : 32) : ((b[o + 3] >> 6) === 3 ? 9 : 17);
+            const x = o + 4 + side;
+            if (x + 12 <= b.length && (m_ascii(b, x, 4) === 'Xing' || m_ascii(b, x, 4) === 'Info') && (b[x + 7] & 1)) return { duration: m_u32(b, x + 8) * samplesPerFrame / rate };
+            const audioBytes = size - o;
+            return audioBytes > 0 ? { duration: audioBytes * 8 / (kbps * 1000) } : null;
+        }
+        return null;
+    }
+    /**
+     * How long is this audio or video file? Read from the file header, no <audio> / <video> element, so it works in Node, workers and tests.
+     *   await FileValidator.readMediaInfo(file) -> { duration: 63.2, width?, height?, format: 'mp4' } | null
+     * MP4 / MOV / M4A / 3GP (also when the moov box is at the end), WAV, FLAC, Ogg (Vorbis, Opus), WebM / MKV, MP3 (the Xing header, else a constant bit rate is assumed).
+     * null: not one of those, damaged, or the header does not say. maxDurationSec / minDurationSec use this first and the browser element only as a fallback.
+     */
+    async function readMediaInfoFromHeader(file) {
+        if (!file || typeof file.size !== 'number') return null;
+        const head = await m_readRange(file, 0, 262144);
+        if (!head || head.length < 12) return null;
+        let info = null, format = null;
+        try {
+            if (m_ascii(head, 4, 4) === 'ftyp' || ['moov', 'mdat', 'free', 'wide'].indexOf(m_ascii(head, 4, 4)) >= 0) { format = 'mp4'; info = await mp4Info(file, head); }
+            else if (m_ascii(head, 0, 4) === 'RIFF' && m_ascii(head, 8, 4) === 'WAVE') { format = 'wav'; info = wavInfo(head); }
+            else if (m_ascii(head, 0, 4) === 'fLaC') { format = 'flac'; info = flacInfo(head); }
+            else if (m_ascii(head, 0, 4) === 'OggS') { format = 'ogg'; const tail = await m_readRange(file, Math.max(0, file.size - 65536), file.size); info = tail ? oggInfo(head, tail) : null; }
+            else if (head[0] === 0x1A && head[1] === 0x45 && head[2] === 0xDF && head[3] === 0xA3) { format = 'webm'; info = webmInfo(head); }
+            else if (m_ascii(head, 0, 3) === 'ID3' || (head[0] === 255 && (head[1] & 224) === 224)) { format = 'mp3'; info = mp3Info(head, file.size); }
+        } catch (e) { info = null; }
+        return info && isFinite(info.duration) && info.duration >= 0 ? Object.assign({ format }, info) : null;
+    }
+
     // ------------------------------------------------------------------ single file
     async function validateFile(file, config, groupCtx) {
         config = normalizeConfig(config);
@@ -1366,7 +1539,7 @@
         // ---- audio / video duration
         if ((category === 'audio' || category === 'video') && (isNum(cfg.maxDurationSec) || isNum(cfg.minDurationSec))) {
             let info = null;
-            try { info = await (isFn(cfg.readMediaInfo) ? cfg.readMediaInfo(file) : readMediaInfoDefault(file, category, cfg.imageTimeoutMs || 10000)); }
+            try { info = await (isFn(cfg.readMediaInfo) ? cfg.readMediaInfo(file) : ((await readMediaInfoFromHeader(file)) || readMediaInfoDefault(file, category, cfg.imageTimeoutMs || 10000))); }
             catch (e) { if (cfg.requireMediaInfo) add('INVALID_MEDIA'); }
             if (info && isFinite(info.duration)) {
                 if (isNum(cfg.maxDurationSec) && info.duration > cfg.maxDurationSec) add('DURATION_TOO_LONG', { max: formatDuration(cfg.maxDurationSec), duration: formatDuration(info.duration) });
@@ -1598,7 +1771,7 @@
     }
 
     return {
-        version: '2.11.0',
+        version: '2.12.0',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         isValid,         // async (files | <input> | selector, config) -> true / false
         guard,           // (input, config, { onSubmit, messageElement }) : check the file input when its form is submitted, direct or AJAX
@@ -1614,6 +1787,7 @@
         hashFile,        // async (File, maxMB) -> SHA-256 hex, or null when over maxMB (files above 32 MB are hashed as a stream)
         _sha256Stream: sha256Stream,
         formatDuration,
+        readMediaInfo: readMediaInfoFromHeader, // async (File) -> { duration, width?, height?, format } | null, read from the header: MP4 / MOV / WAV / FLAC / Ogg / WebM / MP3, no browser needed
         errorMessages,
         getMessage,
         summary,

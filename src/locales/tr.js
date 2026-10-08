@@ -55,6 +55,8 @@
         mask: "Lütfen bu alanı tamamlayın.",
         pwscore: "Lütfen daha güçlü bir parola seçin.",
         pwned: "Bu parola bir veri ihlalinde ortaya çıktı. Lütfen başka bir parola seçin.",
+        postalCode: "Lütfen geçerli bir posta kodu girin.",
+        phoneCountry: "Lütfen geçerli bir telefon numarası girin.",
         dateAfter: "Lütfen daha ileri bir tarih girin.",
         dateBefore: "Lütfen daha önceki bir tarih girin.",
         atLeastOne: "Lütfen bu alanlardan en az birini doldurun.",

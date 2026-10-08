@@ -50,6 +50,8 @@ export default {
     "mask": "Veuillez compléter ce champ.",
     "pwscore": "Veuillez choisir un mot de passe plus fort.",
     "pwned": "Ce mot de passe a été exposé dans une fuite de données. Veuillez en choisir un autre.",
+    "postalCode": "Veuillez saisir un code postal valide.",
+    "phoneCountry": "Veuillez saisir un numéro de téléphone valide.",
     "dateAfter": "Veuillez saisir une date ultérieure.",
     "dateBefore": "Veuillez saisir une date antérieure.",
     "atLeastOne": "Veuillez remplir au moins l'un de ces champs.",

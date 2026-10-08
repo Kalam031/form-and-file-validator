@@ -50,6 +50,8 @@ export default {
     "mask": "Completa questo campo.",
     "pwscore": "Scegli una password più sicura.",
     "pwned": "Questa password è comparsa in una violazione di dati. Scegline un'altra.",
+    "postalCode": "Inserisci un CAP valido.",
+    "phoneCountry": "Inserisci un numero di telefono valido.",
     "dateAfter": "Inserisci una data successiva.",
     "dateBefore": "Inserisci una data precedente.",
     "atLeastOne": "Compila almeno uno di questi campi.",

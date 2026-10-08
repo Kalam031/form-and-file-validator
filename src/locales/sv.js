@@ -55,6 +55,8 @@
         mask: "Fyll i det här fältet helt.",
         pwscore: "Välj ett starkare lösenord.",
         pwned: "Det här lösenordet har förekommit i ett dataintrång. Välj ett annat.",
+        postalCode: "Ange ett giltigt postnummer.",
+        phoneCountry: "Ange ett giltigt telefonnummer.",
         dateAfter: "Ange ett senare datum.",
         dateBefore: "Ange ett tidigare datum.",
         atLeastOne: "Fyll i minst ett av de här fälten.",

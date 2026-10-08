@@ -1044,6 +1044,21 @@ rules: {
 
 The separators and the order of day, month and year come from the browser's `Intl`, so nothing is shipped per country. Parsing is strict: group separators only between groups of three digits (two for `en-IN`), one decimal separator, no exponents, no stray text; two-digit years use a pivot (`pivot: 50`: up to 50 is 20xx) or are refused with `twoDigitYear: false`. Without `locale` the current `FVLocales` language, the page's `<html lang>` and then the browser language are used. The error text is the translated `number` / `date` / `min` / `max` message.
 
+### Postal codes and phone numbers by country
+
+```js
+rules: {
+  country: 'required',
+  zip:   { postalCode: { countryField: 'country' } },     // the format follows the country the visitor picked, and is re-checked when it changes
+  phone: { phoneCountry: { country: 'GB' } }              // a fixed country
+}
+FormValidator.regions.isPostalCode('SW1A 1AA', 'GB');     // true | false | null (no rule for that country)
+FormValidator.regions.isPhone('020 7946 0958', 'GB');     // national or +44 form, trunk 0 handled
+FormValidator.regions.callingCode('GB');                  // 44
+```
+
+About 60 countries for postal codes and 50 for phones. The phone check is plausibility (the prefix and the length of the national number), not a number registry: it will not tell you that a number exists. The data lives in the inputs add-on only, so the core build stays small. A country without a rule, or no country chosen yet, accepts any value. Note that a plain string in the rule map is a custom message, so write `{ country: 'GB' }`, not `'GB'`.
+
 ### Field analytics: `onFieldStats`
 
 ```js

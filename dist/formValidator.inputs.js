@@ -1,14 +1,16 @@
 /*!
- * FormValidator inputs add-on v1.0.0 — one-time-code fields and numbers / dates typed the way the visitor's country writes them.
+ * FormValidator inputs add-on v1.1.0 — one-time-code fields and numbers / dates typed the way the visitor's country writes them.
  *
  *   FormValidator.otp('#code', { length: 6, name: 'code', onComplete: code => form.requestSubmit() })   // 6 boxes, paste and SMS autofill spread over them, WebOTP optional
  *   FormValidator.parseNumber('1.234,56', 'de')       // 1234.56   (NaN when it is not a number written that way)
  *   FormValidator.parseDate('22.11.2033', 'de')       // '2033-11-22'  (null for 31.02.2033, 22/11/33 -> 2033-11-22 with a two-digit year)
+ *   rules: { zip: { postalCode: { countryField: 'country' } }, phone: { phoneCountry: { country: 'GB' } } }   // postal code / phone plausibility per country (FormValidator.regions)
  *   rules: { price: { localeNumber: { locale: 'de', min: 0, decimals: 2 } }, born: { localeDate: { locale: 'en-GB', max: '2010-01-01' } } }
  *
  * Part of the one-file bundle; on its own it needs formValidator.js loaded first. No data leaves the page: the separators and the day / month / year order come from the browser's Intl.
  *
  * Changelog
+ *   1.1.0  postalCode / phoneCountry rules and FormValidator.regions: postal code and phone plausibility for about 60 countries (the data lives only in this add-on, the core stays small).
  *   1.0.0  First release.
  */
 (function (root, factory) {
@@ -262,8 +264,73 @@
         };
     }
 
+    // ------------------------------------------------------------------ postal codes and phone numbers by country (a plausibility check, not a registry)
+    // Postal codes: the national format. A country that has no postal code system is not listed and accepts anything.
+    const POSTAL = {
+        US: '\\d{5}(?:-\\d{4})?', CA: '[ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z][ -]?\\d[ABCEGHJ-NPRSTV-Z]\\d', GB: '(?:GIR ?0AA|[A-PR-UWYZ](?:\\d{1,2}|[A-HK-Y]\\d(?:[\\dABEHMNPRV-Y])?|\\d[A-HJKPS-UW]) ?\\d[ABD-HJLNP-UW-Z]{2})',
+        DE: '\\d{5}', FR: '\\d{5}', ES: '(?:0[1-9]|[1-4]\\d|5[0-2])\\d{3}', IT: '\\d{5}', NL: '[1-9]\\d{3} ?[A-Z]{2}', BE: '[1-9]\\d{3}', AT: '\\d{4}', CH: '[1-9]\\d{3}', LI: '94\\d{2}',
+        SE: '\\d{3} ?\\d{2}', NO: '\\d{4}', DK: '\\d{4}', FI: '\\d{5}', IS: '\\d{3}', PL: '\\d{2}-\\d{3}', PT: '\\d{4}-\\d{3}', IE: '[AC-FHKNPRTV-Y]\\d{2} ?[0-9AC-FHKNPRTV-Y]{4}',
+        LU: '\\d{4}', CZ: '\\d{3} ?\\d{2}', SK: '\\d{3} ?\\d{2}', HU: '\\d{4}', RO: '\\d{6}', GR: '\\d{3} ?\\d{2}', BG: '\\d{4}', HR: '\\d{5}', SI: '\\d{4}', UA: '\\d{5}', RU: '\\d{6}', TR: '\\d{5}',
+        AU: '\\d{4}', NZ: '\\d{4}', JP: '\\d{3}-?\\d{4}', CN: '\\d{6}', KR: '\\d{5}', IN: '[1-9]\\d{5}', PK: '\\d{5}', BD: '\\d{4}', ID: '\\d{5}', VN: '\\d{6}', TH: '\\d{5}', MY: '\\d{5}', PH: '\\d{4}', SG: '\\d{6}',
+        BR: '\\d{5}-?\\d{3}', MX: '\\d{5}', AR: '(?:[A-Z]\\d{4}[A-Z]{3}|\\d{4})', CL: '\\d{7}', CO: '\\d{6}', PE: '\\d{5}',
+        ZA: '\\d{4}', EG: '\\d{5}', SA: '\\d{5}(?:-\\d{4})?', IL: '\\d{5}(?:\\d{2})?', MA: '\\d{5}', NG: '\\d{6}', KE: '\\d{5}'
+    };
+    // Phones: [calling code, shortest, longest national number (digits after the country code, without the trunk 0)]
+    const PHONE = {
+        US: [1, 10, 10], CA: [1, 10, 10], GB: [44, 9, 10], DE: [49, 7, 13], FR: [33, 9, 9], ES: [34, 9, 9], IT: [39, 6, 11], NL: [31, 9, 9], BE: [32, 8, 9], AT: [43, 7, 13], CH: [41, 9, 9],
+        SE: [46, 7, 10], NO: [47, 8, 8], DK: [45, 8, 8], FI: [358, 6, 10], PL: [48, 9, 9], PT: [351, 9, 9], IE: [353, 7, 9], CZ: [420, 9, 9], GR: [30, 10, 10], HU: [36, 8, 9], RO: [40, 9, 9],
+        UA: [380, 9, 9], RU: [7, 10, 10], TR: [90, 10, 10], AU: [61, 9, 9], NZ: [64, 8, 10], JP: [81, 9, 10], CN: [86, 10, 11], KR: [82, 9, 10], IN: [91, 10, 10], PK: [92, 10, 10],
+        BD: [880, 10, 10], ID: [62, 8, 12], VN: [84, 9, 10], TH: [66, 8, 9], MY: [60, 7, 10], PH: [63, 10, 10], SG: [65, 8, 8], HK: [852, 8, 8], BR: [55, 10, 11], MX: [52, 10, 10],
+        AR: [54, 10, 11], CL: [56, 9, 9], CO: [57, 10, 10], ZA: [27, 9, 9], EG: [20, 9, 10], SA: [966, 9, 9], AE: [971, 8, 9], IL: [972, 8, 9], NG: [234, 8, 10], KE: [254, 9, 9]
+    };
+    const KEEPS_ZERO = { US: 1, CA: 1, IT: 1, RU: 1 };   // the leading 0 is part of the number there (or there is no trunk 0)
+    const postalCache = {};
+    const upper = c => String(c === undefined || c === null ? '' : c).trim().toUpperCase();
+    /** isPostalCode('SW1A 1AA', 'GB') -> true | false | null (null: no rule for that country, so nothing can be said). */
+    function isPostalCode(value, country) {
+        const c = upper(country);
+        if (!Object.prototype.hasOwnProperty.call(POSTAL, c)) return null;
+        const re = postalCache[c] || (postalCache[c] = new RegExp('^' + POSTAL[c] + '$', 'i'));
+        return re.test(String(value).trim());
+    }
+    /** isPhone('+44 20 7946 0958', 'GB') or isPhone('020 7946 0958', 'GB') -> true | false | null. Checks the prefix and the length, not whether the number exists. */
+    function isPhone(value, country) {
+        const c = upper(country);
+        if (!Object.prototype.hasOwnProperty.call(PHONE, c)) return null;
+        const cc = String(PHONE[c][0]), min = PHONE[c][1], max = PHONE[c][2];
+        const text = String(value).trim();
+        if (!/^\+?[\d\s\-().\/]+$/.test(text)) return false;
+        let digits = text.replace(/\D/g, '');
+        const intl = text.charAt(0) === '+' || (digits.indexOf('00') === 0 && digits.length > 6);
+        if (intl) {
+            if (text.charAt(0) !== '+') digits = digits.slice(2);
+            if (digits.indexOf(cc) !== 0) return false;
+            let rest = digits.slice(cc.length);
+            if (rest.charAt(0) === '0' && !KEEPS_ZERO[c]) rest = rest.slice(1);   // +44 (0) 20 ...
+            return rest.length >= min && rest.length <= max;
+        }
+        if (digits.charAt(0) === '0' && !KEEPS_ZERO[c]) digits = digits.slice(1);
+        else if (c === 'RU' && digits.charAt(0) === '8') digits = digits.slice(1);
+        else if ((c === 'US' || c === 'CA') && digits.length === 11 && digits.charAt(0) === '1') digits = digits.slice(1);
+        return digits.length >= min && digits.length <= max;
+    }
+    const countryOf = (r, env) => {
+        if (r.countryField) {
+            const vals = env.values || (env.inst && typeof env.inst.getValues === 'function' ? env.inst.getValues() : null);
+            const v = vals ? vals[r.countryField] : undefined;
+            return upper(Array.isArray(v) ? v[0] : v);
+        }
+        return upper(r.country !== undefined ? r.country : r.param);
+    };
+    // postalCode: { country: 'GB' } | { countryField: 'country' } (the value of another field decides; an unknown country accepts anything)
+    FV.registerRule('postalCode', (v, r, env) => isPostalCode(v, countryOf(r, env)) !== false);
+    FV.registerRule('phoneCountry', (v, r, env) => isPhone(v, countryOf(r, env)) !== false);
+    if (!FV.messages.postalCode) FV.messages.postalCode = 'Please enter a valid postal code.';
+    if (!FV.messages.phoneCountry) FV.messages.phoneCountry = 'Please enter a valid phone number.';
+    FV.regions = { postalCodes: Object.keys(POSTAL), phoneCountries: Object.keys(PHONE), callingCode: c => { const e = PHONE[upper(c)]; return e ? e[0] : null; }, isPostalCode, isPhone };
+
     FV.parseNumber = parseNumber;
     FV.parseDate = parseDate;
     FV.otp = otp;
-    return { parseNumber, parseDate, otp, numberSymbols, dateOrder };
+    return { parseNumber, parseDate, otp, numberSymbols, dateOrder, regions: FV.regions };
 });

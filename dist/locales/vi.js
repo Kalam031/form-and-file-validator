@@ -55,6 +55,8 @@
         mask: "Vui lòng hoàn thành trường này.",
         pwscore: "Vui lòng chọn mật khẩu mạnh hơn.",
         pwned: "Mật khẩu này đã xuất hiện trong một vụ rò rỉ dữ liệu. Vui lòng chọn mật khẩu khác.",
+        postalCode: "Vui lòng nhập mã bưu chính hợp lệ.",
+        phoneCountry: "Vui lòng nhập số điện thoại hợp lệ.",
         dateAfter: "Vui lòng nhập một ngày muộn hơn.",
         dateBefore: "Vui lòng nhập một ngày sớm hơn.",
         atLeastOne: "Vui lòng điền ít nhất một trong các trường này.",

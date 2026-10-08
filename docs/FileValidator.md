@@ -211,6 +211,8 @@ All options are optional. Numbers may be given as numeric strings (`'5'`), and l
 | `readMediaInfo` | built in | `async (file) => ({ duration })` to supply your own reader, for example in Node |
 | `requireMediaInfo` | `false` | Report `INVALID_MEDIA` when the duration cannot be read (otherwise the check is skipped) |
 
+**Duration without a browser.** `await FileValidator.readMediaInfo(file)` reads the length (and the picture size of an MP4) from the file header: MP4 / MOV / M4A (moov box first or last), WAV, FLAC, Ogg Vorbis / Opus, WebM / MKV, MP3 (Xing header, else a constant bit rate is assumed). No `<audio>` element, so it works in Node, workers and tests, and returns `null` instead of throwing for anything else. `maxDurationSec` / `minDurationSec` use it first and fall back to the browser element.
+
 **Other**
 
 | Option | Default | Meaning |

@@ -50,6 +50,8 @@ export default {
     "mask": "Lengkapi kolom ini.",
     "pwscore": "Pilih kata sandi yang lebih kuat.",
     "pwned": "Kata sandi ini pernah muncul dalam kebocoran data. Pilih yang lain.",
+    "postalCode": "Masukkan kode pos yang valid.",
+    "phoneCountry": "Masukkan nomor telepon yang valid.",
     "dateAfter": "Masukkan tanggal yang lebih akhir.",
     "dateBefore": "Masukkan tanggal yang lebih awal.",
     "atLeastOne": "Isi setidaknya satu dari kolom ini.",

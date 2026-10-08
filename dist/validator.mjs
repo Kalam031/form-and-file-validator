@@ -1,12 +1,13 @@
-/*! FormValidator 2.19.0 + FileValidator 2.11.0 + upload widget 1.6.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.20.0 + FileValidator 2.12.0 + upload widget 1.6.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
     mods["fileValidator"] = function (module, exports, require, define) {
 /*!
- * FileValidator v2.11.0 — dependency-free file validation for browsers and Node (18+).
+ * FileValidator v2.12.0 — dependency-free file validation for browsers and Node (18+).
  *
  * Changelog
+ *   2.12.0 FileValidator.readMediaInfo(file): duration (and size of the picture for MP4) from the file header, no <audio> / <video> element: Node, workers, tests. maxDurationSec / minDurationSec use it first.
  *   2.11.0 Polyglots: a script, program or ZIP hidden in the head or tail of a picture is DANGEROUS_CONTENT (`polyglot` option). FileValidator.safeName(name) for storage, FileValidator.detect(file).
  *   2.10.0 SVG scan hardened: <!DOCTYPE>/<!ENTITY> (XXE, entity bombs), external href / xlink:href (remote <use>, <image>), CSS @import and url(http...),
  *          xml-stylesheet, and javascript: hidden by character references or whitespace are now DANGEROUS_CONTENT. #id, data:image and <a href=https> stay allowed.
@@ -1201,6 +1202,178 @@ const api = (function (root) {
         });
     }
 
+    // ------------------------------------------------------------------ media length without a browser (headers only: no decoding, works in Node and workers)
+    async function m_readRange(file, start, end) {
+        if (!file || typeof file.slice !== 'function') return null;
+        const blob = file.slice(Math.max(0, Math.floor(start)), Math.max(0, Math.floor(end)));
+        try {
+            if (typeof blob.arrayBuffer === 'function') return new Uint8Array(await blob.arrayBuffer());
+            if (root.FileReader) return await new Promise((res, rej) => { const r = new root.FileReader(); r.onload = () => res(new Uint8Array(r.result)); r.onerror = () => rej(r.error); r.readAsArrayBuffer(blob); });
+        } catch (e) { /* unreadable */ }
+        return null;
+    }
+    const m_u32 = (b, o) => ((b[o] * 16777216) + (b[o + 1] << 16) + (b[o + 2] << 8) + b[o + 3]);
+    const m_u64 = (b, o) => m_u32(b, o) * 4294967296 + m_u32(b, o + 4);
+    const m_le32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16)) + b[o + 3] * 16777216;
+    const m_ascii = (b, o, n) => { let s = ''; for (let i = 0; i < n && o + i < b.length; i++) s += String.fromCharCode(b[o + i]); return s; };
+    /** mvhd / tkhd inside a moov box that is fully in `b`. */
+    function mp4FromMoov(b, start, end) {
+        const out = {};
+        const walk = (s, e, depth) => {
+            let o = s;
+            while (o + 8 <= e && depth < 6) {
+                let size = m_u32(b, o), hdr = 8;
+                const type = m_ascii(b, o + 4, 4);
+                if (size === 1) { size = m_u64(b, o + 8); hdr = 16; } else if (size === 0) size = e - o;
+                if (size < hdr || o + size > e) break;
+                if (type === 'mvhd' && out.duration === undefined) {
+                    const v = b[o + hdr];
+                    const ts = v === 1 ? m_u32(b, o + hdr + 20) : m_u32(b, o + hdr + 12);
+                    const dur = v === 1 ? m_u64(b, o + hdr + 24) : m_u32(b, o + hdr + 16);
+                    if (ts > 0) out.duration = dur / ts;
+                } else if (type === 'tkhd' && out.width === undefined) {
+                    const v = b[o + hdr], w = o + hdr + (v === 1 ? 84 : 72);
+                    const width = m_u32(b, w) / 65536, height = m_u32(b, w + 4) / 65536;
+                    if (width > 0 && height > 0) { out.width = Math.round(width); out.height = Math.round(height); }
+                } else if (type === 'trak' || type === 'moov') walk(o + hdr, o + size, depth + 1);
+                o += size;
+            }
+        };
+        walk(start, end, 0);
+        return out;
+    }
+    async function mp4Info(file, head) {
+        // top-level boxes: moov is at the front (fast start) or at the end; read it wherever it is
+        let o = 0;
+        const total = file.size;
+        for (let i = 0; i < 64 && o + 8 <= total; i++) {
+            const h = o + 16 <= head.length && o >= 0 && head.length > o ? head.subarray(o, o + 16) : await m_readRange(file, o, o + 16);
+            if (!h || h.length < 8) return null;
+            let size = m_u32(h, 0), hdr = 8;
+            const type = m_ascii(h, 4, 4);
+            if (size === 1) { if (h.length < 16) return null; size = m_u64(h, 8); hdr = 16; } else if (size === 0) size = total - o;
+            if (size < hdr) return null;
+            if (type === 'moov') {
+                if (size > 64 * 1048576) return null;   // a header that large is not a real moov
+                const body = await m_readRange(file, o, o + size);
+                if (!body || body.length < size) return null;
+                const r = mp4FromMoov(body, hdr, size);
+                return r.duration === undefined ? null : r;
+            }
+            o += size;
+        }
+        return null;
+    }
+    function wavInfo(b) {
+        let o = 12, rate = 0, align = 0, bytes = -1;
+        while (o + 8 <= b.length) {
+            const id = m_ascii(b, o, 4), size = m_le32(b, o + 4);
+            if (id === 'fmt ' && o + 20 <= b.length) { rate = m_le32(b, o + 12); align = b[o + 20] | (b[o + 21] << 8); }
+            else if (id === 'data') { bytes = size; break; }
+            o += 8 + size + (size & 1);
+        }
+        return rate > 0 && align > 0 && bytes >= 0 ? { duration: bytes / (rate * align) } : null;
+    }
+    function flacInfo(b) {
+        let o = 4;
+        while (o + 4 <= b.length) {
+            const type = b[o] & 127, len = (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
+            if (type === 0 && len >= 18 && o + 4 + 18 <= b.length) {
+                const d = o + 4, rate = (b[d + 10] << 12) | (b[d + 11] << 4) | (b[d + 12] >> 4);
+                const samples = (b[d + 13] & 15) * 4294967296 + m_u32(b, d + 14);
+                return rate > 0 && samples > 0 ? { duration: samples / rate } : null;
+            }
+            if (b[o] & 128) break;
+            o += 4 + len;
+        }
+        return null;
+    }
+    function oggInfo(head, tail) {
+        // the first page names the codec and the sample rate; the granule position of the last page is the total length
+        if (head.length < 64) return null;
+        let rate = 0, preSkip = 0;
+        const seg = head[26], p = 27 + seg;
+        if (m_ascii(head, p + 1, 6) === 'vorbis') rate = m_le32(head, p + 12);
+        else if (m_ascii(head, p, 8) === 'OpusHead') { rate = 48000; preSkip = head[p + 10] | (head[p + 11] << 8); }
+        else if (m_ascii(head, p + 1, 4) === 'FLAC') return null;
+        if (!rate) return null;
+        for (let i = tail.length - 14; i >= 0; i--) {
+            if (tail[i] === 79 && tail[i + 1] === 103 && tail[i + 2] === 103 && tail[i + 3] === 83) {   // OggS
+                const lo = m_le32(tail, i + 6), hi = m_le32(tail, i + 10);
+                if (hi === 0xFFFFFFFF && lo === 0xFFFFFFFF) continue;
+                const g = hi * 4294967296 + lo - preSkip;
+                return g > 0 ? { duration: g / rate } : null;
+            }
+        }
+        return null;
+    }
+    function webmInfo(b) {
+        // EBML: Segment > Info > TimecodeScale (default 1,000,000 ns) and Duration (a float, in timecode units)
+        const readId = (o) => { let n = 1; const f = b[o]; if (f === undefined) return null; for (let m = 128; n < 5 && !(f & m); m >>= 1) n++; let v = 0; for (let i = 0; i < n; i++) v = v * 256 + b[o + i]; return { id: v, len: n }; };
+        const readSize = (o) => { const f = b[o]; if (f === undefined) return null; let n = 1; for (let m = 128; n < 9 && !(f & m); m >>= 1) n++; let v = f & (255 >> n); let unknown = v === (255 >> n); for (let i = 1; i < n; i++) { v = v * 256 + b[o + i]; if (b[o + i] !== 255) unknown = false; } return { size: unknown ? -1 : v, len: n }; };
+        let scale = 1000000, duration = null;
+        const walk = (s, e, depth) => {
+            let o = s;
+            while (o < e && o < b.length && depth < 5) {
+                const id = readId(o); if (!id) return;
+                const sz = readSize(o + id.len); if (!sz) return;
+                const body = o + id.len + sz.len;
+                const end = sz.size < 0 ? e : body + sz.size;
+                if (id.id === 0x18538067 || id.id === 0x1549A966) walk(body, Math.min(end, b.length), depth + 1);   // Segment, Info
+                else if (id.id === 0x2AD7B1 && sz.size > 0 && sz.size <= 8) { let v = 0; for (let i = 0; i < sz.size; i++) v = v * 256 + b[body + i]; scale = v; }
+                else if (id.id === 0x4489 && (sz.size === 4 || sz.size === 8)) { const dv = new DataView(b.buffer, b.byteOffset + body, sz.size); duration = sz.size === 4 ? dv.getFloat32(0) : dv.getFloat64(0); }
+                if (end > b.length && sz.size >= 0) return;
+                o = end;
+            }
+        };
+        walk(0, b.length, 0);
+        return duration !== null && isFinite(duration) && duration >= 0 ? { duration: duration * scale / 1e9 } : null;
+    }
+    function mp3Info(b, size) {
+        let o = 0;
+        if (m_ascii(b, 0, 3) === 'ID3' && b.length > 10) o = 10 + (((b[6] & 127) << 21) | ((b[7] & 127) << 14) | ((b[8] & 127) << 7) | (b[9] & 127));
+        for (let tries = 0; o + 4 < b.length && tries < 4096; o++, tries++) {
+            if (b[o] !== 255 || (b[o + 1] & 224) !== 224) continue;
+            const ver = (b[o + 1] >> 3) & 3, layer = (b[o + 1] >> 1) & 3, br = b[o + 2] >> 4, sr = (b[o + 2] >> 2) & 3;
+            if (ver === 1 || layer === 0 || br === 0 || br === 15 || sr === 3) continue;
+            const rates = [[44100, 48000, 32000], [22050, 24000, 16000], [22050, 24000, 16000]];   // ver 3 = MPEG1, 2 = MPEG2, 0 = MPEG2.5
+            const rate = ver === 3 ? rates[0][sr] : (ver === 2 ? rates[1][sr] : rates[2][sr] / 2);
+            const t1 = [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448], t2 = [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384], t3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+            const t4 = [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256], t5 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+            const table = ver === 3 ? (layer === 3 ? t1 : (layer === 2 ? t2 : t3)) : (layer === 3 ? t4 : t5);
+            const kbps = table[br];
+            const samplesPerFrame = layer === 3 ? 384 : ((layer === 1 && ver !== 3) ? 576 : 1152);
+            // a Xing / Info header (VBR) says the frame count; otherwise the bit rate of the first frame is taken as constant
+            const side = ver === 3 ? ((b[o + 3] >> 6) === 3 ? 17 : 32) : ((b[o + 3] >> 6) === 3 ? 9 : 17);
+            const x = o + 4 + side;
+            if (x + 12 <= b.length && (m_ascii(b, x, 4) === 'Xing' || m_ascii(b, x, 4) === 'Info') && (b[x + 7] & 1)) return { duration: m_u32(b, x + 8) * samplesPerFrame / rate };
+            const audioBytes = size - o;
+            return audioBytes > 0 ? { duration: audioBytes * 8 / (kbps * 1000) } : null;
+        }
+        return null;
+    }
+    /**
+     * How long is this audio or video file? Read from the file header, no <audio> / <video> element, so it works in Node, workers and tests.
+     *   await FileValidator.readMediaInfo(file) -> { duration: 63.2, width?, height?, format: 'mp4' } | null
+     * MP4 / MOV / M4A / 3GP (also when the moov box is at the end), WAV, FLAC, Ogg (Vorbis, Opus), WebM / MKV, MP3 (the Xing header, else a constant bit rate is assumed).
+     * null: not one of those, damaged, or the header does not say. maxDurationSec / minDurationSec use this first and the browser element only as a fallback.
+     */
+    async function readMediaInfoFromHeader(file) {
+        if (!file || typeof file.size !== 'number') return null;
+        const head = await m_readRange(file, 0, 262144);
+        if (!head || head.length < 12) return null;
+        let info = null, format = null;
+        try {
+            if (m_ascii(head, 4, 4) === 'ftyp' || ['moov', 'mdat', 'free', 'wide'].indexOf(m_ascii(head, 4, 4)) >= 0) { format = 'mp4'; info = await mp4Info(file, head); }
+            else if (m_ascii(head, 0, 4) === 'RIFF' && m_ascii(head, 8, 4) === 'WAVE') { format = 'wav'; info = wavInfo(head); }
+            else if (m_ascii(head, 0, 4) === 'fLaC') { format = 'flac'; info = flacInfo(head); }
+            else if (m_ascii(head, 0, 4) === 'OggS') { format = 'ogg'; const tail = await m_readRange(file, Math.max(0, file.size - 65536), file.size); info = tail ? oggInfo(head, tail) : null; }
+            else if (head[0] === 0x1A && head[1] === 0x45 && head[2] === 0xDF && head[3] === 0xA3) { format = 'webm'; info = webmInfo(head); }
+            else if (m_ascii(head, 0, 3) === 'ID3' || (head[0] === 255 && (head[1] & 224) === 224)) { format = 'mp3'; info = mp3Info(head, file.size); }
+        } catch (e) { info = null; }
+        return info && isFinite(info.duration) && info.duration >= 0 ? Object.assign({ format }, info) : null;
+    }
+
     // ------------------------------------------------------------------ single file
     async function validateFile(file, config, groupCtx) {
         config = normalizeConfig(config);
@@ -1371,7 +1544,7 @@ const api = (function (root) {
         // ---- audio / video duration
         if ((category === 'audio' || category === 'video') && (isNum(cfg.maxDurationSec) || isNum(cfg.minDurationSec))) {
             let info = null;
-            try { info = await (isFn(cfg.readMediaInfo) ? cfg.readMediaInfo(file) : readMediaInfoDefault(file, category, cfg.imageTimeoutMs || 10000)); }
+            try { info = await (isFn(cfg.readMediaInfo) ? cfg.readMediaInfo(file) : ((await readMediaInfoFromHeader(file)) || readMediaInfoDefault(file, category, cfg.imageTimeoutMs || 10000))); }
             catch (e) { if (cfg.requireMediaInfo) add('INVALID_MEDIA'); }
             if (info && isFinite(info.duration)) {
                 if (isNum(cfg.maxDurationSec) && info.duration > cfg.maxDurationSec) add('DURATION_TOO_LONG', { max: formatDuration(cfg.maxDurationSec), duration: formatDuration(info.duration) });
@@ -1603,7 +1776,7 @@ const api = (function (root) {
     }
 
     return {
-        version: '2.11.0',
+        version: '2.12.0',
         validateFiles,   // async (FileList | File[] | File | <input>, config)
         isValid,         // async (files | <input> | selector, config) -> true / false
         guard,           // (input, config, { onSubmit, messageElement }) : check the file input when its form is submitted, direct or AJAX
@@ -1619,6 +1792,7 @@ const api = (function (root) {
         hashFile,        // async (File, maxMB) -> SHA-256 hex, or null when over maxMB (files above 32 MB are hashed as a stream)
         _sha256Stream: sha256Stream,
         formatDuration,
+        readMediaInfo: readMediaInfoFromHeader, // async (File) -> { duration, width?, height?, format } | null, read from the header: MP4 / MOV / WAV / FLAC / Ogg / WebM / MP3, no browser needed
         errorMessages,
         getMessage,
         summary,
@@ -3045,9 +3219,10 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.19.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.20.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.20.0 A rule can declare dependsOn (another field) so a form re-checks it when that field changes; countryField does the same for the inputs add-on.
  *   2.19.0 FormValidator.fromZod() / fromYup(): rules from an existing Zod 4 or Yup schema.
  *   2.18.0 FormValidator.htmx() cancels the HTMX request of an invalid form; auto() destroys the forms a swap removed.
  *   2.17.0 onFieldStats option and inst.getFieldStats(); unknown-rule warnings name the field, suggest the closest rule and point at the init() call.
@@ -3619,6 +3794,8 @@ const api = (function (root) {
         if (r.type === 'equalTo' || r.type === 'notEqualTo') return r.target ? [String(r.target).replace(/^#/, '')] : [];
         if (r.type === 'requiredIf' || r.type === 'dateAfter' || r.type === 'dateBefore') return r.field ? [String(r.field)] : [];
         if (r.type === 'atLeastOne' || r.type === 'sumEquals') return ruleFields(r).map(String);
+        if (r.countryField) return [String(r.countryField)];   // postalCode / phoneCountry (inputs add-on) follow the country field
+        if (r.dependsOn) return [].concat(r.dependsOn).map(String);   // your own rule that reads another field
         return [];
     };
     // requiredIf: { field: 'country', equals: 'US' } | { field, in: ['US','CA'] } | { field, notEquals: 'x' } | 'country' (required whenever that field is filled in)
@@ -6664,7 +6841,7 @@ const api = (function (root) {
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.19.0'
+        version: '2.20.0'
     }, CORE ? {} : {
         fromZod,       // (zodSchema, { onUnsupported }) -> rules, read from a Zod 4 schema (Zod itself is not loaded)
         fromYup,       // (yupSchema, { onUnsupported }) -> rules, read from a Yup schema through describe()
@@ -7425,16 +7602,18 @@ const api = (function (root) {
 
     mods["formValidator.inputs"] = function (module, exports, require, define) {
 /*!
- * FormValidator inputs add-on v1.0.0 — one-time-code fields and numbers / dates typed the way the visitor's country writes them.
+ * FormValidator inputs add-on v1.1.0 — one-time-code fields and numbers / dates typed the way the visitor's country writes them.
  *
  *   FormValidator.otp('#code', { length: 6, name: 'code', onComplete: code => form.requestSubmit() })   // 6 boxes, paste and SMS autofill spread over them, WebOTP optional
  *   FormValidator.parseNumber('1.234,56', 'de')       // 1234.56   (NaN when it is not a number written that way)
  *   FormValidator.parseDate('22.11.2033', 'de')       // '2033-11-22'  (null for 31.02.2033, 22/11/33 -> 2033-11-22 with a two-digit year)
+ *   rules: { zip: { postalCode: { countryField: 'country' } }, phone: { phoneCountry: { country: 'GB' } } }   // postal code / phone plausibility per country (FormValidator.regions)
  *   rules: { price: { localeNumber: { locale: 'de', min: 0, decimals: 2 } }, born: { localeDate: { locale: 'en-GB', max: '2010-01-01' } } }
  *
  * Part of the one-file bundle; on its own it needs formValidator.js loaded first. No data leaves the page: the separators and the day / month / year order come from the browser's Intl.
  *
  * Changelog
+ *   1.1.0  postalCode / phoneCountry rules and FormValidator.regions: postal code and phone plausibility for about 60 countries (the data lives only in this add-on, the core stays small).
  *   1.0.0  First release.
  */
 (function (root, factory) {
@@ -7688,10 +7867,75 @@ const api = (function (root) {
         };
     }
 
+    // ------------------------------------------------------------------ postal codes and phone numbers by country (a plausibility check, not a registry)
+    // Postal codes: the national format. A country that has no postal code system is not listed and accepts anything.
+    const POSTAL = {
+        US: '\\d{5}(?:-\\d{4})?', CA: '[ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z][ -]?\\d[ABCEGHJ-NPRSTV-Z]\\d', GB: '(?:GIR ?0AA|[A-PR-UWYZ](?:\\d{1,2}|[A-HK-Y]\\d(?:[\\dABEHMNPRV-Y])?|\\d[A-HJKPS-UW]) ?\\d[ABD-HJLNP-UW-Z]{2})',
+        DE: '\\d{5}', FR: '\\d{5}', ES: '(?:0[1-9]|[1-4]\\d|5[0-2])\\d{3}', IT: '\\d{5}', NL: '[1-9]\\d{3} ?[A-Z]{2}', BE: '[1-9]\\d{3}', AT: '\\d{4}', CH: '[1-9]\\d{3}', LI: '94\\d{2}',
+        SE: '\\d{3} ?\\d{2}', NO: '\\d{4}', DK: '\\d{4}', FI: '\\d{5}', IS: '\\d{3}', PL: '\\d{2}-\\d{3}', PT: '\\d{4}-\\d{3}', IE: '[AC-FHKNPRTV-Y]\\d{2} ?[0-9AC-FHKNPRTV-Y]{4}',
+        LU: '\\d{4}', CZ: '\\d{3} ?\\d{2}', SK: '\\d{3} ?\\d{2}', HU: '\\d{4}', RO: '\\d{6}', GR: '\\d{3} ?\\d{2}', BG: '\\d{4}', HR: '\\d{5}', SI: '\\d{4}', UA: '\\d{5}', RU: '\\d{6}', TR: '\\d{5}',
+        AU: '\\d{4}', NZ: '\\d{4}', JP: '\\d{3}-?\\d{4}', CN: '\\d{6}', KR: '\\d{5}', IN: '[1-9]\\d{5}', PK: '\\d{5}', BD: '\\d{4}', ID: '\\d{5}', VN: '\\d{6}', TH: '\\d{5}', MY: '\\d{5}', PH: '\\d{4}', SG: '\\d{6}',
+        BR: '\\d{5}-?\\d{3}', MX: '\\d{5}', AR: '(?:[A-Z]\\d{4}[A-Z]{3}|\\d{4})', CL: '\\d{7}', CO: '\\d{6}', PE: '\\d{5}',
+        ZA: '\\d{4}', EG: '\\d{5}', SA: '\\d{5}(?:-\\d{4})?', IL: '\\d{5}(?:\\d{2})?', MA: '\\d{5}', NG: '\\d{6}', KE: '\\d{5}'
+    };
+    // Phones: [calling code, shortest, longest national number (digits after the country code, without the trunk 0)]
+    const PHONE = {
+        US: [1, 10, 10], CA: [1, 10, 10], GB: [44, 9, 10], DE: [49, 7, 13], FR: [33, 9, 9], ES: [34, 9, 9], IT: [39, 6, 11], NL: [31, 9, 9], BE: [32, 8, 9], AT: [43, 7, 13], CH: [41, 9, 9],
+        SE: [46, 7, 10], NO: [47, 8, 8], DK: [45, 8, 8], FI: [358, 6, 10], PL: [48, 9, 9], PT: [351, 9, 9], IE: [353, 7, 9], CZ: [420, 9, 9], GR: [30, 10, 10], HU: [36, 8, 9], RO: [40, 9, 9],
+        UA: [380, 9, 9], RU: [7, 10, 10], TR: [90, 10, 10], AU: [61, 9, 9], NZ: [64, 8, 10], JP: [81, 9, 10], CN: [86, 10, 11], KR: [82, 9, 10], IN: [91, 10, 10], PK: [92, 10, 10],
+        BD: [880, 10, 10], ID: [62, 8, 12], VN: [84, 9, 10], TH: [66, 8, 9], MY: [60, 7, 10], PH: [63, 10, 10], SG: [65, 8, 8], HK: [852, 8, 8], BR: [55, 10, 11], MX: [52, 10, 10],
+        AR: [54, 10, 11], CL: [56, 9, 9], CO: [57, 10, 10], ZA: [27, 9, 9], EG: [20, 9, 10], SA: [966, 9, 9], AE: [971, 8, 9], IL: [972, 8, 9], NG: [234, 8, 10], KE: [254, 9, 9]
+    };
+    const KEEPS_ZERO = { US: 1, CA: 1, IT: 1, RU: 1 };   // the leading 0 is part of the number there (or there is no trunk 0)
+    const postalCache = {};
+    const upper = c => String(c === undefined || c === null ? '' : c).trim().toUpperCase();
+    /** isPostalCode('SW1A 1AA', 'GB') -> true | false | null (null: no rule for that country, so nothing can be said). */
+    function isPostalCode(value, country) {
+        const c = upper(country);
+        if (!Object.prototype.hasOwnProperty.call(POSTAL, c)) return null;
+        const re = postalCache[c] || (postalCache[c] = new RegExp('^' + POSTAL[c] + '$', 'i'));
+        return re.test(String(value).trim());
+    }
+    /** isPhone('+44 20 7946 0958', 'GB') or isPhone('020 7946 0958', 'GB') -> true | false | null. Checks the prefix and the length, not whether the number exists. */
+    function isPhone(value, country) {
+        const c = upper(country);
+        if (!Object.prototype.hasOwnProperty.call(PHONE, c)) return null;
+        const cc = String(PHONE[c][0]), min = PHONE[c][1], max = PHONE[c][2];
+        const text = String(value).trim();
+        if (!/^\+?[\d\s\-().\/]+$/.test(text)) return false;
+        let digits = text.replace(/\D/g, '');
+        const intl = text.charAt(0) === '+' || (digits.indexOf('00') === 0 && digits.length > 6);
+        if (intl) {
+            if (text.charAt(0) !== '+') digits = digits.slice(2);
+            if (digits.indexOf(cc) !== 0) return false;
+            let rest = digits.slice(cc.length);
+            if (rest.charAt(0) === '0' && !KEEPS_ZERO[c]) rest = rest.slice(1);   // +44 (0) 20 ...
+            return rest.length >= min && rest.length <= max;
+        }
+        if (digits.charAt(0) === '0' && !KEEPS_ZERO[c]) digits = digits.slice(1);
+        else if (c === 'RU' && digits.charAt(0) === '8') digits = digits.slice(1);
+        else if ((c === 'US' || c === 'CA') && digits.length === 11 && digits.charAt(0) === '1') digits = digits.slice(1);
+        return digits.length >= min && digits.length <= max;
+    }
+    const countryOf = (r, env) => {
+        if (r.countryField) {
+            const vals = env.values || (env.inst && typeof env.inst.getValues === 'function' ? env.inst.getValues() : null);
+            const v = vals ? vals[r.countryField] : undefined;
+            return upper(Array.isArray(v) ? v[0] : v);
+        }
+        return upper(r.country !== undefined ? r.country : r.param);
+    };
+    // postalCode: { country: 'GB' } | { countryField: 'country' } (the value of another field decides; an unknown country accepts anything)
+    FV.registerRule('postalCode', (v, r, env) => isPostalCode(v, countryOf(r, env)) !== false);
+    FV.registerRule('phoneCountry', (v, r, env) => isPhone(v, countryOf(r, env)) !== false);
+    if (!FV.messages.postalCode) FV.messages.postalCode = 'Please enter a valid postal code.';
+    if (!FV.messages.phoneCountry) FV.messages.phoneCountry = 'Please enter a valid phone number.';
+    FV.regions = { postalCodes: Object.keys(POSTAL), phoneCountries: Object.keys(PHONE), callingCode: c => { const e = PHONE[upper(c)]; return e ? e[0] : null; }, isPostalCode, isPhone };
+
     FV.parseNumber = parseNumber;
     FV.parseDate = parseDate;
     FV.otp = otp;
-    return { parseNumber, parseDate, otp, numberSymbols, dateOrder };
+    return { parseNumber, parseDate, otp, numberSymbols, dateOrder, regions: FV.regions };
 });
 
     };
@@ -9788,7 +10032,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.11.0","fileValidator.widget":"1.6.0","fileValidator.upload":"1.1.0","fileValidator.image":"1.0.0","formValidator":"2.19.0","formValidator.element":"1.1.0","formValidator.password":"1.0.0","formValidator.inputs":"1.0.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.12.0","fileValidator.widget":"1.6.0","fileValidator.upload":"1.1.0","fileValidator.image":"1.0.0","formValidator":"2.20.0","formValidator.element":"1.1.0","formValidator.password":"1.0.0","formValidator.inputs":"1.1.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;

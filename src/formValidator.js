@@ -1,7 +1,8 @@
 /*!
- * FormValidator v2.19.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.20.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.20.0 A rule can declare dependsOn (another field) so a form re-checks it when that field changes; countryField does the same for the inputs add-on.
  *   2.19.0 FormValidator.fromZod() / fromYup(): rules from an existing Zod 4 or Yup schema.
  *   2.18.0 FormValidator.htmx() cancels the HTMX request of an invalid form; auto() destroys the forms a swap removed.
  *   2.17.0 onFieldStats option and inst.getFieldStats(); unknown-rule warnings name the field, suggest the closest rule and point at the init() call.
@@ -573,6 +574,8 @@
         if (r.type === 'equalTo' || r.type === 'notEqualTo') return r.target ? [String(r.target).replace(/^#/, '')] : [];
         if (r.type === 'requiredIf' || r.type === 'dateAfter' || r.type === 'dateBefore') return r.field ? [String(r.field)] : [];
         if (r.type === 'atLeastOne' || r.type === 'sumEquals') return ruleFields(r).map(String);
+        if (r.countryField) return [String(r.countryField)];   // postalCode / phoneCountry (inputs add-on) follow the country field
+        if (r.dependsOn) return [].concat(r.dependsOn).map(String);   // your own rule that reads another field
         return [];
     };
     // requiredIf: { field: 'country', equals: 'US' } | { field, in: ['US','CA'] } | { field, notEquals: 'x' } | 'country' (required whenever that field is filled in)
@@ -3618,7 +3621,7 @@
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.19.0'
+        version: '2.20.0'
     }, CORE ? {} : {
         fromZod,       // (zodSchema, { onUnsupported }) -> rules, read from a Zod 4 schema (Zod itself is not loaded)
         fromYup,       // (yupSchema, { onUnsupported }) -> rules, read from a Yup schema through describe()

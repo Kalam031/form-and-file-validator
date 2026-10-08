@@ -55,6 +55,8 @@
         mask: "Bitte vervollständigen Sie dieses Feld.",
         pwscore: "Bitte wählen Sie ein stärkeres Passwort.",
         pwned: "Dieses Passwort ist in einem Datenleck aufgetaucht. Bitte wählen Sie ein anderes.",
+        postalCode: "Bitte geben Sie eine gültige Postleitzahl ein.",
+        phoneCountry: "Bitte geben Sie eine gültige Telefonnummer ein.",
         dateAfter: "Bitte geben Sie ein späteres Datum ein.",
         dateBefore: "Bitte geben Sie ein früheres Datum ein.",
         atLeastOne: "Bitte füllen Sie mindestens eines dieser Felder aus.",
