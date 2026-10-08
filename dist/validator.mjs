@@ -1232,7 +1232,7 @@ const api = (function (root) {
                     const dur = v === 1 ? m_u64(b, o + hdr + 24) : m_u32(b, o + hdr + 16);
                     if (ts > 0) out.duration = dur / ts;
                 } else if (type === 'tkhd' && out.width === undefined) {
-                    const v = b[o + hdr], w = o + hdr + (v === 1 ? 84 : 72);
+                    const v = b[o + hdr], w = o + hdr + (v === 1 ? 88 : 76);
                     const width = m_u32(b, w) / 65536, height = m_u32(b, w + 4) / 65536;
                     if (width > 0 && height > 0) { out.width = Math.round(width); out.height = Math.round(height); }
                 } else if (type === 'trak' || type === 'moov') walk(o + hdr, o + size, depth + 1);

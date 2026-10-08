@@ -16,7 +16,7 @@ function mp4({ seconds, timescale = 1000, moovFirst = true, w = 0, h = 0, versio
     const mvhd = version === 1
         ? box('mvhd', Buffer.from([1, 0, 0, 0]), Buffer.alloc(16), be32(timescale), Buffer.concat([be32(0), be32(Math.round(seconds * timescale))]), Buffer.alloc(80))
         : box('mvhd', Buffer.from([0, 0, 0, 0]), Buffer.alloc(8), be32(timescale), be32(Math.round(seconds * timescale)), Buffer.alloc(80));
-    const tkhd = box('tkhd', Buffer.from([0, 0, 0, 3]), Buffer.alloc(68), be32(w * 65536), be32(h * 65536));
+    const tkhd = box('tkhd', Buffer.from([0, 0, 0, 3]), Buffer.alloc(72), be32(w * 65536), be32(h * 65536));
     const moov = box('moov', mvhd, box('trak', tkhd));
     const ftyp = box('ftyp', Buffer.from('isom'), be32(512), Buffer.from('isom'));
     const mdat = box('mdat', Buffer.alloc(400000, 7));

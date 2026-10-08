@@ -134,13 +134,17 @@ test('fv CLI: check, export, import (Zod, Yup, Joi, JSON Schema), migrate, rules
     const yupFile = write('yupschema.cjs', "const yup = require(" + JSON.stringify(require.resolve('yup')) + "); module.exports = yup.object({ email: yup.string().email().required(), n: yup.number().min(1) });");
     r = cli('import', yupFile, '--from', 'yup');
     assert.deepEqual(JSON.parse(r.stdout).email, ['required', 'email']);
-    const joiFile = write('joischema.cjs', "const Joi = require(" + JSON.stringify(require.resolve('joi')) + "); module.exports = Joi.object({ name: Joi.string().required().min(2).max(10), age: Joi.number().integer().min(18), plan: Joi.string().valid('a', 'b'), rows: Joi.array().items(Joi.object({ q: Joi.number().required() })).min(1) });");
-    r = cli('import', joiFile, '--from', 'joi');
-    assert.equal(r.status, 0, r.stderr);
-    const joiRules = JSON.parse(r.stdout);
-    assert.deepEqual(Object.keys(joiRules).sort(), ['age', 'name', 'plan', 'rows', 'rows[].q']);
-    assert.equal(FormValidator.checkValues({ name: 'A', age: 20, plan: 'a', rows: [{ q: '1' }] }, joiRules).valid, false);
-    assert.equal(FormValidator.checkValues({ name: 'Ann', age: 20, plan: 'a', rows: [{ q: '1' }] }, joiRules).valid, true);
+    let joi = null;
+    try { joi = require.resolve('joi'); } catch (e) { /* joi 18 needs a newer Node */ }
+    const joiFile = write('joischema.cjs', "const Joi = require(" + JSON.stringify(joi || 'joi') + "); module.exports = Joi.object({ name: Joi.string().required().min(2).max(10), age: Joi.number().integer().min(18), plan: Joi.string().valid('a', 'b'), rows: Joi.array().items(Joi.object({ q: Joi.number().required() })).min(1) });");
+    if (joi) {
+        r = cli('import', joiFile, '--from', 'joi');
+        assert.equal(r.status, 0, r.stderr);
+        const joiRules = JSON.parse(r.stdout);
+        assert.deepEqual(Object.keys(joiRules).sort(), ['age', 'name', 'plan', 'rows', 'rows[].q']);
+        assert.equal(FormValidator.checkValues({ name: 'A', age: 20, plan: 'a', rows: [{ q: '1' }] }, joiRules).valid, false);
+        assert.equal(FormValidator.checkValues({ name: 'Ann', age: 20, plan: 'a', rows: [{ q: '1' }] }, joiRules).valid, true);
+    }
     r = cli('import', write('s.json', JSON.stringify({ type: 'object', required: ['a'], properties: { a: { type: 'string', format: 'email' } } })), '--from', 'json-schema');
     assert.deepEqual(JSON.parse(r.stdout).a, ['required', 'email']);
 
@@ -157,8 +161,9 @@ test('fv CLI: check, export, import (Zod, Yup, Joi, JSON Schema), migrate, rules
     assert.equal(cli('--version').stdout.trim(), require('../package.json').version);
 });
 
-test('ESLint plugin: unknown rules in init / schema / checkValue / useFormValidator, skips what it cannot read', async () => {
-    const { Linter } = require('eslint');
+test('ESLint plugin: unknown rules in init / schema / checkValue / useFormValidator, skips what it cannot read', async t => {
+    let Linter;
+    try { ({ Linter } = require('eslint')); } catch (e) { return t.skip('eslint does not load on this Node (' + process.version + ')'); }
     const plugin = require('../tools/eslint-plugin.js');
     const linter = new Linter();
     const run = code => linter.verify(code, [plugin.configs.recommended], { filename: 'x.js' });
