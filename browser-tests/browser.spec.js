@@ -585,7 +585,7 @@ for (const b of BROWSERS) {
                 const r = await page.evaluate(async ignoreTag => {
                     if (ignoreTag) {      // an older browser: decodes the pixels as stored and never reads the EXIF tag (simulated by dropping the APP1 segment before decoding)
                         const orig = window.createImageBitmap.bind(window);
-                        window.createImageBitmap = async (src, ...rest) => { if (!src || typeof src.arrayBuffer !== 'function') return orig(src, ...rest); const b = new Uint8Array(await src.arrayBuffer()); if (b[2] === 0xff && b[3] === 0xe1) src = new Blob([b.subarray(0, 2), b.subarray(4 + ((b[4] << 8) | b[5]))], { type: 'image/jpeg' }); return orig(src, ...rest); };
+                        window.createImageBitmap = async (src, ...rest) => { if (!src || typeof src.arrayBuffer !== 'function') return orig(src, ...rest); const b = new Uint8Array(await src.arrayBuffer()); if (b[2] === 0xff && b[3] === 0xe1) { const rest = b.subarray(4 + ((b[4] << 8) | b[5])), joined = new Uint8Array(2 + rest.length); joined.set(b.subarray(0, 2), 0); joined.set(rest, 2); src = new Blob([joined], { type: 'image/jpeg' }); }   // one piece: Firefox cannot sniff a picture from a 2-byte first part return orig(src, ...rest); };
                     }
                     // 200 x 100 picture, left half red, right half blue, with EXIF orientation 6 (shown turned clockwise: 100 x 200, red on top)
                     const raw = await halves(200, 100, 'image/jpeg');
