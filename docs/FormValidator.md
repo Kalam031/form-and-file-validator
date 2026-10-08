@@ -373,6 +373,19 @@ FormValidator.schema(rules).safeParse(body);
 - **What JSON Schema cannot say** (`equalTo`, `requiredIf`, `dateAfter`, `pwcheck`, `mask`, `unique` on a column of rows, your own rules) is kept in an **`x-fv-rules`** annotation that validators ignore and `fromJsonSchema` reads back: rules, schema, rules, schema is stable.
 - `fromJsonSchema` follows local `$ref` (`$defs`, `definitions`), merges `allOf`, and reports what it skips (`anyOf` / `oneOf`, `not`, `if`, `patternProperties`, remote refs, `exclusiveMinimum`) to `onUnsupported`; it never throws and ignores hostile keys. Checked against Ajv with the same payloads. Part of the core build.
 
+### Coming from Zod or Yup
+
+`FormValidator.fromZod(schema)` (Zod 4) and `FormValidator.fromYup(schema)` read an existing schema and give back rules, so the form and the server can keep one definition without rewriting it. Neither library is loaded by this one; the schema you pass is read through its own public description (`_zod.def`, `describe()`).
+
+```js
+const rules = FormValidator.fromZod(z.object({ email: z.email(), age: z.number().int().min(18).optional(), items: z.array(z.object({ qty: z.number().min(1) })).min(1) }), { onUnsupported: (path, what) => console.warn(path, what) });
+FormValidator.init('#signup', { rules });
+```
+
+- Read: required (non-optional) fields, string `min` / `max` / `length` / `regex` / `email` / `url` / `uuid` / `startsWith` / `endsWith`, number `int` / `min` / `max` / `multipleOf`, `enum`, `literal`, nested objects (`a.b`), arrays of objects (`a[].b`), `optional` / `nullable` / `default` / `pipe` / `coerce` (the input side). Yup: `required`, `min` / `max` / `length`, `email` / `url` / `uuid` / `matches`, `integer`, `oneOf`, nested `object()` and `array().of()`.
+- Reported to `onUnsupported(path, what)` and skipped: `refine` / `test()` functions, `union`, exclusive bounds (`positive()`, `gt`), regex flags, `when()`, `lazy`. Add those with your own rule. Both functions never throw.
+
+
 ### Messages: plurals, labels, a language per call, error formats and email suggestions
 
 **ICU plurals and select** in your own messages: `{min, plural, one {# character} other {# characters}}`, `=0 {none}`, `offset:1`, `{kind, select, f {She} m {He} other {They}}`. `#` is the number; the categories follow the language (Russian one / few / many, Arabic zero / two ...). Plain `{min}` placeholders work as before, and unbalanced or unknown input is left as written.

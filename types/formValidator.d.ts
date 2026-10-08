@@ -631,6 +631,10 @@ export interface FormValidatorStatic {
     toJsonSchema(rules: Record<string, RulesForField>, options?: { title?: string; additionalProperties?: boolean }): Record<string, any>;
     /** A JSON Schema / OpenAPI schema object as rules; skipped keywords go to onUnsupported. */
     fromJsonSchema(schema: unknown, options?: { onUnsupported?: (path: string, keyword: string) => void }): Record<string, RulesForField>;
+    /** A Zod 4 schema as rules (Zod is not loaded by this library). What has no rule (refine, union, exclusive bounds, regex flags) goes to onUnsupported. */
+    fromZod(schema: unknown, options?: { onUnsupported?: (path: string, what: string) => void }): Record<string, RulesForField>;
+    /** A Yup schema as rules, read through schema.describe(). */
+    fromYup(schema: unknown, options?: { onUnsupported?: (path: string, what: string) => void }): Record<string, RulesForField>;
     /** The error map in another shape: 'flat', 'tree', 'list', 'pretty' or 'problem' (RFC 9457 body). */
     formatErrors(errors: unknown, style?: 'flat' | 'tree' | 'list' | 'pretty' | 'problem', options?: { status?: number; title?: string; type?: string; detail?: string; instance?: string }): any;
     /** "Did you mean ...?" for a mistyped email domain or ending, or null. */

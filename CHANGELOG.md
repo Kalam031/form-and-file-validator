@@ -2,6 +2,9 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.36.0
+- **`FormValidator.fromZod(schema)` / `fromYup(schema)`**: existing Zod 4 and Yup schemas become rules (nested objects, arrays of rows, formats, limits, enums, optional fields); what has no rule is reported to `onUnsupported`. Neither library is loaded. Checked against Zod and Yup with the same payloads.
+
 ## 3.35.0
 - **Rule trace and time travel**: `config.trace` / `inst.enableTrace()` records every check rule by rule (pass, fail, skipped with the reason, pending, stale, milliseconds, trigger, code), `getTrace()` / `onTrace()` / `clearTrace()`, optional values (passwords always hidden) and snapshots so `restoreTrace(entry)` puts the form back to that moment. `FormValidator.devtools(form, { trace: true })` shows it with click-for-detail and a restore button. Off by default.
 

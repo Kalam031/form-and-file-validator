@@ -1,4 +1,4 @@
-/*! FormValidator 2.18.0 + FileValidator 2.11.0 + upload widget 1.6.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
+/*! FormValidator 2.19.0 + FileValidator 2.11.0 + upload widget 1.6.0 + jQuery Validation layer 1.2.0 | one-file bundle | see docs/ */
 const api = (function (root) {
     'use strict';
     var mods = {}, cache = {};
@@ -3045,9 +3045,10 @@ const api = (function (root) {
 
     mods["formValidator"] = function (module, exports, require, define) {
 /*!
- * FormValidator v2.18.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
+ * FormValidator v2.19.0 — dependency-free form validation (jQuery / Select2 / Bootstrap are optional).
  *
  * Changelog
+ *   2.19.0 FormValidator.fromZod() / fromYup(): rules from an existing Zod 4 or Yup schema.
  *   2.18.0 FormValidator.htmx() cancels the HTMX request of an invalid form; auto() destroys the forms a swap removed.
  *   2.17.0 onFieldStats option and inst.getFieldStats(); unknown-rule warnings name the field, suggest the closest rule and point at the init() call.
  *   2.16.0 FormValidator.devtools(form): a live panel (value, pristine/dirty/touched/pending, error and code per field).
@@ -5963,6 +5964,140 @@ const api = (function (root) {
         return fixed;
     }
 
+    // ------------------------------------------------------------------ Zod and Yup schemas as rules
+    // Both are read through their own public description and turned into a JSON Schema node, then fromJsonSchema() does the mapping: one place decides what a keyword means.
+    const ZOD_FORMATS = { email: 'email', url: 'uri', uuid: 'uuid', guid: 'uuid', ipv4: 'ipv4', ipv6: 'ipv6', date: 'date', datetime: 'date-time' };
+    const regexSource = (re, note) => {
+        if (!(re instanceof RegExp)) return undefined;
+        if (re.flags.replace(/[gy]/g, '')) note('regex flags');   // a flag (i, m, s, u) changes the meaning and a JSON Schema pattern has none
+        return re.source;
+    };
+    function zodNode(schema, note, depth) {
+        const d = schema && schema._zod && schema._zod.def;
+        if (!d || depth > 12) { note('unknown schema'); return { node: {}, optional: true }; }
+        const t = d.type;
+        let optional = false;
+        if (t === 'optional' || t === 'default' || t === 'prefault' || t === 'catch' || t === 'nullable' || t === 'readonly' || t === 'nonoptional' || t === 'lazy') {
+            const inner = t === 'lazy' ? (isFn(d.getter) ? guard(d.getter, undefined) : null) : d.innerType;
+            const r = zodNode(inner, note, depth + 1);
+            return { node: r.node, optional: t === 'nonoptional' ? false : (r.optional || t === 'optional' || t === 'default' || t === 'prefault' || t === 'catch') };
+        }
+        if (t === 'pipe') return zodNode(d.in, note, depth + 1);   // coerce / transform: the input side is what the user types
+        const node = {};
+        const checks = (d.checks || []).map(c => c && c._zod && c._zod.def).filter(Boolean);
+        if (t === 'string') {
+            node.type = 'string';
+            if (ZOD_FORMATS[d.format]) node.format = ZOD_FORMATS[d.format]; else if (d.format) note(d.format);
+            checks.forEach(c => {
+                if (c.check === 'min_length') node.minLength = Math.max(node.minLength || 0, c.minimum);
+                else if (c.check === 'max_length') node.maxLength = node.maxLength === undefined ? c.maximum : Math.min(node.maxLength, c.maximum);
+                else if (c.check === 'length_equals') { node.minLength = c.length; node.maxLength = c.length; }
+                else if (c.check === 'string_format' && c.format === 'regex') { const p = regexSource(c.pattern, note); if (p !== undefined && node.pattern === undefined) node.pattern = p; else if (p !== undefined) note('several regex'); }
+                else if (c.check === 'string_format' && ZOD_FORMATS[c.format]) node.format = ZOD_FORMATS[c.format];
+                else if (c.check === 'string_format' && c.format === 'starts_with' && typeof c.prefix === 'string' && node.pattern === undefined) node.pattern = '^' + c.prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                else if (c.check === 'string_format' && c.format === 'ends_with' && typeof c.suffix === 'string' && node.pattern === undefined) node.pattern = c.suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
+                else if (c.check) note(c.check === 'string_format' ? c.format : c.check);
+            });
+        } else if (t === 'number' || t === 'int' || t === 'bigint') {
+            node.type = t === 'number' ? 'number' : 'integer';
+            checks.forEach(c => {
+                if (c.check === 'number_format') { if (/int/.test(String(c.format))) node.type = 'integer'; }
+                else if (c.check === 'greater_than') { if (c.inclusive) node.minimum = Math.max(node.minimum === undefined ? -Infinity : node.minimum, Number(c.value)); else node.exclusiveMinimum = Number(c.value); }
+                else if (c.check === 'less_than') { if (c.inclusive) node.maximum = Math.min(node.maximum === undefined ? Infinity : node.maximum, Number(c.value)); else node.exclusiveMaximum = Number(c.value); }
+                else if (c.check === 'multiple_of') node.multipleOf = Number(c.value);
+                else if (c.check) note(c.check);
+            });
+        } else if (t === 'enum') {
+            const en = d.entries || {}; node.enum = Object.keys(en).filter(k => !(typeof en[k] === 'string' && typeof en[en[k]] === 'number')).map(k => en[k]);   // numeric TypeScript enums list their names twice
+        } else if (t === 'literal') node.enum = (d.values || []).slice();
+        else if (t === 'object') {
+            node.type = 'object'; node.properties = {}; node.required = [];
+            const shape = typeof d.shape === 'function' ? guard(d.shape, undefined) : d.shape;
+            Object.keys(shape || {}).forEach(k => {
+                if (BAD_KEYS.indexOf(k) >= 0) return;
+                const r = zodNode(shape[k], (w) => note(k + ': ' + w), depth + 1);
+                node.properties[k] = r.node;
+                if (!r.optional) node.required.push(k);
+            });
+        } else if (t === 'array') {
+            node.type = 'array';
+            node.items = zodNode(d.element, note, depth + 1).node;
+            checks.forEach(c => {
+                if (c.check === 'min_length') node.minItems = c.minimum;
+                else if (c.check === 'max_length') node.maxItems = c.maximum;
+                else if (c.check === 'length_equals') { node.minItems = c.length; node.maxItems = c.length; }
+                else if (c.check) note(c.check);
+            });
+        } else if (t === 'boolean' || t === 'date' || t === 'any' || t === 'unknown' || t === 'string_bool' || t === 'file') { /* nothing a rule can say */ }
+        else note(t);   // union, intersection, tuple, record, custom ...
+        return { node, optional: false };
+    }
+    /**
+     * A Zod 4 schema as rules: FormValidator.fromZod(z.object({ email: z.email(), age: z.number().int().min(18), items: z.array(z.object({ qty: z.number() })).min(1) })).
+     * Read: object (nested -> 'a.b'), array of objects (-> 'a[].b'), string (min / max / length / regex / email / url / uuid / startsWith / endsWith), number (int, min, max,
+     * multipleOf), enum, literal, optional / nullable / default (not required), pipe / coerce (the input side). Required means a non-optional field. What has no rule
+     * (refine, union, exclusive bounds, regex flags ...) goes to options.onUnsupported(path, what) and is skipped; add those with your own rule. Zod is not loaded by this library.
+     */
+    function fromZod(schema, options) {
+        const o = options || {};
+        const notes = [];
+        const r = zodNode(schema, w => notes.push(w), 0);
+        const rules = fromJsonSchema(r.node, { onUnsupported: o.onUnsupported });
+        if (isFn(o.onUnsupported)) notes.forEach(w => { const i = w.lastIndexOf(': '); guard(o.onUnsupported, undefined, i < 0 ? '' : w.slice(0, i).replace(/: /g, '.'), i < 0 ? w : w.slice(i + 2)); });
+        return rules;
+    }
+    function yupNode(d, note, depth) {
+        const node = {};
+        if (!d || depth > 12) return node;
+        const ty = d.type;
+        if (ty === 'string') node.type = 'string'; else if (ty === 'number') node.type = 'number'; else if (ty === 'array') node.type = 'array'; else if (ty === 'object') node.type = 'object';
+        else if (ty !== 'boolean' && ty !== 'date' && ty !== 'mixed') note(ty);
+        if (Array.isArray(d.oneOf) && d.oneOf.length) { const vals = d.oneOf.filter(v => v !== undefined && v !== null); if (vals.length) node.enum = vals; }
+        if (Array.isArray(d.notOneOf) && d.notOneOf.length) node.not = { enum: d.notOneOf.filter(v => v !== undefined && v !== null) };
+        (d.tests || []).forEach(t => {
+            const p = t.params || {}, n = t.name;
+            const arr = ty === 'array';
+            if (n === 'required') return;
+            if (n === 'min' && p.min !== undefined) { if (arr) node.minItems = p.min; else if (ty === 'number') node.minimum = p.min; else node.minLength = p.min; }
+            else if (n === 'max' && p.max !== undefined) { if (arr) node.maxItems = p.max; else if (ty === 'number') node.maximum = p.max; else node.maxLength = p.max; }
+            else if (n === 'min' && p.more !== undefined) node.exclusiveMinimum = p.more;   // positive() / moreThan()
+            else if (n === 'max' && p.less !== undefined) node.exclusiveMaximum = p.less;   // negative() / lessThan()
+            else if (n === 'length' && p.length !== undefined) { if (arr) { node.minItems = p.length; node.maxItems = p.length; } else { node.minLength = p.length; node.maxLength = p.length; } }
+            else if (n === 'integer') node.type = 'integer';
+            else if (n === 'email') node.format = 'email';
+            else if (n === 'url') node.format = 'uri';
+            else if (n === 'uuid') node.format = 'uuid';
+            else if (n === 'matches') { const s = regexSource(p.regex, note); if (s !== undefined && node.pattern === undefined) node.pattern = s; else if (s !== undefined) note('several matches'); }
+            else if (n === 'trim' || n === 'lowercase' || n === 'uppercase' || n === 'strict') { /* a transform, nothing to check */ }
+            else if (n) note(n);
+        });
+        if (d.fields && typeof d.fields === 'object') {
+            node.type = 'object'; node.properties = {}; node.required = [];
+            Object.keys(d.fields).forEach(k => {
+                if (BAD_KEYS.indexOf(k) >= 0) return;
+                const f = d.fields[k];
+                node.properties[k] = yupNode(f, w => note(k + ': ' + w), depth + 1);
+                if (f && f.optional === false) node.required.push(k);
+            });
+        }
+        if (d.innerType) { node.type = 'array'; node.items = yupNode(d.innerType, note, depth + 1); }
+        return node;
+    }
+    /**
+     * A Yup schema as rules: FormValidator.fromYup(yup.object({ email: yup.string().email().required(), tags: yup.array().of(yup.string()).min(1) })).
+     * Read through schema.describe(): required, string min / max / length / email / url / uuid / matches, number integer / min / max, array min / max / length, oneOf,
+     * nested objects and arrays of objects. test() with your own function, when(), lazy and exclusive bounds go to options.onUnsupported(path, name) and are skipped.
+     */
+    function fromYup(schema, options) {
+        const o = options || {};
+        if (!schema || !isFn(schema.describe)) return {};
+        const d = guard(() => schema.describe(), undefined);
+        const notes = [];
+        const rules = fromJsonSchema(yupNode(d, w => notes.push(w), 0), { onUnsupported: o.onUnsupported });
+        if (isFn(o.onUnsupported)) notes.forEach(w => { const i = w.lastIndexOf(': '); guard(o.onUnsupported, undefined, i < 0 ? '' : w.slice(0, i).replace(/: /g, '.'), i < 0 ? w : w.slice(i + 2)); });
+        return rules;
+    }
+
     // ------------------------------------------------------------------ rules served by your backend
     const LOADED = new Map();
     /**
@@ -6529,8 +6664,10 @@ const api = (function (root) {
         getRule: name => validators[name] || null,
         ruleNames: () => Object.keys(validators),   // every registered rule, built in and custom
         messages: DEFAULT_MESSAGES,     // mutable: FormValidator.messages.required = 'Pflichtfeld'
-        version: '2.18.0'
+        version: '2.19.0'
     }, CORE ? {} : {
+        fromZod,       // (zodSchema, { onUnsupported }) -> rules, read from a Zod 4 schema (Zod itself is not loaded)
+        fromYup,       // (yupSchema, { onUnsupported }) -> rules, read from a Yup schema through describe()
         init,
         initFromUrl,   // async (formId, url, { config, messages }) -> instance: load() the rules and start the form
         mask,          // (input, '(999) 999-9999', { onComplete, trailing }) -> { value, raw, complete, update, destroy }: format while typing
@@ -9651,7 +9788,7 @@ $.validator.addMethod( "ziprange", function( value, element ) {
     FormValidator.useJQuery = useJQuery;
 
     var api = { FormValidator: FormValidator, FileValidator: FileValidator, locales: locales, useJQuery: useJQuery,
-        versions: {"fileValidator":"2.11.0","fileValidator.widget":"1.6.0","fileValidator.upload":"1.1.0","fileValidator.image":"1.0.0","formValidator":"2.18.0","formValidator.element":"1.1.0","formValidator.password":"1.0.0","formValidator.inputs":"1.0.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
+        versions: {"fileValidator":"2.11.0","fileValidator.widget":"1.6.0","fileValidator.upload":"1.1.0","fileValidator.image":"1.0.0","formValidator":"2.19.0","formValidator.element":"1.1.0","formValidator.password":"1.0.0","formValidator.inputs":"1.0.0","formValidator.jquery":"1.2.0","formValidator.additional":"1.0.0","locale":"1.0.0"} };
 
     if (root.jQuery && root.jQuery.fn) useJQuery(root.jQuery);   // jQuery was loaded first: the jQuery Validation API is ready
     return api;
