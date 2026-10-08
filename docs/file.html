@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.35.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.38.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -26,6 +26,8 @@
       <li><a href="accessibility.html">Accessibility</a></li>
       <li><a href="benchmarks.html">Benchmarks</a></li>
       <li><a href="api-stability.html">API stability</a></li>
+      <li><a href="recipes.html">Recipes</a></li>
+      <li><a href="tooling.html">Tooling (CLI, ESLint)</a></li>
       <li><a href="playground.html">Playground</a></li>
     </ul>
   </nav>
@@ -477,6 +479,7 @@ if (await g.validate()) { /* ... */ }
 <td>Report <code>INVALID_MEDIA</code> when the duration cannot be read (otherwise the check is skipped)</td>
 </tr>
 </tbody></table></div>
+<p><strong>Duration without a browser.</strong> <code>await FileValidator.readMediaInfo(file)</code> reads the length (and the picture size of an MP4) from the file header: MP4 / MOV / M4A (moov box first or last), WAV, FLAC, Ogg Vorbis / Opus, WebM / MKV, MP3 (Xing header, else a constant bit rate is assumed). No <code>&lt;audio&gt;</code> element, so it works in Node, workers and tests, and returns <code>null</code> instead of throwing for anything else. <code>maxDurationSec</code> / <code>minDurationSec</code> use it first and fall back to the browser element.</p>
 <p><strong>Other</strong></p>
 <div class="tablewrap" role="region" aria-label="Table 7" tabindex="0"><table>
 <thead>

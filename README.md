@@ -213,7 +213,7 @@ What it does:
 
 ## Documentation
 
-`docs/FormValidator.md`, `docs/FileValidator.md` (including the upload widget), `docs/Server-and-Frameworks.md`, `docs/Languages.md`, `docs/Migrating-from-jQuery-Validate.md`, `docs/Accessibility.md` and `docs/Benchmarks.md` (size and speed against zod, yup, valibot, ajv, jQuery Validation and Pristine, with the script to run it yourself: `npm run bench`). The same pages are a static site with a live playground: open `docs/index.html`, or turn on GitHub Pages for the `/docs` folder.
+`docs/FormValidator.md`, `docs/FileValidator.md` (including the upload widget), `docs/Server-and-Frameworks.md`, `docs/Languages.md`, `docs/Migrating-from-jQuery-Validate.md`, `docs/Accessibility.md`, `docs/Recipes.md` (copy-ready answers, run by the tests), `docs/Tooling.md` (the `fv` command line, ESLint plugin, codemod, code export) and `docs/Benchmarks.md` (size and speed against zod, yup, valibot, ajv, jQuery Validation and Pristine, with the script to run it yourself: `npm run bench`). The same pages are a static site with a live playground: open `docs/index.html`, or turn on GitHub Pages for the `/docs` folder.
 
 Demos to open in a browser: `demo.html` (a form), `demo-upload.html` (the upload widget), `demo-jquery.html` (the jQuery-style API).
 

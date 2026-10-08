@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recipes · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.38.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="benchmarks.html">Benchmarks</a></li>
+      <li><a href="api-stability.html">API stability</a></li>
+      <li><a href="recipes.html" aria-current="page">Recipes</a></li>
+      <li><a href="tooling.html">Tooling (CLI, ESLint)</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="recipes">Recipes</h1>
+<p>Short, copy-ready answers to the questions that come up most. Every block marked <code>js test</code> is run by the test suite against the real library (<code>tests/recipes.test.js</code>), so what you read here works. The rules are plain data, so the same objects run in the browser, in Node on the server, and in tests.</p>
+<pre tabindex="0"><code class="language-js">// helper used by the recipes below: the names of the fields that fail
+const failing = (data, rules) =&gt; Object.keys(FormValidator.checkValues(data, rules).errors).sort();
+</code></pre>
+<h2 id="sign-up-email-password-confirmation">Sign-up: email, password, confirmation</h2>
+<pre tabindex="0"><code class="language-js">const rules = {
+  email: [&#39;required&#39;, &#39;email&#39;],
+  password: { required: true, minlength: 8 },
+  confirm: { required: true, equalTo: &#39;password&#39; }
+};
+assert.deepEqual(failing({ email: &#39;a@b.co&#39;, password: &#39;Secret123&#39;, confirm: &#39;Secret123&#39; }, rules), []);
+assert.deepEqual(failing({ email: &#39;nope&#39;, password: &#39;short&#39;, confirm: &#39;other&#39; }, rules), [&#39;confirm&#39;, &#39;email&#39;, &#39;password&#39;]);
+</code></pre>
+<p>In the page: <code>FormValidator.init({ form: &#39;#signup&#39;, rules })</code>. The same <code>rules</code> object validates the request on the server (see &quot;Same rules on the server&quot;).</p>
+<h2 id="a-field-that-is-required-only-in-some-cases">A field that is required only in some cases</h2>
+<pre tabindex="0"><code class="language-js">const rules = { country: &#39;required&#39;, state: { requiredIf: { field: &#39;country&#39;, in: [&#39;US&#39;, &#39;CA&#39;] } } };
+assert.deepEqual(failing({ country: &#39;US&#39;, state: &#39;&#39; }, rules), [&#39;state&#39;]);
+assert.deepEqual(failing({ country: &#39;DE&#39;, state: &#39;&#39; }, rules), []);
+</code></pre>
+<h2 id="a-date-range-and-an-age-limit">A date range, and an age limit</h2>
+<pre tabindex="0"><code class="language-js">const rules = { start: &#39;required&#39;, end: { required: true, dateAfter: { field: &#39;start&#39; } }, age: { integer: true, range: [18, 120] } };
+assert.deepEqual(failing({ start: &#39;2030-05-01&#39;, end: &#39;2030-04-01&#39;, age: 17 }, rules), [&#39;age&#39;, &#39;end&#39;]);
+assert.deepEqual(failing({ start: &#39;2030-05-01&#39;, end: &#39;2030-05-02&#39;, age: 18 }, rules), []);
+</code></pre>
+<h2 id="postal-code-and-phone-that-follow-the-chosen-country">Postal code and phone that follow the chosen country</h2>
+<pre tabindex="0"><code class="language-js">const rules = {
+  country: &#39;required&#39;,
+  zip: { required: true, postalCode: { countryField: &#39;country&#39; } },
+  phone: { phoneCountry: { countryField: &#39;country&#39; } }
+};
+assert.deepEqual(failing({ country: &#39;GB&#39;, zip: &#39;SW1A 1AA&#39;, phone: &#39;020 7946 0958&#39; }, rules), []);
+assert.deepEqual(failing({ country: &#39;US&#39;, zip: &#39;SW1A 1AA&#39;, phone: &#39;12345&#39; }, rules), [&#39;phone&#39;, &#39;zip&#39;]);
+</code></pre>
+<p>The checks are plausibility checks (format and length), not a registry of real numbers. A country without a rule accepts anything.</p>
+<h2 id="a-repeating-group-order-lines-with-unique-codes">A repeating group (order lines) with unique codes</h2>
+<pre tabindex="0"><code class="language-js">const rules = { &#39;lines[].sku&#39;: { required: true, unique: true }, &#39;lines[].qty&#39;: { required: true, integer: true, min: 1 }, lines: { minItems: 1 } };
+assert.deepEqual(failing({ lines: [{ sku: &#39;a&#39;, qty: 1 }, { sku: &#39;b&#39;, qty: 2 }] }, rules), []);
+assert.deepEqual(failing({ lines: [{ sku: &#39;a&#39;, qty: 1 }, { sku: &#39;a&#39;, qty: 0 }] }, rules), [&#39;lines[0].sku&#39;, &#39;lines[1].qty&#39;, &#39;lines[1].sku&#39;]);
+assert.deepEqual(failing({ lines: [] }, rules), [&#39;lines&#39;]);
+</code></pre>
+<h2 id="show-the-server39s-answer-on-the-fields">Show the server&#39;s answer on the fields</h2>
+<p>Whatever the backend sends (RFC 9457 problem+json, ASP.NET <code>ModelState</code>, Laravel, Django REST, FastAPI, Zod, JSON:API) becomes field messages:</p>
+<pre tabindex="0"><code class="language-js">const body = { type: &#39;about:blank&#39;, title: &#39;Validation failed&#39;, errors: { Email: [&#39;Already registered&#39;], &#39;Items[0].Qty&#39;: [&#39;Too many&#39;] } };
+const r = FormValidator.serverErrors(body);
+assert.equal(r.errors.Email || r.errors.email, &#39;Already registered&#39;);
+assert.ok(Object.keys(r.errors).some(k =&gt; /items\[0\]\.qty/i.test(k)));
+</code></pre>
+<p>In a page: <code>inst.setServerErrors(await response.json())</code>. Fields that are not on the form go to <code>r.form</code>.</p>
+<h2 id="same-rules-on-the-server">Same rules on the server</h2>
+<pre tabindex="0"><code class="language-js">const rules = { email: [&#39;required&#39;, &#39;email&#39;], age: { integer: true, range: [18, 99] } };
+const posted = FormValidator.parseFormData(new URLSearchParams(&#39;email=a%40b.co&amp;age=17&#39;), { coerce: true });
+assert.deepEqual(posted, { email: &#39;a@b.co&#39;, age: 17 });
+const result = FormValidator.checkValues(posted, rules);
+assert.equal(result.valid, false);
+assert.deepEqual(Object.keys(result.errors), [&#39;age&#39;]);
+</code></pre>
+<p>For Express, Fastify, Hono, Next.js route handlers, Remix and SvelteKit actions there are ready-made wrappers in <a href="server-and-frameworks.html">Server and frameworks</a>.</p>
+<h2 id="your-own-rule-also-asynchronous">Your own rule (also asynchronous)</h2>
+<pre tabindex="0"><code class="language-js">FormValidator.registerRule(&#39;evenNumber&#39;, v =&gt; Number(v) % 2 === 0);
+FormValidator.registerRule(&#39;freeUsername&#39;, async v =&gt; (await Promise.resolve([&#39;admin&#39;, &#39;root&#39;])).indexOf(v) &lt; 0);
+FormValidator.messages.evenNumber = &#39;Please enter an even number.&#39;;
+assert.equal(FormValidator.checkValue(&#39;4&#39;, [&#39;evenNumber&#39;]).valid, true);
+const bad = FormValidator.checkValue(&#39;5&#39;, [&#39;evenNumber&#39;]);
+assert.equal(bad.valid, false);
+assert.equal(bad.message, &#39;Please enter an even number.&#39;);
+</code></pre>
+<p>An asynchronous rule runs only after the synchronous ones pass, and a stale answer is dropped when the user keeps typing. The form waits for it on submit.</p>
+<h2 id="messages-in-the-visitor39s-language">Messages in the visitor&#39;s language</h2>
+<pre tabindex="0"><code class="language-js">FormValidator.registerMessages(&#39;de&#39;, { minlength: &#39;Mindestens {0} Zeichen.&#39; });
+const r = FormValidator.checkValue(&#39;ab&#39;, { minlength: 3 }, { lang: &#39;de&#39; });
+assert.equal(r.valid, false);
+assert.equal(r.message, &#39;Mindestens 3 Zeichen.&#39;);
+assert.equal(FormValidator.checkValue(&#39;ab&#39;, { minlength: 3 }).message, &#39;Please enter at least 3 characters.&#39;);
+</code></pre>
+<p><code>lang</code> is per call, so one page (or one server) can answer in many languages. The 18 ready-made packs are separate files (<code>form-and-file-validator/locales/de.mjs</code>), so a bundler ships only the languages you import. <code>FormValidator.explain(value, rules)</code> lists every rule with the reason it passed or failed, which is the quickest way to debug a surprising result.</p>
+<h2 id="images-up-to-5-mb-nothing-disguised">Images up to 5 MB, nothing disguised</h2>
+<pre tabindex="0"><code class="language-js">const cfg = { allowedExtensions: [&#39;.jpg&#39;, &#39;.png&#39;, &#39;.webp&#39;], maxFileSizeMB: 5 };
+const png = new File([Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])], &#39;a.png&#39;, { type: &#39;image/png&#39; });
+assert.equal((await FileValidator.validateFile(png, cfg)).isValid, true);
+const fake = new File([Uint8Array.from([0x4d, 0x5a, 0x90, 0, 3, 0, 0, 0])], &#39;holiday.png&#39;, { type: &#39;image/png&#39; });
+const verdict = await FileValidator.validateFile(fake, cfg);
+assert.equal(verdict.isValid, false, &#39;a Windows program renamed to .png is rejected by its content, not its name&#39;);
+</code></pre>
+<p>The name and the browser&#39;s <code>file.type</code> are what the client claims; the library reads the first bytes. Check again on the server: the <a href="file.html">upload security checklist</a> lists what to verify there.</p>
+<h2 id="storybook">Storybook</h2>
+<p>A story needs nothing special: initialise the validator in a play function and assert on the messages.</p>
+<pre tabindex="0"><code class="language-js">// Signup.stories.js
+export const InvalidSubmit = {
+  render: () =&gt; signupFormElement(),               // your component, containing &lt;form id=&quot;signup&quot;&gt;
+  play: async ({ canvasElement, userEvent }) =&gt; {
+    FormValidator.init({ form: canvasElement.querySelector(&#39;#signup&#39;), rules: { email: [&#39;required&#39;, &#39;email&#39;] } });
+    await userEvent.click(canvasElement.querySelector(&#39;button[type=submit]&#39;));
+    // the message sits in an element with role=&quot;alert&quot;, linked to the input with aria-describedby
+  }
+};
+</code></pre>
+<p><code>FormValidator.init</code> returns an instance with <code>destroy()</code>; call it in the story&#39;s cleanup so stories do not leak listeners. For rules-only components use <code>FormValidator.checkValues</code> in unit tests and skip the DOM.</p>
+<h2 id="playwright">Playwright</h2>
+<pre tabindex="0"><code class="language-js">import { test, expect } from &#39;@playwright/test&#39;;
+
+test(&#39;shows the error and blocks the submit&#39;, async ({ page }) =&gt; {
+  await page.goto(&#39;/signup&#39;);
+  await page.getByLabel(&#39;Email&#39;).fill(&#39;not-an-email&#39;);
+  await page.getByRole(&#39;button&#39;, { name: &#39;Create account&#39; }).click();
+  await expect(page.getByRole(&#39;alert&#39;)).toContainText(&#39;valid email&#39;);
+  await expect(page.getByLabel(&#39;Email&#39;)).toHaveAttribute(&#39;aria-invalid&#39;, &#39;true&#39;);
+});
+
+test(&#39;uploads are checked by content&#39;, async ({ page }) =&gt; {
+  await page.goto(&#39;/profile&#39;);
+  await page.setInputFiles(&#39;input[type=file]&#39;, { name: &#39;holiday.png&#39;, mimeType: &#39;image/png&#39;, buffer: Buffer.from([0x4d, 0x5a, 0x90, 0, 3, 0, 0, 0]) });
+  await expect(page.getByRole(&#39;alert&#39;)).toBeVisible();
+});
+</code></pre>
+<p>Errors are real <code>role=&quot;alert&quot;</code> regions with <code>aria-invalid</code> on the field, so the accessible queries above find them without test ids. <code>form-and-file-validator/testing</code> has <code>fillAndSubmit</code> and <code>expectError</code> helpers for jsdom and unit tests.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

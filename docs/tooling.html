@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tooling (CLI, ESLint) · form-and-file-validator</title>
+<meta name="description" content="Dependency-free form validation (successor of jQuery Validation) and file validation with an upload widget.">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.38.0</span></a>
+  <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
+</header>
+<div class="wrap">
+  <nav aria-label="Documentation">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="form.html">FormValidator</a></li>
+      <li><a href="file.html">FileValidator</a></li>
+      <li><a href="server-and-frameworks.html">Server &amp; frameworks</a></li>
+      <li><a href="languages.html">Languages</a></li>
+      <li><a href="migrating.html">Migrating from jQuery Validate</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="benchmarks.html">Benchmarks</a></li>
+      <li><a href="api-stability.html">API stability</a></li>
+      <li><a href="recipes.html">Recipes</a></li>
+      <li><a href="tooling.html" aria-current="page">Tooling (CLI, ESLint)</a></li>
+      <li><a href="playground.html">Playground</a></li>
+    </ul>
+  </nav>
+  <main id="content">
+<h1 id="tooling-command-line-eslint-codemods-export">Tooling: command line, ESLint, codemods, export</h1>
+<p>Everything here is optional and ships in the same package (the <code>tools/</code> folder). Nothing is added to what your visitors download.</p>
+<h2 id="the-fv-command-line">The <code>fv</code> command line</h2>
+<pre tabindex="0"><code>npx fv check rules.json                  # lint a rules file
+npx fv export rules.json --to zod        # rules as Zod / TypeScript / JSON Schema / HTML / React / Vue / Angular
+npx fv import ./schema.mjs --from zod    # a Zod, Yup or Joi schema (or a JSON Schema file) as rules
+npx fv migrate &quot;src/**/*.js&quot; --write     # jQuery Validation calls -&gt; FormValidator
+npx fv rules                             # every rule name
+</code></pre>
+<p>A rules file is JSON (<code>{ &quot;rules&quot;: { ... } }</code>, a plain map, or a JSON Schema / OpenAPI object) or a <code>.js</code> / <code>.mjs</code> / <code>.cjs</code> module exporting the rules (default export, a <code>rules</code> export, or <code>module.exports</code>). <code>--export name</code> picks a named export. The exit code is <code>0</code> when clean, <code>1</code> when problems were found, <code>2</code> for a usage error, so <code>fv check</code> fits in CI.</p>
+<h3 id="fv-check"><code>fv check</code></h3>
+<p>Finds the mistakes that would otherwise show up as a console warning on a live page:</p>
+<pre tabindex="0"><code>error: email (emial): Unknown rule &quot;emial&quot;. Did you mean &quot;email&quot;?
+error: age (range): &quot;range&quot; has min 50 above max 10: nothing can pass.
+error: age (minlength): &quot;minlength&quot; needs a number, got &quot;x&quot;.
+warning: pw2 (equalTo): &quot;equalTo&quot; refers to the field &quot;pw&quot;, which has no rules here (fine if it is a plain field of the form).
+</code></pre>
+<p>Your own rules are unknown to a plain run: load the file that registers them with <code>--require ./setup.js</code>, or list them with <code>--allow myRule,otherRule</code>. <code>--json</code> prints the findings as JSON.</p>
+<h3 id="fv-export-and-the-playground"><code>fv export</code> and the playground</h3>
+<p><code>fv export rules.json --to zod --name Signup</code> writes a Zod schema and its inferred type; <code>typescript</code> an interface; <code>json-schema</code> a JSON Schema (2020-12); <code>html</code> a form with <code>data-fv</code> attributes; <code>react</code>, <code>vue</code>, <code>angular</code> a starter component. Rules that a target cannot say (<code>equalTo</code>, <code>requiredIf</code>, ...) are kept as a comment so nothing disappears silently. The <a href="playground.html">playground</a> has the same exporter in a box: type the rules, pick a format, copy.</p>
+<h3 id="fv-import"><code>fv import</code></h3>
+<p>Already have a schema? <code>fv import ./schema.mjs --from zod --export signupSchema &gt; rules.json</code>. Zod 4, Yup and Joi schemas are read through their own public description; a JSON Schema or OpenAPI component works too (<code>--from json-schema</code>). Whatever has no rule equivalent (<code>refine</code>, unions, exclusive bounds) is listed on stderr. The same conversion is available in code as <code>FormValidator.fromZod(schema)</code> and <code>FormValidator.fromYup(schema)</code>.</p>
+<h3 id="fv-migrate"><code>fv migrate</code></h3>
+<p>For code that should stop depending on jQuery: <code>$(&#39;#signup&#39;).validate({ rules, messages })</code> becomes <code>FormValidator.init({ form: &#39;#signup&#39;, rules, messages })</code>, <code>.valid()</code> becomes <code>FormValidator.isValid(...)</code>, and <code>$.validator.addMethod</code> / <code>addClassRules</code> become <code>FormValidator.addMethod</code> / <code>addClassRules</code>. Without <code>--write</code> it only reports. Options other than <code>rules</code> and <code>messages</code> (<code>submitHandler</code>, <code>errorPlacement</code>, ...) stay in a <code>/* TODO */</code> comment and are listed, because they have a different shape in the new API (<a href="migrating.html">migration guide</a>). If you keep jQuery, you do not need this: the compatibility layer runs your existing code unchanged.</p>
+<h2 id="eslint">ESLint</h2>
+<pre tabindex="0"><code class="language-js">// eslint.config.js
+import fv from &#39;form-and-file-validator/eslint-plugin&#39;;
+export default [fv.configs.recommended];
+</code></pre>
+<p>The rule <code>form-and-file-validator/valid-rules</code> reads the rules you write in <code>FormValidator.init</code>, <code>schema</code>, <code>checkValues</code>, <code>checkValue</code>, <code>action</code>, <code>toJsonSchema</code>, <code>useFormValidator</code> and the Angular helpers, and reports unknown rule names (with a suggestion), impossible ranges, non-numeric lengths and invalid patterns, right in the editor. Rules registered in the same file with <code>registerRule</code> / <code>addMethod</code> are known; others go in <code>settings: { &#39;form-and-file-validator&#39;: { allow: [&#39;myRule&#39;] } }</code>. Anything it cannot read statically (variables, function calls) is skipped, never guessed.</p>
+<h2 id="editor-help">Editor help</h2>
+<p><code>snippets/form-and-file-validator.code-snippets</code> has VS Code snippets, and <code>schemas/rules.schema.json</code> is a JSON Schema for a rules file: point your editor at it (<code>&quot;$schema&quot;: &quot;./node_modules/form-and-file-validator/schemas/rules.schema.json&quot;</code>) for completion and checks while you type.</p>
+<h2 id="cookbook">Cookbook</h2>
+<p><a href="Recipes.md">Recipes</a> has copy-ready answers (all run by the test suite), plus Storybook and Playwright examples.</p>
+
+  </main>
+</div>
+<footer>MIT licensed · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/Kalam031/form-and-file-validator/blob/main/CONTRIBUTING.md">Contribute</a></footer>
+</body>
+</html>

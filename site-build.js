@@ -24,6 +24,8 @@ const PAGES = [
     { file: 'accessibility.html', title: 'Accessibility', src: 'docs/Accessibility.md' },
     { file: 'benchmarks.html', title: 'Benchmarks', src: 'docs/Benchmarks.md' },
     { file: 'api-stability.html', title: 'API stability', src: 'docs/API-Stability.md' },
+    { file: 'recipes.html', title: 'Recipes', src: 'docs/Recipes.md' },
+    { file: 'tooling.html', title: 'Tooling (CLI, ESLint)', src: 'docs/Tooling.md' },
     { file: 'playground.html', title: 'Playground', src: null }
 ];
 const LINKS = {
@@ -111,7 +113,7 @@ footer{border-top:1px solid var(--line);padding:20px 16px;text-align:center;colo
 .fv-zone{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center}.fv-dragover{border-color:var(--accent);background:var(--side)}
 .fv-list{list-style:none;padding:0;text-align:left}.fv-file{display:flex;align-items:center;gap:8px;padding:4px 0}.fv-preview{width:40px;height:40px;object-fit:cover;border-radius:4px}
 .fv-message{color:var(--err);text-align:left}
-#result{white-space:pre-wrap}
+#result,#export-out{white-space:pre-wrap}.sr{position:absolute;left:-999px}
 @media (max-width:760px){.wrap{flex-direction:column;gap:0}nav{flex:none}nav ul{display:flex;flex-wrap:wrap;position:static}}
 `;
 
@@ -142,7 +144,30 @@ const PLAYGROUND = `<h1>Playground</h1>
 </div>
 <h2>Result</h2>
 <pre id="result" aria-live="polite" tabindex="0">Press "Check" or add a file.</pre>
+<h2>Export your rules</h2>
+<p>Write the rules as JSON, pick a format, and copy code for Zod, TypeScript, JSON Schema, plain HTML, React, Vue or Angular. The same output comes from <code>fv export</code> on the command line.</p>
+<div class="pg">
+  <section class="card" aria-labelledby="h-rules">
+    <h3 id="h-rules" style="margin-top:0">Rules (JSON)</h3>
+    <label for="rules-json" class="sr">Rules as JSON</label>
+    <textarea id="rules-json" rows="12" spellcheck="false" style="width:100%;font:13px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px">{
+  "email": ["required", "email"],
+  "age": { "integer": true, "range": [18, 99] },
+  "plan": { "oneOf": ["free", "pro"] },
+  "items[].qty": { "required": true, "number": true, "min": 1 },
+  "items": { "minItems": 1 }
+}</textarea>
+    <label for="export-format">Format</label>
+    <select id="export-format"><option>zod</option><option>typescript</option><option>json-schema</option><option>html</option><option>react</option><option>vue</option><option>angular</option></select>
+    <button type="button" id="export-copy">Copy</button>
+  </section>
+  <section class="card" aria-labelledby="h-out">
+    <h3 id="h-out" style="margin-top:0">Output</h3>
+    <pre id="export-out" aria-live="polite" tabindex="0"></pre>
+  </section>
+</div>
 <script src="assets/validator.min.js"></script>
+<script src="assets/fv-codegen.js"></script>
 <script src="assets/locales.all.min.js"></script>
 <script src="assets/playground.js"></script>`;
 
@@ -169,6 +194,13 @@ const PLAYGROUND_JS = `(function () {
     show({ language: sel.value, note: 'Submit the form or add a file to see the messages in this language.' });
   });
   var auto = FVLocales.auto('en', { document: true }); sel.value = auto.code;
+  var src = document.getElementById('rules-json'), fmt = document.getElementById('export-format'), out = document.getElementById('export-out');
+  function exportNow() {
+    try { out.textContent = FVCodegen.exportRules(JSON.parse(src.value), fmt.value, { FormValidator: FormValidator, name: 'signup' }); out.classList.remove('error'); }
+    catch (e) { out.textContent = e.message; out.classList.add('error'); }
+  }
+  src.addEventListener('input', exportNow); fmt.addEventListener('change', exportNow); exportNow();
+  document.getElementById('export-copy').addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(out.textContent); });
 })();`;
 
 function build() {
@@ -179,6 +211,7 @@ function build() {
     if (!fs.existsSync(dist('validator.min.js'))) throw new Error('site-build: run "npm run build" first');
     fs.copyFileSync(dist('validator.min.js'), path.join(ASSETS, 'validator.min.js'));
     fs.copyFileSync(dist('locales/all.min.js'), path.join(ASSETS, 'locales.all.min.js'));
+    fs.copyFileSync(path.join(ROOT, 'tools', 'fv-codegen.js'), path.join(ASSETS, 'fv-codegen.js'));
     fs.writeFileSync(path.join(DOCS, '.nojekyll'), '');
     const made = [];
     for (const page of PAGES) {

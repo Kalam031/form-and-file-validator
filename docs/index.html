@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.35.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.38.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -26,6 +26,8 @@
       <li><a href="accessibility.html">Accessibility</a></li>
       <li><a href="benchmarks.html">Benchmarks</a></li>
       <li><a href="api-stability.html">API stability</a></li>
+      <li><a href="recipes.html">Recipes</a></li>
+      <li><a href="tooling.html">Tooling (CLI, ESLint)</a></li>
       <li><a href="playground.html">Playground</a></li>
     </ul>
   </nav>
@@ -349,7 +351,7 @@ $(&#39;#email&#39;).valid();   // true or false, right away, like the original
 <li><strong>Form with a drop area:</strong> use example 1 for the form and example 3 for the zone. The widget puts the accepted files into the input, so FormValidator&#39;s <code>required</code> and <code>file</code> rules see them.</li>
 </ul>
 <h2 id="documentation">Documentation</h2>
-<p><code>docs/FormValidator.md</code>, <code>docs/FileValidator.md</code> (including the upload widget), <code>docs/Server-and-Frameworks.md</code>, <code>docs/Languages.md</code>, <code>docs/Migrating-from-jQuery-Validate.md</code>, <code>docs/Accessibility.md</code> and <code>docs/Benchmarks.md</code> (size and speed against zod, yup, valibot, ajv, jQuery Validation and Pristine, with the script to run it yourself: <code>npm run bench</code>). The same pages are a static site with a live playground: open <code>docs/index.html</code>, or turn on GitHub Pages for the <code>/docs</code> folder.</p>
+<p><code>docs/FormValidator.md</code>, <code>docs/FileValidator.md</code> (including the upload widget), <code>docs/Server-and-Frameworks.md</code>, <code>docs/Languages.md</code>, <code>docs/Migrating-from-jQuery-Validate.md</code>, <code>docs/Accessibility.md</code>, <code>docs/Recipes.md</code> (copy-ready answers, run by the tests), <code>docs/Tooling.md</code> (the <code>fv</code> command line, ESLint plugin, codemod, code export) and <code>docs/Benchmarks.md</code> (size and speed against zod, yup, valibot, ajv, jQuery Validation and Pristine, with the script to run it yourself: <code>npm run bench</code>). The same pages are a static site with a live playground: open <code>docs/index.html</code>, or turn on GitHub Pages for the <code>/docs</code> folder.</p>
 <p>Demos to open in a browser: <code>demo.html</code> (a form), <code>demo-upload.html</code> (the upload widget), <code>demo-jquery.html</code> (the jQuery-style API).</p>
 <h2 id="formvalidator">FormValidator</h2>
 <pre tabindex="0"><code class="language-js">FormValidator.init({
@@ -430,7 +432,7 @@ The packs are machine-quality translations: please have a native speaker check t
 <h2 id="use-from-a-cdn-jsdelivr">Use from a CDN (jsDelivr)</h2>
 <p>Always pin the exact version and keep the <code>integrity</code> attribute, so the file your visitors load can never change:</p>
 <pre tabindex="0"><code class="language-html">&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/validator.min.js&quot;
-        integrity=&quot;sha384-IzTB07oPW1Bbyzs1wc0pbbsHK3J7NNaTknYbhMJE836CEQJUcw4CSghyrU2w+aFz&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+        integrity=&quot;sha384-Itx2hKYckUG3UQkJ1ZO8ofZPVW6MbSpQJs/KEyCNo31NAEdLPyOwg7GYk0AyWuqn&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Kalam031/form-and-file-validator@3.27.0/dist/locales/de.min.js&quot;
         integrity=&quot;sha384-mmSW5mVYaC+rhElftx/0QVwLyq0VSIOLlmUzwkOjvzKCUJXHIEaGTfS0K0bB96ln&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
 &lt;script&gt;FVLocales.use(&#39;de&#39;);&lt;/script&gt;

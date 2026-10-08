@@ -2,6 +2,14 @@
 
 Versions of the package follow semver. Each source file also keeps its own changelog in its header.
 
+## 3.38.0
+- **`fv` command line** (`npx fv ...`, `tools/fv.js`): `check` (unknown rules with a suggestion, impossible ranges, wrong parameters, dangling field references), `export` (Zod, TypeScript, JSON Schema, HTML, React, Vue, Angular), `import` (Zod, Yup, Joi, JSON Schema), `migrate` (a jQuery Validation codemod), `rules`.
+- **ESLint plugin** `form-and-file-validator/eslint-plugin` with the rule `valid-rules`.
+- **Playground** has a rules box that exports the code, the same exporter as `fv export`.
+- **Docs**: [Recipes](docs/Recipes.md) (every `js test` block is executed by `tests/recipes.test.js`), [Tooling](docs/Tooling.md), Storybook and Playwright examples.
+- **Weekly compatibility workflow** (`.github/workflows/compat.yml`): installs the newest React, Vue, Svelte, Solid, Lit, Angular, Zod, Yup, Joi, Ajv, React Hook Form and runs the tests that use them.
+- Dev dependencies: eslint, joi (tests only).
+
 ## 3.37.0
 - **Postal codes and phone numbers by country** (inputs add-on 1.1.0): rules `postalCode` and `phoneCountry` (a fixed `country` or a `countryField` that is watched), `FormValidator.regions` (`isPostalCode`, `isPhone`, `callingCode`), about 60 countries. Data only in the add-on; the core stays small.
 - **`FileValidator.readMediaInfo(file)`** (FileValidator 2.12.0): duration of MP4 / MOV / WAV / FLAC / Ogg / WebM / MP3 from the header, no browser element; `maxDurationSec` / `minDurationSec` use it first.

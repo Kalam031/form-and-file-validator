@@ -27,5 +27,5 @@ footer{border-top:1px solid var(--line);padding:20px 16px;text-align:center;colo
 .fv-zone{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center}.fv-dragover{border-color:var(--accent);background:var(--side)}
 .fv-list{list-style:none;padding:0;text-align:left}.fv-file{display:flex;align-items:center;gap:8px;padding:4px 0}.fv-preview{width:40px;height:40px;object-fit:cover;border-radius:4px}
 .fv-message{color:var(--err);text-align:left}
-#result{white-space:pre-wrap}
+#result,#export-out{white-space:pre-wrap}.sr{position:absolute;left:-999px}
 @media (max-width:760px){.wrap{flex-direction:column;gap:0}nav{flex:none}nav ul{display:flex;flex-wrap:wrap;position:static}}

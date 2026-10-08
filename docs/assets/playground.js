@@ -21,4 +21,11 @@
     show({ language: sel.value, note: 'Submit the form or add a file to see the messages in this language.' });
   });
   var auto = FVLocales.auto('en', { document: true }); sel.value = auto.code;
+  var src = document.getElementById('rules-json'), fmt = document.getElementById('export-format'), out = document.getElementById('export-out');
+  function exportNow() {
+    try { out.textContent = FVCodegen.exportRules(JSON.parse(src.value), fmt.value, { FormValidator: FormValidator, name: 'signup' }); out.classList.remove('error'); }
+    catch (e) { out.textContent = e.message; out.classList.add('error'); }
+  }
+  src.addEventListener('input', exportNow); fmt.addEventListener('change', exportNow); exportNow();
+  document.getElementById('export-copy').addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(out.textContent); });
 })();

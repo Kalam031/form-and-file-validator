@@ -1,6 +1,6 @@
 {
   "name": "form-and-file-validator",
-  "version": "3.37.0",
+  "version": "3.38.0",
   "description": "Dependency-free FormValidator (successor of the jQuery Validation plugin), FileValidator and an upload widget",
   "license": "MIT",
   "author": "abu_kalam (https://www.npmjs.com/~abu_kalam)",
@@ -105,7 +105,9 @@
     "./jquery": "./dist/formValidator.jquery.js",
     "./jquery-additional": "./dist/formValidator.additional.js",
     "./types/*": "./types/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./eslint-plugin": "./tools/eslint-plugin.js",
+    "./tools/*": "./tools/*"
   },
   "files": [
     "dist",
@@ -200,11 +202,13 @@
     "alpinejs": "^3.17.4",
     "axe-core": "^4.13.0",
     "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
     "express": "^5.2.1",
     "express-fileupload": "^1.5.2",
     "fastify": "^5.12.5",
     "formidable": "^3.5.4",
     "hono": "^4.13.12",
+    "joi": "^18.2.9",
     "jquery": "^4.0.0",
     "jquery-validation": "^1.22.1",
     "jquery3": "npm:jquery@^3.7.1",
@@ -226,5 +230,8 @@
     "valibot": "^1.5.0",
     "vue": "^3.5.43",
     "yup": "^1.7.1"
+  },
+  "bin": {
+    "fv": "tools/fv.js"
   }
 }

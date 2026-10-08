@@ -5,9 +5,9 @@
   "metadata": {
     "component": {
       "type": "library",
-      "bom-ref": "form-and-file-validator@3.37.0",
+      "bom-ref": "form-and-file-validator@3.38.0",
       "name": "form-and-file-validator",
-      "version": "3.37.0",
+      "version": "3.38.0",
       "licenses": [
         {
           "license": {
@@ -15,7 +15,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/form-and-file-validator@3.37.0"
+      "purl": "pkg:npm/form-and-file-validator@3.38.0"
     },
     "properties": [
       {
@@ -1143,7 +1143,7 @@
   ],
   "dependencies": [
     {
-      "ref": "form-and-file-validator@3.37.0",
+      "ref": "form-and-file-validator@3.38.0",
       "dependsOn": []
     }
   ]

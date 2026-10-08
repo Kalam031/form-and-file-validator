@@ -806,6 +806,18 @@ for (const b of BROWSERS) {
             await page.waitForSelector('#list .fv-file');
             assert.match(await page.textContent('#status'), /تمت إضافة/);
         }, '/docs/playground.html');
+        it2('docs site playground: the rules box exports Zod, TypeScript and the other formats, and says what is wrong with bad JSON', async page => {
+            await page.waitForFunction(() => /z.object/.test(document.getElementById('export-out').textContent));
+            assert.match(await page.textContent('#export-out'), /age: z.coerce.number().int().min(18).max(99)/);
+            await page.selectOption('#export-format', 'typescript');
+            assert.match(await page.textContent('#export-out'), /export interface Signup/);
+            await page.selectOption('#export-format', 'react');
+            assert.match(await page.textContent('#export-out'), /useFormValidator/);
+            await page.fill('#rules-json', '{ nope');
+            await page.waitForFunction(() => document.getElementById('export-out').classList.contains('error'));
+            await page.fill('#rules-json', '{"a":"required"}');
+            await page.waitForFunction(() => !document.getElementById('export-out').classList.contains('error') && /useFormValidator/.test(document.getElementById('export-out').textContent));
+        }, '/docs/playground.html');
         it2('axe (with colour contrast): docs site pages', async page => {
             await axeRun(page, 'docs/index.html');
             for (const f of ['form.html', 'file.html', 'languages.html', 'server-and-frameworks.html', 'playground.html']) {

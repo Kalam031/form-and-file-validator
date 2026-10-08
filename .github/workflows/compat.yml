@@ -1,0 +1,42 @@
+name: Compatibility
+# Weekly (and on demand): does the library still work with the NEWEST releases of the libraries it plugs into?
+# The normal CI tests the versions pinned in package-lock.json. This one installs the latest of each integration (without touching the lock file)
+# and runs the tests that talk to them, so a breaking release of React, Vue, Angular, Zod, Yup, React Hook Form ... is noticed within a week.
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - name: react
+            packages: react@latest react-dom@latest react-hook-form@latest @hookform/resolvers@latest
+            tests: tests/integrations.test.mjs tests/formValidator.schema.test.js
+          - name: vue-svelte-solid-lit
+            packages: vue@latest svelte@latest solid-js@latest lit@latest
+            tests: tests/integrations.test.mjs tests/frameworks2.test.mjs
+          - name: angular
+            packages: '@angular/core@latest @angular/forms@latest @angular/common@latest @angular/compiler@latest @angular/platform-browser@latest'
+            tests: tests/angular.test.mjs tests/angular.signals.test.mjs
+          - name: schema-libraries
+            packages: zod@latest yup@latest joi@latest ajv@latest valibot@latest
+            tests: tests/formValidator.converters.test.js tests/formValidator.jsonschema.test.js tests/tools.test.js tests/formValidator.schema.test.js
+          - name: next-channels
+            packages: react@next react-dom@next vue@next
+            tests: tests/integrations.test.mjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install the newest releases (not saved)
+        run: npm install --no-save --legacy-peer-deps ${{ matrix.group.packages }}
+      - run: node build.js
+      - name: Tests that use them
+        run: node --test ${{ matrix.group.tests }}

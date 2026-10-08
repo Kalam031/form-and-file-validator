@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="top">
-  <a class="brand" href="index.html">form-and-file-validator <span>v3.35.0</span></a>
+  <a class="brand" href="index.html">form-and-file-validator <span>v3.38.0</span></a>
   <a class="gh" href="https://github.com/Kalam031/form-and-file-validator">GitHub</a>
 </header>
 <div class="wrap">
@@ -26,6 +26,8 @@
       <li><a href="accessibility.html">Accessibility</a></li>
       <li><a href="benchmarks.html">Benchmarks</a></li>
       <li><a href="api-stability.html">API stability</a></li>
+      <li><a href="recipes.html">Recipes</a></li>
+      <li><a href="tooling.html">Tooling (CLI, ESLint)</a></li>
       <li><a href="playground.html">Playground</a></li>
     </ul>
   </nav>
@@ -594,6 +596,15 @@ FormValidator.schema(rules).safeParse(body);
 <li><strong>Mapped both ways</strong>: <code>required</code>, <code>email</code> / <code>url</code> / <code>uuid</code> / <code>ipv4</code> / <code>ipv6</code> / <code>domain</code> / <code>time</code> / <code>date</code> (<code>format</code>), <code>minlength</code> / <code>maxlength</code> / <code>rangelength</code>, <code>pattern</code> (and <code>digits</code>, <code>alpha</code>, <code>alphanumeric</code>, <code>slug</code>, <code>hexColor</code> as patterns), <code>min</code> / <code>max</code> / <code>range</code> / <code>step</code> (<code>minimum</code>, <code>maximum</code>, <code>multipleOf</code>), <code>number</code> / <code>integer</code> (<code>type</code>, so JSON numbers validate), <code>oneOf</code> / <code>notOneOf</code> (<code>enum</code>, <code>not.enum</code>), <code>minItems</code> / <code>maxItems</code>, nested paths (<code>a.b</code>) and rows (<code>items[].x</code>) as objects and arrays of objects; for a list of plain values, <code>unique</code> is <code>uniqueItems</code>.</li>
 <li><strong>What JSON Schema cannot say</strong> (<code>equalTo</code>, <code>requiredIf</code>, <code>dateAfter</code>, <code>pwcheck</code>, <code>mask</code>, <code>unique</code> on a column of rows, your own rules) is kept in an <strong><code>x-fv-rules</code></strong> annotation that validators ignore and <code>fromJsonSchema</code> reads back: rules, schema, rules, schema is stable.</li>
 <li><code>fromJsonSchema</code> follows local <code>$ref</code> (<code>$defs</code>, <code>definitions</code>), merges <code>allOf</code>, and reports what it skips (<code>anyOf</code> / <code>oneOf</code>, <code>not</code>, <code>if</code>, <code>patternProperties</code>, remote refs, <code>exclusiveMinimum</code>) to <code>onUnsupported</code>; it never throws and ignores hostile keys. Checked against Ajv with the same payloads. Part of the core build.</li>
+</ul>
+<h3 id="coming-from-zod-or-yup">Coming from Zod or Yup</h3>
+<p><code>FormValidator.fromZod(schema)</code> (Zod 4) and <code>FormValidator.fromYup(schema)</code> read an existing schema and give back rules, so the form and the server can keep one definition without rewriting it. Neither library is loaded by this one; the schema you pass is read through its own public description (<code>_zod.def</code>, <code>describe()</code>).</p>
+<pre tabindex="0"><code class="language-js">const rules = FormValidator.fromZod(z.object({ email: z.email(), age: z.number().int().min(18).optional(), items: z.array(z.object({ qty: z.number().min(1) })).min(1) }), { onUnsupported: (path, what) =&gt; console.warn(path, what) });
+FormValidator.init(&#39;#signup&#39;, { rules });
+</code></pre>
+<ul>
+<li>Read: required (non-optional) fields, string <code>min</code> / <code>max</code> / <code>length</code> / <code>regex</code> / <code>email</code> / <code>url</code> / <code>uuid</code> / <code>startsWith</code> / <code>endsWith</code>, number <code>int</code> / <code>min</code> / <code>max</code> / <code>multipleOf</code>, <code>enum</code>, <code>literal</code>, nested objects (<code>a.b</code>), arrays of objects (<code>a[].b</code>), <code>optional</code> / <code>nullable</code> / <code>default</code> / <code>pipe</code> / <code>coerce</code> (the input side). Yup: <code>required</code>, <code>min</code> / <code>max</code> / <code>length</code>, <code>email</code> / <code>url</code> / <code>uuid</code> / <code>matches</code>, <code>integer</code>, <code>oneOf</code>, nested <code>object()</code> and <code>array().of()</code>.</li>
+<li>Reported to <code>onUnsupported(path, what)</code> and skipped: <code>refine</code> / <code>test()</code> functions, <code>union</code>, exclusive bounds (<code>positive()</code>, <code>gt</code>), regex flags, <code>when()</code>, <code>lazy</code>. Add those with your own rule. Both functions never throw.</li>
 </ul>
 <h3 id="messages-plurals-labels-a-language-per-call-error-formats-and-email-suggestions">Messages: plurals, labels, a language per call, error formats and email suggestions</h3>
 <p><strong>ICU plurals and select</strong> in your own messages: <code>{min, plural, one {# character} other {# characters}}</code>, <code>=0 {none}</code>, <code>offset:1</code>, <code>{kind, select, f {She} m {He} other {They}}</code>. <code>#</code> is the number; the categories follow the language (Russian one / few / many, Arabic zero / two ...). Plain <code>{min}</code> placeholders work as before, and unbalanced or unknown input is left as written.</p>
@@ -1505,6 +1516,17 @@ rules: {
 }
 </code></pre>
 <p>The separators and the order of day, month and year come from the browser&#39;s <code>Intl</code>, so nothing is shipped per country. Parsing is strict: group separators only between groups of three digits (two for <code>en-IN</code>), one decimal separator, no exponents, no stray text; two-digit years use a pivot (<code>pivot: 50</code>: up to 50 is 20xx) or are refused with <code>twoDigitYear: false</code>. Without <code>locale</code> the current <code>FVLocales</code> language, the page&#39;s <code>&lt;html lang&gt;</code> and then the browser language are used. The error text is the translated <code>number</code> / <code>date</code> / <code>min</code> / <code>max</code> message.</p>
+<h3 id="postal-codes-and-phone-numbers-by-country">Postal codes and phone numbers by country</h3>
+<pre tabindex="0"><code class="language-js">rules: {
+  country: &#39;required&#39;,
+  zip:   { postalCode: { countryField: &#39;country&#39; } },     // the format follows the country the visitor picked, and is re-checked when it changes
+  phone: { phoneCountry: { country: &#39;GB&#39; } }              // a fixed country
+}
+FormValidator.regions.isPostalCode(&#39;SW1A 1AA&#39;, &#39;GB&#39;);     // true | false | null (no rule for that country)
+FormValidator.regions.isPhone(&#39;020 7946 0958&#39;, &#39;GB&#39;);     // national or +44 form, trunk 0 handled
+FormValidator.regions.callingCode(&#39;GB&#39;);                  // 44
+</code></pre>
+<p>About 60 countries for postal codes and 50 for phones. The phone check is plausibility (the prefix and the length of the national number), not a number registry: it will not tell you that a number exists. The data lives in the inputs add-on only, so the core build stays small. A country without a rule, or no country chosen yet, accepts any value. Note that a plain string in the rule map is a custom message, so write <code>{ country: &#39;GB&#39; }</code>, not <code>&#39;GB&#39;</code>.</p>
 <h3 id="field-analytics-onfieldstats">Field analytics: <code>onFieldStats</code></h3>
 <pre tabindex="0"><code class="language-js">FormValidator.init({ form: &#39;signup&#39;, rules, config: {
     onFieldStats: stats =&gt; navigator.sendBeacon(&#39;/analytics/forms&#39;, JSON.stringify(stats))   // you decide where it goes
