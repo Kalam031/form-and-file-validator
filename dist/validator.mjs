@@ -5625,7 +5625,7 @@ const api = (function (root) {
     function callSite() {
         try {
             const lines = String(new Error().stack || '').split(/\r?\n/).slice(1);
-            const hit = lines.find(l => !/form-and-file-validator|[\\/]src[\\/]formValidator\.js|[\\/](validator|formValidator)(\.min)?\.m?js|node:internal/.test(l));
+            const hit = lines.find(l => !/node_modules[\\/]form-and-file-validator|[\\/]src[\\/]formValidator\.js|[\\/](validator|formValidator)(\.min)?\.m?js|node:/.test(l));
             return hit ? hit.replace(/^\s*at\s+/, '').trim() : '';
         } catch (e) { return ''; }
     }
